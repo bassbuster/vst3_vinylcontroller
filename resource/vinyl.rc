@@ -1,0 +1,93 @@
+#include <windows.h>
+#include "../version.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+
+background.png          PNG DISCARDABLE background.png
+curve_1.png             PNG DISCARDABLE curve_1.png
+curve_2.png             PNG DISCARDABLE curve_2.png
+curve_3.png             PNG DISCARDABLE curve_3.png
+digits.png              PNG DISCARDABLE digits.png
+distorsion.png          PNG DISCARDABLE distorsion.png
+freeze.png              PNG DISCARDABLE freeze.png
+fx_blue.png             PNG DISCARDABLE fx_blue.png
+x_empty.png             PNG DISCARDABLE x_empty.png
+fx_green.png            PNG DISCARDABLE fx_green.png
+x_red.png               PNG DISCARDABLE x_red.png
+fx_yellow.png           PNG DISCARDABLE fx_yellow.png
+gain_back.png           PNG DISCARDABLE gain_back.png
+glass.png               PNG DISCARDABLE glass.png
+hold.png                PNG DISCARDABLE hold.png
+kick_button.png         PNG DISCARDABLE kick_button.png
+kick_button_act.png     PNG DISCARDABLE kick_button_act.png
+knob_handle.png         PNG DISCARDABLE knob_handle.png
+locktone.png            PNG DISCARDABLE locktone.png
+loop_check.png          PNG DISCARDABLE loop_check.png
+loop_check_on.png       PNG DISCARDABLE loop_check_on.png
+pitch_1.png             PNG DISCARDABLE pitch_1.png
+pitch_2.png             PNG DISCARDABLE pitch_2.png
+pitch_3.png             PNG DISCARDABLE pitch_3.png
+pitch_handler.png       PNG DISCARDABLE pitch_handler.png
+pitch_slider.png        PNG DISCARDABLE pitch_slider.png
+postroll.png            PNG DISCARDABLE postroll.png
+preroll.png             PNG DISCARDABLE preroll.png
+revers_check_on.png     PNG DISCARDABLE revers_check_on.png
+sample_combo.png        PNG DISCARDABLE sample_combo.png
+smal_handler.png        PNG DISCARDABLE smal_handler.png
+smal_slider.png         PNG DISCARDABLE smal_slider.png
+sync_check_on.png       PNG DISCARDABLE sync_check_on.png
+tclearn_check.png       PNG DISCARDABLE tclearn_check.png
+tclearn_check_on.png    PNG DISCARDABLE tclearn_check_on.png
+vintage.png             PNG DISCARDABLE vintage.png
+volume_handler.png      PNG DISCARDABLE volume_handler.png
+volume_slider.png       PNG DISCARDABLE volume_slider.png
+vu_off.png              PNG DISCARDABLE vu_off.png
+vu_on.png               PNG DISCARDABLE vu_on.png
+yellow_combo.png        PNG DISCARDABLE yellow_combo.png
+
+vintage                 RCDATA DISCARDABLE vintage.wav
+
+//punchin.png             PNG DISCARDABLE punchin.png
+//punchout.png            PNG DISCARDABLE punchout.png
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Version
+/////////////////////////////////////////////////////////////////////////////
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION MAJOR_VERSION_INT,SUB_VERSION_INT,RELEASE_NUMBER_INT,BUILD_NUMBER_INT
+ PRODUCTVERSION MAJOR_VERSION_INT,SUB_VERSION_INT,RELEASE_NUMBER_INT,BUILD_NUMBER_INT
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040004e4"
+        BEGIN
+            VALUE "FileVersion",      FULL_VERSION_STR"\0"
+            VALUE "ProductVersion",   FULL_VERSION_STR"\0"
+            VALUE "OriginalFilename", "again.vst3\0"
+            VALUE "FileDescription",  stringFileDescription"\0"
+            VALUE "InternalName",     stringFileDescription"\0"
+            VALUE "ProductName",      stringFileDescription"\0"
+            VALUE "CompanyName",      stringCompanyName"\0"
+            VALUE "LegalCopyright",   stringLegalCopyright"\0"
+            VALUE "LegalTrademarks",  stringLegalTrademarks"\0"
+            //VALUE "PrivateBuild",     " \0"
+            //VALUE "SpecialBuild",     " \0"
+            //VALUE "Comments",         " \0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x400, 1252
+    END
+END
+
