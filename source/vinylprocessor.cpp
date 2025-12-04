@@ -91,7 +91,7 @@ AVinyl::AVinyl() :
     // register its editor class (the same than used in againentry.cpp)
     setControllerClass(AVinylControllerUID);
 
-    VintageSample = std::make_unique<SampleEntry>("vintage", "Resource/vintage.wav");
+    VintageSample = std::make_unique<SampleEntry>("vintage", "Resources/vintage.wav");
     if (VintageSample) {
         VintageSample->Loop = true;
         VintageSample->Sync = false;
@@ -143,12 +143,12 @@ AVinyl::AVinyl() :
 
     params.addReader(kCurrentEntryId, [this] () { return double(iCurrentEntry / (EMaximumSamples - 1)); },
                      [this](Sample64 value) {
-                         SetCurrentEntry(std::floor(value * double(EMaximumSamples - 1) + 0.5));
+                         SetCurrentEntry(floor(value * double(EMaximumSamples - 1) + 0.5));
                          dirtyParams |= PadSet(iCurrentEntry);
                      });
     params.addReader(kCurrentSceneId, [this] () { return double(iCurrentScene / (EMaximumScenes - 1)); },
                      [this](Sample64 value) {
-                         iCurrentScene = std::floor(value * float(EMaximumScenes - 1) + 0.5f);
+                         iCurrentScene = floor(value * float(EMaximumScenes - 1) + 0.5f);
                          dirtyParams = true;
                      });
 

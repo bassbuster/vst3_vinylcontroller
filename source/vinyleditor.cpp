@@ -1,48 +1,63 @@
-//------------------------------------------------------------------------
-// Project     : VST SDK
-// Version     : 3.1.0
-//
-// Category    : Examples
-// Filename    : public.sdk/samples/vst/again/source/againeditor.cpp
-// Created by  : Steinberg, 04/2005
-// Description : AGain Editor Example for VST 3.0 using VSTGUI 3.5
-//
-//-----------------------------------------------------------------------------
-// LICENSE
-// (c) 2010, Steinberg Media Technologies GmbH, All Rights Reserved
-//-----------------------------------------------------------------------------
-// This Software Development Kit may not be distributed in parts or its entirety  
-// without prior written agreement by Steinberg Media Technologies GmbH. 
-// This SDK must not be used to re-engineer or manipulate any technology used  
-// in any Steinberg or Third-party application or software module, 
-// unless permitted by law.
-// Neither the name of the Steinberg Media Technologies nor the names of its
-// contributors may be used to endorse or promote products derived from this 
-// software without specific prior written permission.
-// 
-// THIS SDK IS PROVIDED BY STEINBERG MEDIA TECHNOLOGIES GMBH "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-// IN NO EVENT SHALL STEINBERG MEDIA TECHNOLOGIES GMBH BE LIABLE FOR ANY DIRECT, 
-// INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
-// OF THE POSSIBILITY OF SUCH DAMAGE.
-//-----------------------------------------------------------------------------
 #include "pluginterfaces/base/geoconstants.h"
-//#pragma hdrstop
 #include "vinyleditor.h"
 #include "vinylcontroller.h"
 #include "vinylparamids.h"
 
 #include "base/source/fstring.h"
 
-//#include <stdio.h>
 #include <math.h>
 #include <filesystem>
 
+#define CASE_BEGIN_EDIT(a,b)                         	\
+case a:                                         	\
+{                                             	\
+        controller->beginEdit (b);                	\
+}	break;
+
+#define CASE_END_EDIT(a,b)								\
+case a:                                           \
+{                                               \
+        controller->endEdit (b);                    \
+}	break;
+
+#define CASE_UPDATE(a,b)                               	\
+case a:                                             \
+    if (b)                                          \
+{                                               \
+        b->setValueNormalized ((float)value); \
+}                                               \
+    break;
+
+#define CASE_UPDATE_MINUS(a,b)                              \
+case a:                                             \
+    if (b)                                          \
+{                                               \
+        b->setValueNormalized (1.0 - (float)value); \
+}                                               \
+    break;
+
+
+#define CASE_VALUE_CHANGED(a,b)                                           	\
+case a:                                                             \
+{                                                                   \
+        controller->setParamNormalized (b, pControl->getValueNormalized ()); 		\
+        controller->performEdit (b, pControl->getValueNormalized ());        		\
+}	break;
+
+#define CASE_PAD_CHANGED(a,b)                                                     \
+case a:                                                              \
+{                                                                         \
+        IMessage* msg = controller->allocateMessage ();                       \
+        if (msg)                                                              \
+    {                                                                     \
+            String sampleName (nameEdit->getText());                          \
+            msg->setMessageID ("touchPad");                                   \
+            msg->getAttributes ()->setInt("PadNumber", b);                    \
+            msg->getAttributes ()->setFloat("PadValue", pControl->getValueNormalized());                    \
+            controller->sendMessage (msg);                                    \
+            msg->release ();                                                  \
+    }                                                                     \
+}	break;
 
 namespace Steinberg {
 namespace Vst {
@@ -66,37 +81,21 @@ enum
 // AGainEditorView Implementation
 //------------------------------------------------------------------------
 AVinylEditorView::AVinylEditorView (void* controller)
-: VSTGUIEditor (controller)
-//, textEdit (0)
-//, gainSlider (0)
-//, gainTextEdit (0)
-//, vuMeter (0)
-, lastVuLeftMeterValue (0.f)
-, lastVuRightMeterValue (0.f)
-, currentEntry(0)
-, lastSpeedValue(0)
-, lastPositionValue(0)
-//, currentScene(0)
+    : VSTGUIEditor(controller)
+    , lastVuLeftMeterValue(0.f)
+    , lastVuRightMeterValue(0.f)
+    , currentEntry(0)
+    , lastSpeedValue(0)
+    , lastPositionValue(0)
 {
-	setIdleRate (50); // 1000ms/50ms = 20Hz
-
-	// set the default View size
-	ViewRect viewRect (0, 0, kEditorMaxWidth, kEditorHeight);
-	setRect (viewRect);
+    setIdleRate(50); // 1000ms/50ms = 20Hz
+    setRect ({0, 0, kEditorMaxWidth, kEditorHeight});
 }
 
 //------------------------------------------------------------------------
 tresult PLUGIN_API AVinylEditorView::onSize (ViewRect* newSize)
 {
-   	tresult res = VSTGUIEditor::onSize (newSize);
-	return res;
-   /*if (checkSizeConstraint(newSize)==kResultTrue) {
-	  //setRect (*newSize);
-	  frame->setSize(newSize->getWidth(),newSize->getHeight());
-	  //frame->invalid ();
-	  return  kResultTrue;
-   }
-   return  kResultFalse;*/
+    return VSTGUIEditor::onSize (newSize);
 }
 
 //------------------------------------------------------------------------
@@ -234,18 +233,28 @@ tresult PLUGIN_API AVinylEditorView::queryInterface (const char* iid, void** obj
 	return VSTGUIEditor::queryInterface (iid, obj);
 }
 
+
+template <typename T, typename ... Args>
+auto make_forgetable(Args&&... arg)
+{
+    auto forget = [](T* obj) { obj->forget(); };
+    return std::unique_ptr<T, decltype(forget)>(std::forward<Args>(arg)..., std::move(forget));
+}
+
 //------------------------------------------------------------------------
 bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType& platformType)
 {
-	if (frame) // already attached!
-	{
-		return false;
-	}
+    // if (frame) // already attached!
+    // {
+    // 	return false;
+    // }
+
 
 
 
     VSTGUI::CRect editorSize (0, 0, kEditorMaxWidth, kEditorHeight);
     VSTGUI::CRect size;
+    //auto frameback = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("background.png"));
     VSTGUI::CBitmap* frameback = new VSTGUI::CBitmap(VSTGUI::CResourceDescription("background.png"));
     frame = new VSTGUI::CFrame (editorSize, this);
 	frame->setBackground(frameback);
@@ -265,9 +274,6 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
 	for (int i = 0; i < sizeof(switchedFx)/sizeof(int); i++) {
 		effectBase1->addEntry(effectNames[bitNumber(switchedFx[i])],i,0);
 	}
-	//effectBase1->addEntry("Distorsion",0,0);
-	//effectBase1->addEntry("PreRoll",1,0);
-	//effectBase1->addEntry("PostRoll",2,0);
 
     effectBase2 = new VSTGUI::COptionMenu(size,this,'BsE2',0,0,VSTGUI::CVinylPopupMenu::kCheckStyle);
 	for (int i = 0; i < sizeof(punchFx)/sizeof(int); i++) {
@@ -767,6 +773,10 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
 	//update (kPunchInId, getController ()->getParamNormalized (kPunchInId));
 	//update (kPunchOutId, getController ()->getParamNormalized (kPunchOutId));
 
+    getFrame()->open(parent, platformType, nullptr);
+
+
+    //Steinberg::IdleUpdateHandler::start ();
 
 	return true;
 }
@@ -794,10 +804,10 @@ void PLUGIN_API AVinylEditorView::close ()
 	}
 	//sampleBitmaps.removeAll ();
 
-    if (frame) {
-		frame->forget();
-		frame = 0;
-	}
+ //    if (frame) {
+    // 	frame->forget();
+    // 	frame = 0;
+    // }
 
 	gainKnob = 0;
 	scenKnob = 0;
@@ -851,6 +861,15 @@ void PLUGIN_API AVinylEditorView::close ()
 
 	wavView = 0;
 
+    //getFrame()->unregisterMouseObserver (this);
+    getFrame()->removeAll(true);
+    int32_t refCount = getFrame()->getNbReference();
+    if (refCount == 1) {
+        getFrame()->close ();
+        frame = nullptr;
+    } else {
+        getFrame()->forget();
+    }
 
 }
 

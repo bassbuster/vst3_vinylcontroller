@@ -109,10 +109,3 @@ smtg_target_setup_options(${target}
     BUNDLE_IDENTIFIER "com.steinberg.vst3.${target}"
     COMPANY_NAME "Steinberg Media Technologies"
 )
-
-if(SMTG_WIN)
-    target_sources(${target}
-        PRIVATE
-            resource/vinyl.rc
-    )
-endif(SMTG_WIN)
