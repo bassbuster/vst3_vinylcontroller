@@ -50,7 +50,7 @@ public:
     //void messageTextChanged ();
     //void newEntry(SampleEntry * newEntry);
     void initEntry(SampleEntry * newEntry);
-    void delEntry(int64 delEntryIndex);
+    void delEntry(size_t delEntryIndex);
     void setPadState(int _pad, bool _state);
     void setPadType(int _pad, int _type);
     void setPadTag(int _pad, int _tag);
@@ -119,7 +119,7 @@ private:
 	bool lastVintage;
 	bool lastLockTone;
 
-	int64 currentEntry;
+	int64_t currentEntry;
 	int PadTag[ENumberOfPads];
 
 	//int64 currentScene;

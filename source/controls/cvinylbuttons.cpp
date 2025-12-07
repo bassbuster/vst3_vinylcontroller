@@ -657,18 +657,18 @@ void C5PositionView::draw (CDrawContext *pContext)
     CPoint where (offset);
 
 	bounceValue ();
-	float _step = 0.125 * (getMax () - getMin ());
+	float _step = 0.125f * (getMax () - getMin ());
 	if (value == getMin ()) {
         if (getDrawBackground()) {
             getDrawBackground()->draw (pContext, getVisibleViewSize(), where);
         }
     } else if (value == getMax ()) {
         if (pPosition5) pPosition5->draw (pContext, getVisibleViewSize(), where);
-    } else if (value < _step*3.0) {
+    } else if (value < _step * 3.0f) {
         if (pPosition2) pPosition2->draw (pContext, getVisibleViewSize(), where);
-    } else if (value < _step*5.0) {
+    } else if (value < _step * 5.0f) {
         if (pPosition3) pPosition3->draw (pContext, getVisibleViewSize(), where);
-    } else if (value < _step*7.0) {
+    } else if (value < _step * 7.0f) {
         if (pPosition4) pPosition4->draw (pContext, getVisibleViewSize(), where);
 	}
 	setDirty (false);
@@ -676,21 +676,21 @@ void C5PositionView::draw (CDrawContext *pContext)
 
 //------------------------------------------------------------------------
 int32_t C5PositionView::getPosition() {
-	float _step = 0.125 * (getMax () - getMin ());
+	float _step = 0.125f * (getMax () - getMin ());
 	if (value == getMin ()) return 0;
 	else if (value == getMax ()) return 4;
-	else if (value < _step*3.0) return 1;
-	else if (value < _step*5.0) return 2;
-	else if (value < _step*6.0) return 3;
+	else if (value < _step * 3.0f) return 1;
+	else if (value < _step * 5.0f) return 2;
+	else if (value < _step * 6.0f) return 3;
 	else return 0;
 }
 void C5PositionView::setPosition(int32_t position) {
-	float _step = 0.125 * (getMax () - getMin ());
+	float _step = 0.125f * (getMax () - getMin ());
 	switch (position){
 		case -1: value = getMax (); break;
-		case 1: value = getMin () + _step*2.0; break;
-		case 2: value = getMin () + _step*4.0; break;
-		case 3: value = getMin () + _step*6.0; break;
+		case 1: value = getMin () + _step * 2.0f; break;
+		case 2: value = getMin () + _step * 4.0f; break;
+		case 3: value = getMin () + _step * 6.0f; break;
 		case 4: value = getMax (); break;
 		default: value = getMin ();
 	}

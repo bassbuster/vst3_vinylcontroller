@@ -91,7 +91,7 @@ AVinyl::AVinyl() :
     // register its editor class (the same than used in againentry.cpp)
     setControllerClass(AVinylControllerUID);
 
-    VintageSample = std::make_unique<SampleEntry>("vintage", "Resources/vintage.wav");
+    VintageSample = std::make_unique<SampleEntry>("vintage", "c:\\Work\\vst3sdk\\build\\VST3\\Debug\\vinylcontroller.vst3\\Contents\\Resources\\vintage.wav");
     if (VintageSample) {
         VintageSample->Loop = true;
         VintageSample->Sync = false;

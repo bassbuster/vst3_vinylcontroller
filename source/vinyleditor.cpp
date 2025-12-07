@@ -236,13 +236,13 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
     padBase->addEntry(EEmptyBaseTitle, 0, VSTGUI::CMenuItem::kTitle | VSTGUI::CMenuItem::kDisabled);
 
     effectBase1 = new VSTGUI::COptionMenu(size, this, 'BsE1', 0, 0, VSTGUI::CVinylPopupMenu::kCheckStyle);
-    for (int i = 0; i < sizeof(switchedFx)/sizeof(int); i++) {
-        effectBase1->addEntry(effectNames[bitNumber(switchedFx[i])], i, 0);
+    for (size_t i = 0; i < sizeof(switchedFx)/sizeof(int); i++) {
+        effectBase1->addEntry(effectNames[bitNumber(switchedFx[i])], int32_t(i), 0);
     }
 
     effectBase2 = new VSTGUI::COptionMenu(size, this, 'BsE2', 0, 0, VSTGUI::CVinylPopupMenu::kCheckStyle);
-    for (int i = 0; i < sizeof(punchFx)/sizeof(int); i++) {
-        effectBase2->addEntry(effectNames[bitNumber(punchFx[i])], i, 0);
+    for (size_t i = 0; i < sizeof(punchFx)/sizeof(int); i++) {
+        effectBase2->addEntry(effectNames[bitNumber(punchFx[i])], int32_t(i), 0);
     }
 
     {
@@ -452,32 +452,32 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
         padKick[9]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView(padKick[9]);
         size.offset(47, 0);
-        padKick[10] = new VSTGUI::CVinylKickButton (size,this, 'Pd10', kickOff.get(), kickOn.get(), offset);
+        padKick[10] = new VSTGUI::CVinylKickButton (size,this, 'Pd00' + 10, kickOff.get(), kickOn.get(), offset);
         padKick[10]->setPopupMenu(popupPad);
         padKick[10]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView(padKick[10]);
         size.offset(47, 0);
-        padKick[11] = new VSTGUI::CVinylKickButton (size,this, 'Pd11', kickOff.get(), kickOn.get(), offset);
+        padKick[11] = new VSTGUI::CVinylKickButton (size,this, 'Pd00' + 11, kickOff.get(), kickOn.get(), offset);
         padKick[11]->setPopupMenu(popupPad);
         padKick[11]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView(padKick[11]);
         size.offset(-141, 47);
-        padKick[12] = new VSTGUI::CVinylKickButton (size,this, 'Pd12', kickOff.get(), kickOn.get(), offset);
+        padKick[12] = new VSTGUI::CVinylKickButton (size,this, 'Pd00' + 12, kickOff.get(), kickOn.get(), offset);
         padKick[12]->setPopupMenu(popupPad);
         padKick[12]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView(padKick[12]);
         size.offset(47, 0);
-        padKick[13] = new VSTGUI::CVinylKickButton (size,this, 'Pd13', kickOff.get(), kickOn.get(), offset);
+        padKick[13] = new VSTGUI::CVinylKickButton (size,this, 'Pd00' + 13, kickOff.get(), kickOn.get(), offset);
         padKick[13]->setPopupMenu(popupPad);
         padKick[13]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView(padKick[13]);
         size.offset(47, 0);
-        padKick[14] = new VSTGUI::CVinylKickButton (size,this, 'Pd14', kickOff.get(), kickOn.get(), offset);
+        padKick[14] = new VSTGUI::CVinylKickButton (size,this, 'Pd00' + 14, kickOff.get(), kickOn.get(), offset);
         padKick[14]->setPopupMenu(popupPad);
         padKick[14]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView (padKick[14]);
         size.offset(47, 0);
-        padKick[15] = new VSTGUI::CVinylKickButton (size,this, 'Pd15', kickOff.get(), kickOn.get(), offset);
+        padKick[15] = new VSTGUI::CVinylKickButton (size,this, 'Pd00' + 15, kickOff.get(), kickOn.get(), offset);
         padKick[15]->setPopupMenu(popupPad);
         padKick[15]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView(padKick[15]);
@@ -575,13 +575,13 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
     }
     {
         auto fxBit = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("preroll.png"));
-        size.offset (12, 0);
+        size.offset(12, 0);
         dispPreRoll = new VSTGUI::CVuMeter (size, fxBit.get(), 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
         frame->addView(dispPreRoll);
     }
     {
         auto fxBit = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("postroll.png"));
-        size.offset (12, 0);
+        size.offset(12, 0);
         dispPostRoll = new VSTGUI::CVuMeter (size, fxBit.get(), 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
         frame->addView(dispPostRoll);
     }
@@ -779,17 +779,17 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
     CASE_PAD_CHANGED('Pd07', 7)
     CASE_PAD_CHANGED('Pd08', 8)
     CASE_PAD_CHANGED('Pd09', 9)
-    CASE_PAD_CHANGED('Pd10', 10)
-    CASE_PAD_CHANGED('Pd11', 11)
-    CASE_PAD_CHANGED('Pd12', 12)
-    CASE_PAD_CHANGED('Pd13', 13)
-    CASE_PAD_CHANGED('Pd14', 14)
-    CASE_PAD_CHANGED('Pd15', 15)
+    CASE_PAD_CHANGED('Pd00' + 10, 10)
+    CASE_PAD_CHANGED('Pd00' + 11, 11)
+    CASE_PAD_CHANGED('Pd00' + 12, 12)
+    CASE_PAD_CHANGED('Pd00' + 13, 13)
+    CASE_PAD_CHANGED('Pd00' + 14, 14)
+    CASE_PAD_CHANGED('Pd00' + 15, 15)
     //------------------
     case 'Name':
     {
-        if (sampleBase) sampleBase->getEntry(currentEntry)->setTitle(nameEdit->getText());
-        if (padBase) padBase->getEntry(currentEntry)->setTitle(nameEdit->getText());
+        if (sampleBase) sampleBase->getEntry(int32_t(currentEntry))->setTitle(nameEdit->getText());
+        if (padBase) padBase->getEntry(int32_t(currentEntry))->setTitle(nameEdit->getText());
         IMessage* msg = controller->allocateMessage ();
         if (msg)
         {
@@ -1005,25 +1005,25 @@ void AVinylEditorView::update (ParamID tag, ParamValue value)
         break;
     case kCurrentEntryId:
     {
-        int newCurEntry = floor(value * float(EMaximumSamples - 1) + 0.5);
+        int64_t newCurEntry = floor(value * float(EMaximumSamples - 1) + 0.5);
         if (newCurEntry != currentEntry) {
             currentEntry = floor(value * float(EMaximumSamples - 1) + 0.5);
 
-            if ((currentEntry < sampleBitmaps.size()) && (currentEntry >= 0)) {
+            if ((currentEntry < int64_t(sampleBitmaps.size())) && (currentEntry >= 0)) {
 
                 if (wavView) {
                     wavView->setWave(sampleBitmaps.at(currentEntry));
                     wavView->setPosition(0);
                 }
                 if (sampleBase) {
-                    sampleBase->setCurrent(currentEntry, true);
+                    sampleBase->setCurrent(int32_t(currentEntry), true);
                 }
                 String textval;
                 if (sampleNumber) {
                     sampleNumber->setText(VSTGUI::UTF8String(textval.printf("#%03d", currentEntry + 1)));
                 }
                 if (nameEdit && sampleBase) {
-                    nameEdit->setText(sampleBase->getEntry(currentEntry)->getTitle());
+                    nameEdit->setText(sampleBase->getEntry(int32_t(currentEntry))->getTitle());
                 }
             }
         }
@@ -1080,44 +1080,44 @@ VSTGUI::CMessageResult AVinylEditorView::notify (CBaseObject* sender, const char
             lastVuRightMeterValue = 0.f;
         }
         if (dispDistorsion) {
-            dispDistorsion->setValue(lastDistort ? 0 : 1);
+            dispDistorsion->setValue(lastDistort ? 1 : 0);
         }
         if (dispPreRoll) {
-            dispPreRoll->setValue(lastPreRoll ? 0 : 1);
+            dispPreRoll->setValue(lastPreRoll ? 1 : 0);
         }
         if (dispPostRoll) {
-            dispPostRoll->setValue(lastPostRoll ? 0 : 1);
+            dispPostRoll->setValue(lastPostRoll ? 1 : 0);
         }
         if (dispHold) {
-            dispHold->setValue(lastHold ? 0 : 1);
+            dispHold->setValue(lastHold ? 1 : 0);
         }
         if (dispFreeze) {
-            dispFreeze->setValue (lastFreeze ? 0 : 1);
+            dispFreeze->setValue (lastFreeze ? 1 : 0);
         }
         if (dispVintage) {
-            dispVintage->setValue (lastVintage ? 0 : 1);
+            dispVintage->setValue (lastVintage ? 1 : 0);
         }
         if (dispLockTone) {
-            dispLockTone->setValue (lastLockTone ? 0 : 1);
+            dispLockTone->setValue (lastLockTone ? 1 : 0);
         }
     }
     if (message == VSTGUI::CNewFileSelector::kSelectEndMessage) {
         VSTGUI::CNewFileSelector* sel = dynamic_cast<VSTGUI::CNewFileSelector*>(sender);
         if (sel) {
             if (strcmp(sel->kSelectEndMessage,"LoadingFile")==0) {
-                int32 MaxCount = (sel->getNumSelectedFiles()<(EMaximumSamples-sampleBitmaps.size()))?
+                size_t MaxCount = (sel->getNumSelectedFiles()<(EMaximumSamples - sampleBitmaps.size())) ?
                                      sel->getNumSelectedFiles() :
                                      EMaximumSamples-sampleBitmaps.size();
-                for(int32_t i=0;i<MaxCount;i++)
+                for(size_t i = 0; i < MaxCount; i++)
                 {
                     IMessage* msg = controller->allocateMessage ();
                     if (msg) {
                         using namespace std::filesystem;
                         msg->setMessageID ("loadNewEntry");
                         msg->getAttributes ()->setString("File",
-                                                        String(sel->getSelectedFile(i)));
+                                                        String(sel->getSelectedFile(int32_t(i))));
                         msg->getAttributes ()->setString("Sample",
-                                                        path(sel->getSelectedFile(i)).filename().u16string().data());
+                                                        path(sel->getSelectedFile(int32_t(i))).filename().u16string().data());
                         controller->sendMessage (msg);
                         msg->release ();
                     }
@@ -1190,7 +1190,7 @@ VSTGUI::CBitmap * AVinylEditorView::generateWaveform(SampleEntry * newEntry)
     double beatPeriodic = drawBeats ? double(bitmapWidth) / (2.0 * newEntry->GetACIDbeats()) : 0;
     VSTGUI::CBitmap * Digits = new VSTGUI::CBitmap(VSTGUI::CResourceDescription("digits.png"));
     VSTGUI::CBitmap * waveForm = new VSTGUI::CBitmap(bitmapWidth, 83);
-    if (waveForm) {
+    if (waveForm && newEntry->GetBufferLength() > 0) {
         VSTGUI::CBitmapPixelAccess * PixelMap = VSTGUI::CBitmapPixelAccess::create(waveForm);
         VSTGUI::CBitmapPixelAccess * PixelDigits = VSTGUI::CBitmapPixelAccess::create(Digits);
         PixelMap->setPosition(0,61);
@@ -1234,20 +1234,20 @@ VSTGUI::CBitmap * AVinylEditorView::generateWaveform(SampleEntry * newEntry)
     }else return 0;
 }
 
-void AVinylEditorView::delEntry(int64 delEntryIndex)
+void AVinylEditorView::delEntry(size_t delEntryIndex)
 {
-    if ((delEntryIndex>=0)&&(delEntryIndex < sampleBitmaps.size())) {
+    if ((delEntryIndex >= 0) && (delEntryIndex < sampleBitmaps.size())) {
 
         VSTGUI::CBitmap * waveForm = sampleBitmaps.at(delEntryIndex);
 
         sampleBitmaps.erase(sampleBitmaps.begin() + delEntryIndex);
         waveForm->forget();
         if (sampleBase) {
-            sampleBase->removeEntry(delEntryIndex);
+            sampleBase->removeEntry(int32_t(delEntryIndex));
             if (padBase) {
-                padBase->removeEntry(delEntryIndex);
+                padBase->removeEntry(int32_t(delEntryIndex));
             }
-            if (currentEntry>=sampleBase->getNbEntries()) {
+            if (currentEntry >= sampleBase->getNbEntries()) {
                 currentEntry = sampleBase->getNbEntries() - 1;
             }
             if (sampleBase->getNbEntries()==0) {
@@ -1287,7 +1287,7 @@ void AVinylEditorView::initEntry(SampleEntry * newEntry)
 
         VSTGUI::CBitmap * waveForm;
 
-        int32 Index = newEntry->GetIndex()-1;
+        size_t Index = newEntry->GetIndex() - 1;
         if (Index < sampleBitmaps.size()) {
 
             waveForm = generateWaveform(newEntry);
@@ -1296,10 +1296,10 @@ void AVinylEditorView::initEntry(SampleEntry * newEntry)
             oldBitmap->forget();
 
             if (sampleBase) {
-                sampleBase->getEntry(Index)->setTitle(newEntry->GetName());
+                sampleBase->getEntry(int32_t(Index))->setTitle(newEntry->GetName());
             }
             if (padBase) {
-                padBase->getEntry(Index)->setTitle(newEntry->GetName());
+                padBase->getEntry(int32_t(Index))->setTitle(newEntry->GetName());
             }
         } else {
             waveForm = generateWaveform(newEntry);

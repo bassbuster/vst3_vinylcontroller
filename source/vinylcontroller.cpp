@@ -323,7 +323,7 @@ tresult PLUGIN_API AVinylController::setKnobmode (KnobMode  mode)
 //------------------------------------------------------------------------
 tresult PLUGIN_API AVinylController::setState (IBStream* state)
 {
-	tresult result = kResultFalse;
+	//tresult result = kResultFalse;
 
 	int8 byteOrder;
 	if (state->read (&byteOrder, sizeof (int8)) == kResultTrue)
