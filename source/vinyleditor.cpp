@@ -62,17 +62,17 @@ case a:                                                              \
 namespace Steinberg {
 namespace Vst {
 
-const char * effectNames[9] = {"Distorsion","PreRoll","PostRoll","PunchIn","PunchOut","Hold","Freeze","Vintage","LockTone"};
-int switchedFx[6] = {eDistorsion,ePreRoll,ePostRoll,eHold,eVintage,eLockTone};
-int punchFx[9] = {eDistorsion,ePreRoll,ePostRoll,ePunchIn,ePunchOut,eHold,eFreeze,eVintage,eLockTone};
+const char * effectNames[9] = {"Distorsion", "PreRoll", "PostRoll", "PunchIn", "PunchOut", "Hold", "Freeze", "Vintage", "LockTone"};
+int switchedFx[6] = {eDistorsion, ePreRoll, ePostRoll, eHold, eVintage, eLockTone};
+int punchFx[9] = {eDistorsion, ePreRoll, ePostRoll, ePunchIn, ePunchOut, eHold, eFreeze, eVintage, eLockTone};
 
 //------------------------------------------------------------------------
 enum
 {
-	// UI size
-	kEditorMinWidth  = 252,
-	kEditorMaxWidth  = 630,
-	kEditorHeight = 246
+    // UI size
+    kEditorMinWidth  = 252,
+    kEditorMaxWidth  = 630,
+    kEditorHeight = 246
 };
 
 /// \cond ignore
@@ -101,136 +101,111 @@ tresult PLUGIN_API AVinylEditorView::onSize (ViewRect* newSize)
 //------------------------------------------------------------------------
 tresult PLUGIN_API AVinylEditorView::checkSizeConstraint (ViewRect* rect)
 {
-	//tresult result = kResultTrue; //VSTGUIEditor::checkSizeConstraint(rect);
-	if ((rect->right - rect->left) <= ((kEditorMinWidth + kEditorMaxWidth) /2))
-	{
-		rect->right = rect->left + kEditorMinWidth;
-		//result = result && kResultFalse;
-	}
-	else if ((rect->right - rect->left) > ((kEditorMinWidth + kEditorMaxWidth) /2))
-	{
-		rect->right = rect->left + kEditorMaxWidth;
-	}
-	//if (rect->bottom - rect->top < kEditorMinHeight)
-	//{
-	//	rect->bottom = rect->top + kEditorMinHeight;
-		//result = result && kResultFalse;
-	//}
-	//else if (rect->bottom - rect->top > kEditorMaxHeight)
-	//{
-	//	rect->bottom = rect->top + kEditorMaxHeight;
-	//}
+    if ((rect->right - rect->left) <= ((kEditorMinWidth + kEditorMaxWidth) / 2)) {
+        rect->right = rect->left + kEditorMinWidth;
+        //result = result && kResultFalse;
+    } else if ((rect->right - rect->left) > ((kEditorMinWidth + kEditorMaxWidth) / 2)) {
+        rect->right = rect->left + kEditorMaxWidth;
+    }
     rect->bottom = rect->top + kEditorHeight;
-	//if (textEdit!= 0) {
-	//  textEdit->setViewSize(CRect(10,10,rect->right - rect->left - 10,30),false);
-	//}
-	return VSTGUIEditor::checkSizeConstraint(rect);
+
+    return VSTGUIEditor::checkSizeConstraint(rect);
 }
 
 //------------------------------------------------------------------------
 tresult PLUGIN_API AVinylEditorView::findParameter (int32 xPos, int32 yPos, ParamID& resultTag)
 {
-	// look up the parameter (view) which is located at xPos/yPos.
+    // look up the parameter (view) which is located at xPos/yPos.
 
     VSTGUI::CPoint where (xPos, yPos);
 
-	// Implementation 1:
-	// The parameter xPos/yPos are relative coordinates to the AGainEditorView coordinates.
-	// If the window of the VST3 plugin is moved, xPos is always >= 0 and <= AGainEditorView width.
-	// yPos is always >= 0 and <= AGainEditorView height.
-	// 
-	// gainSlider->hitTest() is a short cut for:
-	// CRect sliderRect = gainSlider->getMouseableArea ();
-	// if (where.isInside (sliderRect))
-	// {
-	//      resultTag = kGainId;
-	//      return kResultOk;
-	// }
-
-	// test wether xPos/yPos is inside the gainSlider.
-	if (volumeSlider->hitTest (where, 0))
-	{
-		resultTag = kVolumeId;
-		return kResultOk;
-	}
-	if (pitchSlider->hitTest (where, 0))
-	{
-		resultTag = kPitchId;
-		return kResultOk;
-	}
-	if (gainKnob->hitTest (where, 0))
-	{
-		resultTag = kGainId;
-		return kResultOk;
-	}
-	if (scenKnob->hitTest (where, 0))
-	{
-		resultTag = kCurrentSceneId;
-		return kResultOk;
-	}
-	if (loopBox->hitTest (where, 0))
-	{
-		resultTag = kLoopId;
-		return kResultOk;
-	}
-	if (syncBox->hitTest (where, 0))
-	{
-		resultTag = kSyncId;
-		return kResultOk;
-	}
-	if (rvrsBox->hitTest (where, 0))
-	{
-		resultTag = kReverseId;
-		return kResultOk;
-	}
-	if (curvSwitch->hitTest (where, 0))
-	{
-		resultTag = kVolCurveId;
-		return kResultOk;
-	}
-	if (pitchSwitch->hitTest (where, 0))
-	{
-		resultTag = kPitchSwitchId;
-		return kResultOk;
-	}
-	if (ampSlide->hitTest (where, 0))
-	{
-		resultTag = kAmpId;
-		return kResultOk;
-	}
-	if (tuneSlide->hitTest (where, 0))
-	{
-		resultTag = kTuneId;
-		return kResultOk;
-	}
+    // Implementation 1:
+    // The parameter xPos/yPos are relative coordinates to the AGainEditorView coordinates.
+    // If the window of the VST3 plugin is moved, xPos is always >= 0 and <= AGainEditorView width.
+    // yPos is always >= 0 and <= AGainEditorView height.
+    //
+    // gainSlider->hitTest() is a short cut for:
+    // CRect sliderRect = gainSlider->getMouseableArea ();
+    // if (where.isInside (sliderRect))
+    // {
+    //      resultTag = kGainId;
+    //      return kResultOk;
+    // }
 
 
-	// Implementation 2:
-	// An alternative solution with VSTGui can look like this. (This requires C++ RTTI)
-	// 
-	// if (frame)
-	// {
-	//  CControl* controlAtPos = dynamic_cast<CControl*>(frame->getViewAt (where, true);
-	//  if (controlAtPos)
-	//  {
-	//      switch (controlAtPos->getTag ())
-	//      {
-	//          case 'Gain':
-	//          case 'GaiT':
-	//              resultTag = resultTag;
-	//              return kResultOk;
-	//      }
-	//  }
-	// 
+    // test wether xPos/yPos is inside the gainSlider.
+    if (volumeSlider->hitTest (where, 0)) {
+        resultTag = kVolumeId;
+        return kResultOk;
+    }
+    if (pitchSlider->hitTest (where, 0)) {
+        resultTag = kPitchId;
+        return kResultOk;
+    }
+    if (gainKnob->hitTest (where, 0)) {
+        resultTag = kGainId;
+        return kResultOk;
+    }
+    if (scenKnob->hitTest (where, 0)) {
+        resultTag = kCurrentSceneId;
+        return kResultOk;
+    }
+    if (loopBox->hitTest (where, 0)) {
+        resultTag = kLoopId;
+        return kResultOk;
+    }
+    if (syncBox->hitTest (where, 0)) {
+        resultTag = kSyncId;
+        return kResultOk;
+    }
+    if (rvrsBox->hitTest (where, 0)) {
+        resultTag = kReverseId;
+        return kResultOk;
+    }
+    if (curvSwitch->hitTest (where, 0)) {
+        resultTag = kVolCurveId;
+        return kResultOk;
+    }
+    if (pitchSwitch->hitTest (where, 0)) {
+        resultTag = kPitchSwitchId;
+        return kResultOk;
+    }
+    if (ampSlide->hitTest (where, 0)) {
+        resultTag = kAmpId;
+        return kResultOk;
+    }
+    if (tuneSlide->hitTest (where, 0)) {
+        resultTag = kTuneId;
+        return kResultOk;
+    }
 
-	return kResultFalse;
+
+    // Implementation 2:
+    // An alternative solution with VSTGui can look like this. (This requires C++ RTTI)
+    //
+    // if (frame)
+    // {
+    //  CControl* controlAtPos = dynamic_cast<CControl*>(frame->getViewAt (where, true);
+    //  if (controlAtPos)
+    //  {
+    //      switch (controlAtPos->getTag ())
+    //      {
+    //          case 'Gain':
+    //          case 'GaiT':
+    //              resultTag = resultTag;
+    //              return kResultOk;
+    //      }
+    //  }
+    //
+
+    return kResultFalse;
 }
 
 //------------------------------------------------------------------------
 tresult PLUGIN_API AVinylEditorView::queryInterface (const char* iid, void** obj)
 {
-	QUERY_INTERFACE (iid, obj, IParameterFinder::iid, IParameterFinder)
-	return VSTGUIEditor::queryInterface (iid, obj);
+    QUERY_INTERFACE (iid, obj, IParameterFinder::iid, IParameterFinder)
+    return VSTGUIEditor::queryInterface (iid, obj);
 }
 
 
@@ -238,630 +213,533 @@ template <typename T, typename ... Args>
 auto make_forgetable(Args&&... arg)
 {
     auto forget = [](T* obj) { obj->forget(); };
-    return std::unique_ptr<T, decltype(forget)>(std::forward<Args>(arg)..., std::move(forget));
+    return std::unique_ptr<T, decltype(forget)>(new T(std::forward<Args>(arg)...), std::move(forget));
 }
 
 //------------------------------------------------------------------------
 bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType& platformType)
 {
-    // if (frame) // already attached!
-    // {
-    // 	return false;
-    // }
-
-
-
-
     VSTGUI::CRect editorSize (0, 0, kEditorMaxWidth, kEditorHeight);
     VSTGUI::CRect size;
-    //auto frameback = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("background.png"));
-    VSTGUI::CBitmap* frameback = new VSTGUI::CBitmap(VSTGUI::CResourceDescription("background.png"));
     frame = new VSTGUI::CFrame (editorSize, this);
-	frame->setBackground(frameback);
-	frameback->forget();
-	frameback = 0;
+    {
+        auto frameback = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("background.png"));
+        frame->setBackground(frameback.get());
+    }
 
-	//attachedToParent();
-	 ////////////////PopUp
+    ////////////////PopUp
 
-    sampleBase = new VSTGUI::COptionMenu(size,this,'Base',0,0,VSTGUI::CVinylPopupMenu::kCheckStyle);
-    sampleBase->addEntry(EEmptyBaseTitle,0,VSTGUI::CMenuItem::kTitle|VSTGUI::CMenuItem::kDisabled);
+    sampleBase = new VSTGUI::COptionMenu(size, this, 'Base', 0, 0, VSTGUI::CVinylPopupMenu::kCheckStyle);
+    sampleBase->addEntry(EEmptyBaseTitle, 0, VSTGUI::CMenuItem::kTitle | VSTGUI::CMenuItem::kDisabled);
 
-    padBase = new VSTGUI::COptionMenu(size,this,'BsPd',0,0,VSTGUI::CVinylPopupMenu::kCheckStyle);
-    padBase->addEntry(EEmptyBaseTitle,0,VSTGUI::CMenuItem::kTitle|VSTGUI::CMenuItem::kDisabled);
+    padBase = new VSTGUI::COptionMenu(size, this, 'BsPd', 0, 0, VSTGUI::CVinylPopupMenu::kCheckStyle);
+    padBase->addEntry(EEmptyBaseTitle, 0, VSTGUI::CMenuItem::kTitle | VSTGUI::CMenuItem::kDisabled);
 
-    effectBase1 = new VSTGUI::COptionMenu(size,this,'BsE1',0,0,VSTGUI::CVinylPopupMenu::kCheckStyle);
-	for (int i = 0; i < sizeof(switchedFx)/sizeof(int); i++) {
-		effectBase1->addEntry(effectNames[bitNumber(switchedFx[i])],i,0);
-	}
+    effectBase1 = new VSTGUI::COptionMenu(size, this, 'BsE1', 0, 0, VSTGUI::CVinylPopupMenu::kCheckStyle);
+    for (int i = 0; i < sizeof(switchedFx)/sizeof(int); i++) {
+        effectBase1->addEntry(effectNames[bitNumber(switchedFx[i])], i, 0);
+    }
 
-    effectBase2 = new VSTGUI::COptionMenu(size,this,'BsE2',0,0,VSTGUI::CVinylPopupMenu::kCheckStyle);
-	for (int i = 0; i < sizeof(punchFx)/sizeof(int); i++) {
-		effectBase2->addEntry(effectNames[bitNumber(punchFx[i])],i,0);
-	}
+    effectBase2 = new VSTGUI::COptionMenu(size, this, 'BsE2', 0, 0, VSTGUI::CVinylPopupMenu::kCheckStyle);
+    for (int i = 0; i < sizeof(punchFx)/sizeof(int); i++) {
+        effectBase2->addEntry(effectNames[bitNumber(punchFx[i])], i, 0);
+    }
 
-    VSTGUI::CBitmap* menuOn = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("fx_yellow.png"));
-	//CBitmap* menuOff = new CBitmap (1020);
-	//size (0, 0, 48, 48);
-	//size.offset (61, 193);
-    popupPad = new VSTGUI::CVinylPopupMenu(this,'PpUp',menuOn,VSTGUI::CRect(-4,-4,4,4));
-	popupPad->addEntry("Assign MIDI key",0,0);
-    popupPad->addEntry("-",1,VSTGUI::CMenuItem::kSeparator);
-	popupPad->addEntry(padBase,"Select sample");
-	popupPad->addEntry(effectBase1,"Switch Fxs");
-	popupPad->addEntry(effectBase2,"Kick Fxs");
-    popupPad->addEntry("-",5,VSTGUI::CMenuItem::kSeparator);
-	popupPad->addEntry("Clear",6,0);
-	//popupPad->setCurrent(2,false);
-	//frame->addView (popupPad);
-	menuOn->forget ();
-	menuOn = 0;
-	//menuOff->forget ();
+    {
+        auto menuOn = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("fx_yellow.png"));
+        popupPad = new VSTGUI::CVinylPopupMenu(this, 'PpUp', menuOn.get(), VSTGUI::CRect(-4,-4,4,4));
+    }
+    popupPad->addEntry("Assign MIDI key",0,0);
+    popupPad->addEntry("-", 1, VSTGUI::CMenuItem::kSeparator);
+    popupPad->addEntry(padBase, "Select sample");
+    popupPad->addEntry(effectBase1, "Switch Fxs");
+    popupPad->addEntry(effectBase2, "Kick Fxs");
+    popupPad->addEntry("-", 5, VSTGUI::CMenuItem::kSeparator);
+    popupPad->addEntry("Clear", 6, 0);
 
 
-
-
-	//---Knobs-------
-    VSTGUI::CBitmap* handle = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("knob_handle.png"));
-    VSTGUI::CBitmap* background = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("gain_back.png"));
-
-	size (0, 0, 24, 24);
-	size.offset (17, 17);
+    //---Knobs-------
     VSTGUI::CPoint offset (0,0);
-    gainKnob = new VSTGUI::CKnob (size, this, 'Gain', background,handle, offset);
-	frame->addView (gainKnob);
-	//handle->forget ();
-	//background->forget ();
-	//background = new CBitmap (1009);
+    {
+        auto handle = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("knob_handle.png"));
+        auto background = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("gain_back.png"));
 
-	//size (0, 0, 40, 40);
-	size.offset (63, 0);
-	//offset (0,0);
-    scenKnob = new VSTGUI::CKnob (size, this, 'Scen', background,handle, offset);
-	scenKnob->setMin(1);
-	scenKnob->setMax(EMaximumScenes);
-	frame->addView (scenKnob);
+        size(0, 0, 24, 24);
+        size.offset(17, 17);
+        gainKnob = new VSTGUI::CKnob(size, this, 'Gain', background.get(), handle.get(), offset);
+        frame->addView(gainKnob);
 
-	handle->forget ();
-	background->forget ();
-	//handle = 0;
-	//background = 0;
+        size.offset (63, 0);
+        scenKnob = new VSTGUI::CKnob(size, this, 'Scen', background.get(), handle.get(), offset);
+        scenKnob->setMin(1);
+        scenKnob->setMax(EMaximumScenes);
+        frame->addView(scenKnob);
+    }
 
-	//---Pitch slider-------
-    handle = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("pitch_handler.png"));
-    background = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("pitch_slider.png"));
+    //---Pitch slider-------
+    {
+        auto handle = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("pitch_handler.png"));
+        auto background = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("pitch_slider.png"));
 
-	size (0, 0, 350, 39);
-	size.offset (267, 182);
-	//CPoint offsetHandle (0, 0);
-    pitchSlider = new VSTGUI::CHorizontalSlider (size, this, 'Pith', offset, size.getWidth (), handle, background, offset, VSTGUI::CSliderBase::kLeft);
-	frame->addView (pitchSlider);
-	handle->forget ();
-	background->forget ();
-	//handle = 0;
-	//background = 0;
-
-	//---Mix slider-------
-    handle = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("volume_handler.png"));
-    background = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("volume_slider.png"));
-	size (0, 0, 38, 145);
-	size.offset (9, 75);
-	//offsetHandle (0, 0);
-    volumeSlider = new VSTGUI::CVerticalSlider (size, this, 'Fadr', offset, size.getHeight (), handle, background, offset);
-	frame->addView (volumeSlider);
-	handle->forget ();
-	background->forget ();
-	handle = 0;
-    background = 0;
-
-	//---VuMeter--------------------
-    VSTGUI::CBitmap* onBitmap = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("vu_on.png"));
-    VSTGUI::CBitmap* offBitmap = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("vu_off.png"));
-
-	size (0, 0, 352, 11);
-	size.offset (265, 142);
-    vuLeftMeter = new VSTGUI::CVuMeter (size, onBitmap, offBitmap, 37, VSTGUI::CVuMeter::Style::kHorizontal);
-	frame->addView (vuLeftMeter);
-	size.offset (0, 12);
-    vuRightMeter = new VSTGUI::CVuMeter (size, onBitmap, offBitmap, 37, VSTGUI::CVuMeter::Style::kHorizontal);
-	frame->addView (vuRightMeter);
-	onBitmap->forget ();
-	offBitmap->forget ();
-	onBitmap = 0;
-	offBitmap = 0;
+        size(0, 0, 350, 39);
+        size.offset(267, 182);
+        pitchSlider = new VSTGUI::CHorizontalSlider (size, this, 'Pith', offset, size.getWidth(), handle.get(), background.get(), offset, VSTGUI::CSliderBase::kLeft);
+        frame->addView(pitchSlider);
+    }
 
 
+    //---Mix slider-------
+    {
+        auto handle = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("volume_handler.png"));
+        auto background = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("volume_slider.png"));
+        size(0, 0, 38, 145);
+        size.offset(9, 75);
+        volumeSlider = new VSTGUI::CVerticalSlider (size, this, 'Fadr', offset, size.getHeight (), handle.get(), background.get(), offset);
+        frame->addView(volumeSlider);
+    }
 
 
-	//---3posSwitch--------------------
-    VSTGUI::CBitmap* oPos1 = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("curve_1.png"));
-    VSTGUI::CBitmap* oPos2 = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("curve_2.png"));
-    VSTGUI::CBitmap* oPos3 = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("curve_3.png"));
+    //---VuMeter--------------------
+    {
+        auto onBitmap = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("vu_on.png"));
+        auto offBitmap = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("vu_off.png"));
 
-	size (0, 0, 18, 10);
-	size.offset (18, 225);
-    curvSwitch = new VSTGUI::C3PositionSwitchBox (size, this, 'Curv', oPos1,oPos2,oPos3, offset);
-	frame->addView (curvSwitch);
-	oPos1->forget ();
-	oPos2->forget ();
-	oPos3->forget ();
-	//oPos1 = 0;
-	//oPos2 = 0;
-	//oPos3 = 0;
+        size(0, 0, 352, 11);
+        size.offset(265, 142);
+        vuLeftMeter = new VSTGUI::CVuMeter (size, onBitmap.get(), offBitmap.get(), 37, VSTGUI::CVuMeter::Style::kHorizontal);
+        frame->addView(vuLeftMeter);
+        size.offset(0, 12);
+        vuRightMeter = new VSTGUI::CVuMeter (size, onBitmap.get(), offBitmap.get(), 37, VSTGUI::CVuMeter::Style::kHorizontal);
+        frame->addView(vuRightMeter);
+    }
 
-    oPos1 = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("pitch_1.png"));
-    oPos2 = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("pitch_2.png"));
-    oPos3 = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("pitch_3.png"));
-	size (0, 0, 28, 10);
-	size.offset (264, 226);
-    pitchSwitch = new VSTGUI::C3PositionSwitchBox (size, this, 'PtCr', oPos1,oPos2,oPos3, offset);
-	frame->addView (pitchSwitch);
-	oPos1->forget ();
-	oPos2->forget ();
-	oPos3->forget ();
-	oPos1 = 0;
-	oPos2 = 0;
-	oPos3 = 0;
+    //---3posSwitch--------------------
+    {
+        auto oPos1 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("curve_1.png"));
+        auto oPos2 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("curve_2.png"));
+        auto oPos3 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("curve_3.png"));
 
-	//---PadTypes--------------------
-    VSTGUI::CBitmap* padType1 = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("fx_blue.png"));
-    VSTGUI::CBitmap* padType2 = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("fx_green.png"));
-    VSTGUI::CBitmap* padType3 = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("x_red.png"));
-    VSTGUI::CBitmap* padType4 = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("x_empty.png"));
+        size(0, 0, 18, 10);
+        size.offset(18, 225);
+        curvSwitch = new VSTGUI::C3PositionSwitchBox (size, this, 'Curv', oPos1.get(), oPos2.get(), oPos3.get(), offset);
+        frame->addView (curvSwitch);
+    }
 
-	size (0, 0, 47, 47);
-	size.offset (61, 52);
-    padType[0] = new VSTGUI::C5PositionView (size, this, 'Pt00', padType4,padType1,padType2,padType3,padType4, offset);
-	frame->addView (padType[0]);
-	size.offset (47, 0);
-    padType[1] = new VSTGUI::C5PositionView (size, this, 'Pt01', padType4,padType1,padType2,padType3,padType4, offset);
-	frame->addView (padType[1]);
-	size.offset (47, 0);
-    padType[2] = new VSTGUI::C5PositionView (size, this, 'Pt02', padType4,padType1,padType2,padType3,padType4, offset);
-	frame->addView (padType[2]);
-	size.offset (47, 0);
-    padType[3] = new VSTGUI::C5PositionView (size, this, 'Pt03', padType4,padType1,padType2,padType3,padType4, offset);
-	frame->addView (padType[3]);
-	size.offset (-141, 47);
-    padType[4] = new VSTGUI::C5PositionView (size, this, 'Pt04', padType4,padType1,padType2,padType3,padType4, offset);
-	frame->addView (padType[4]);
-	size.offset (47, 0);
-    padType[5] = new VSTGUI::C5PositionView (size, this, 'Pt05', padType4,padType1,padType2,padType3,padType4, offset);
-	frame->addView (padType[5]);
-	size.offset (47, 0);
-    padType[6] = new VSTGUI::C5PositionView (size, this, 'Pt06', padType4,padType1,padType2,padType3,padType4, offset);
-	frame->addView (padType[6]);
-	size.offset (47, 0);
-    padType[7] = new VSTGUI::C5PositionView (size, this, 'Pt07', padType4,padType1,padType2,padType3,padType4, offset);
-	frame->addView (padType[7]);
-	size.offset (-141, 47);
-    padType[8] = new VSTGUI::C5PositionView (size, this, 'Pt08', padType4,padType1,padType2,padType3,padType4, offset);
-	frame->addView (padType[8]);
-	size.offset (47, 0);
-    padType[9] = new VSTGUI::C5PositionView (size, this, 'Pt09', padType4,padType1,padType2,padType3,padType4, offset);
-	frame->addView (padType[9]);
-	size.offset (47, 0);
-    padType[10] = new VSTGUI::C5PositionView (size, this, 'Pt10', padType4,padType1,padType2,padType3,padType4, offset);
-	frame->addView (padType[10]);
-	size.offset (47, 0);
-    padType[11] = new VSTGUI::C5PositionView (size, this, 'Pt11', padType4,padType1,padType2,padType3,padType4, offset);
-	frame->addView (padType[11]);
-	size.offset (-141, 47);
-    padType[12] = new VSTGUI::C5PositionView (size, this, 'Pt12', padType4,padType1,padType2,padType3,padType4, offset);
-	frame->addView (padType[12]);
-	size.offset (47, 0);
-    padType[13] = new VSTGUI::C5PositionView (size, this, 'Pt13', padType4,padType1,padType2,padType3,padType4, offset);
-	frame->addView (padType[13]);
-	size.offset (47, 0);
-    padType[14] = new VSTGUI::C5PositionView (size, this, 'Pt14', padType4,padType1,padType2,padType3,padType4, offset);
-	frame->addView (padType[14]);
-	size.offset (47, 0);
-    padType[15] = new VSTGUI::C5PositionView (size, this, 'Pt15', padType4,padType1,padType2,padType3,padType4, offset);
-	frame->addView (padType[15]);
+    {
+        auto oPos1 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("pitch_1.png"));
+        auto oPos2 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("pitch_2.png"));
+        auto oPos3 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("pitch_3.png"));
+        size(0, 0, 28, 10);
+        size.offset(264, 226);
+        pitchSwitch = new VSTGUI::C3PositionSwitchBox (size, this, 'PtCr', oPos1.get(), oPos2.get(), oPos3.get(), offset);
+        frame->addView(pitchSwitch);
+    }
 
 
-	padType1->forget ();
-	padType2->forget ();
-	padType3->forget ();
-	padType4->forget ();
-	padType1 = 0;
-	padType2 = 0;
-	padType3 = 0;
-	padType4 = 0;
+    //---PadTypes--------------------
+    {
+        auto padType1 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("fx_blue.png"));
+        auto padType2 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("fx_green.png"));
+        auto padType3 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("x_red.png"));
+        auto padType4 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("x_empty.png"));
 
-	//---Pads--------------------
-    VSTGUI::CBitmap* kickOn = new VSTGUI::CBitmap(VSTGUI::CResourceDescription("kick_button_act.png"));
-    VSTGUI::CBitmap* kickOff = new VSTGUI::CBitmap(VSTGUI::CResourceDescription("kick_button.png"));
+        size(0, 0, 47, 47);
+        size.offset(61, 52);
+        padType[0] = new VSTGUI::C5PositionView(size, this, 'Pt00', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
+        frame->addView (padType[0]);
+        size.offset (47, 0);
+        padType[1] = new VSTGUI::C5PositionView(size, this, 'Pt01', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
+        frame->addView (padType[1]);
+        size.offset (47, 0);
+        padType[2] = new VSTGUI::C5PositionView(size, this, 'Pt02', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
+        frame->addView (padType[2]);
+        size.offset (47, 0);
+        padType[3] = new VSTGUI::C5PositionView(size, this, 'Pt03', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
+        frame->addView (padType[3]);
+        size.offset (-141, 47);
+        padType[4] = new VSTGUI::C5PositionView(size, this, 'Pt04', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
+        frame->addView (padType[4]);
+        size.offset (47, 0);
+        padType[5] = new VSTGUI::C5PositionView(size, this, 'Pt05', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
+        frame->addView (padType[5]);
+        size.offset (47, 0);
+        padType[6] = new VSTGUI::C5PositionView(size, this, 'Pt06', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
+        frame->addView (padType[6]);
+        size.offset (47, 0);
+        padType[7] = new VSTGUI::C5PositionView(size, this, 'Pt07', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
+        frame->addView (padType[7]);
+        size.offset (-141, 47);
+        padType[8] = new VSTGUI::C5PositionView(size, this, 'Pt08', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
+        frame->addView (padType[8]);
+        size.offset (47, 0);
+        padType[9] = new VSTGUI::C5PositionView(size, this, 'Pt09', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
+        frame->addView (padType[9]);
+        size.offset (47, 0);
+        padType[10] = new VSTGUI::C5PositionView(size, this, 'Pt10', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
+        frame->addView (padType[10]);
+        size.offset (47, 0);
+        padType[11] = new VSTGUI::C5PositionView(size, this, 'Pt11', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
+        frame->addView (padType[11]);
+        size.offset (-141, 47);
+        padType[12] = new VSTGUI::C5PositionView(size, this, 'Pt12', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
+        frame->addView (padType[12]);
+        size.offset (47, 0);
+        padType[13] = new VSTGUI::C5PositionView(size, this, 'Pt13', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
+        frame->addView (padType[13]);
+        size.offset (47, 0);
+        padType[14] = new VSTGUI::C5PositionView(size, this, 'Pt14', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
+        frame->addView (padType[14]);
+        size.offset (47, 0);
+        padType[15] = new VSTGUI::C5PositionView(size, this, 'Pt15', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
+        frame->addView (padType[15]);
+    }
 
-	size (0, 0, 40, 40);
-	size.offset (65, 56);
-	//BeforePopup = &callBeforePopup;
-    padKick[0] = new VSTGUI::CVinylKickButton (size,this, 'Pd00', kickOff,kickOn,offset);
-	padKick[0]->setPopupMenu(popupPad);
-    padKick[0]->BeforePopup = &AVinylEditorView::callBeforePopup;
-	frame->addView (padKick[0]);
-	size.offset (47, 0);
-    padKick[1] = new VSTGUI::CVinylKickButton (size,this, 'Pd01', kickOff,kickOn,offset);
-	padKick[1]->setPopupMenu(popupPad);
-    padKick[1]->BeforePopup=&AVinylEditorView::callBeforePopup;
-	frame->addView (padKick[1]);
-	size.offset (47, 0);
-    padKick[2] = new VSTGUI::CVinylKickButton (size,this, 'Pd02', kickOff,kickOn,offset);
-	padKick[2]->setPopupMenu(popupPad);
-    padKick[2]->BeforePopup=&AVinylEditorView::callBeforePopup;
-	frame->addView (padKick[2]);
-	size.offset (47, 0);
-    padKick[3] = new VSTGUI::CVinylKickButton (size,this, 'Pd03', kickOff,kickOn,offset);
-	padKick[3]->setPopupMenu(popupPad);
-    padKick[3]->BeforePopup=&AVinylEditorView::callBeforePopup;
-	frame->addView (padKick[3]);
-	size.offset (-141, 47);
-    padKick[4] = new VSTGUI::CVinylKickButton (size,this, 'Pd04', kickOff,kickOn,offset);
-	padKick[4]->setPopupMenu(popupPad);
-    padKick[4]->BeforePopup=&AVinylEditorView::callBeforePopup;
-	frame->addView (padKick[4]);
-	size.offset (47, 0);
-    padKick[5] = new VSTGUI::CVinylKickButton (size,this, 'Pd05', kickOff,kickOn,offset);
-	padKick[5]->setPopupMenu(popupPad);
-    padKick[5]->BeforePopup=&AVinylEditorView::callBeforePopup;
-	frame->addView (padKick[5]);
-	size.offset (47, 0);
-    padKick[6] = new VSTGUI::CVinylKickButton (size,this, 'Pd06', kickOff,kickOn,offset);
-	padKick[6]->setPopupMenu(popupPad);
-    padKick[6]->BeforePopup=&AVinylEditorView::callBeforePopup;
-	frame->addView (padKick[6]);
-	size.offset (47, 0);
-    padKick[7] = new VSTGUI::CVinylKickButton (size,this, 'Pd07', kickOff,kickOn,offset);
-	padKick[7]->setPopupMenu(popupPad);
-    padKick[7]->BeforePopup=&AVinylEditorView::callBeforePopup;
-	frame->addView (padKick[7]);
-	size.offset (-141, 47);
-    padKick[8] = new VSTGUI::CVinylKickButton (size,this, 'Pd08', kickOff,kickOn,offset);
-	padKick[8]->setPopupMenu(popupPad);
-    padKick[8]->BeforePopup=&AVinylEditorView::callBeforePopup;
-	frame->addView (padKick[8]);
-	size.offset (47, 0);
-    padKick[9] = new VSTGUI::CVinylKickButton (size,this, 'Pd09', kickOff,kickOn,offset);
-	padKick[9]->setPopupMenu(popupPad);
-    padKick[9]->BeforePopup=&AVinylEditorView::callBeforePopup;
-	frame->addView (padKick[9]);
-	size.offset (47, 0);
-    padKick[10] = new VSTGUI::CVinylKickButton (size,this, 'Pd10', kickOff,kickOn,offset);
-	padKick[10]->setPopupMenu(popupPad);
-    padKick[10]->BeforePopup=&AVinylEditorView::callBeforePopup;
-	frame->addView (padKick[10]);
-	size.offset (47, 0);
-    padKick[11] = new VSTGUI::CVinylKickButton (size,this, 'Pd11', kickOff,kickOn,offset);
-	padKick[11]->setPopupMenu(popupPad);
-    padKick[11]->BeforePopup=&AVinylEditorView::callBeforePopup;
-	frame->addView (padKick[11]);
-	size.offset (-141, 47);
-    padKick[12] = new VSTGUI::CVinylKickButton (size,this, 'Pd12', kickOff,kickOn,offset);
-	padKick[12]->setPopupMenu(popupPad);
-    padKick[12]->BeforePopup=&AVinylEditorView::callBeforePopup;
-	frame->addView (padKick[12]);
-	size.offset (47, 0);
-    padKick[13] = new VSTGUI::CVinylKickButton (size,this, 'Pd13', kickOff,kickOn,offset);
-	padKick[13]->setPopupMenu(popupPad);
-    padKick[13]->BeforePopup=&AVinylEditorView::callBeforePopup;
-	frame->addView (padKick[13]);
-	size.offset (47, 0);
-    padKick[14] = new VSTGUI::CVinylKickButton (size,this, 'Pd14', kickOff,kickOn,offset);
-	padKick[14]->setPopupMenu(popupPad);
-    padKick[14]->BeforePopup=&AVinylEditorView::callBeforePopup;
-	frame->addView (padKick[14]);
-	size.offset (47, 0);
-    padKick[15] = new VSTGUI::CVinylKickButton (size,this, 'Pd15', kickOff,kickOn,offset);
-	padKick[15]->setPopupMenu(popupPad);
-    padKick[15]->BeforePopup=&AVinylEditorView::callBeforePopup;
-	frame->addView (padKick[15]);
-	kickOn->forget ();
-	kickOff->forget ();
-	kickOn = 0;
-	kickOff = 0;
-	//
+    //---Pads--------------------
+    {
+        auto kickOn = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("kick_button_act.png"));
+        auto kickOff = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("kick_button.png"));
 
-	////Wave View Window
-    VSTGUI::CBitmap* glass = new VSTGUI::CBitmap(VSTGUI::CResourceDescription("glass.png"));
-	size (0,0,343,83);
-	size.offset(270,54);
-    wavView = new VSTGUI::CWaveView(size,this,'Wave',glass,0);
-	frame->addView(wavView);
-	glass->forget();
-	glass = 0;
+        size(0, 0, 40, 40);
+        size.offset(65, 56);
 
-	///////CheckBoxes/////////////////////////////////////////////////////////////////////
-    VSTGUI::CBitmap* checkOff = new VSTGUI::CBitmap(VSTGUI::CResourceDescription("loop_check.png"));
-    VSTGUI::CBitmap* checkOn =  new VSTGUI::CBitmap(VSTGUI::CResourceDescription("loop_check_on.png"));
-	size (0, 0, 55, 16);
-	size.offset (267, 32);
-    loopBox = new VSTGUI::CVinylCheckBox (size,this, 'Loop', checkOn ,checkOff,offset);
-	frame->addView (loopBox);
-	checkOn->forget ();
+        padKick[0] = new VSTGUI::CVinylKickButton (size,this, 'Pd00', kickOff.get(), kickOn.get(), offset);
+        padKick[0]->setPopupMenu(popupPad);
+        padKick[0]->BeforePopup = &AVinylEditorView::callBeforePopup;
+        frame->addView(padKick[0]);
+        size.offset(47, 0);
+        padKick[1] = new VSTGUI::CVinylKickButton (size,this, 'Pd01', kickOff.get(), kickOn.get(), offset);
+        padKick[1]->setPopupMenu(popupPad);
+        padKick[1]->BeforePopup=&AVinylEditorView::callBeforePopup;
+        frame->addView(padKick[1]);
+        size.offset(47, 0);
+        padKick[2] = new VSTGUI::CVinylKickButton (size,this, 'Pd02', kickOff.get(), kickOn.get(), offset);
+        padKick[2]->setPopupMenu(popupPad);
+        padKick[2]->BeforePopup=&AVinylEditorView::callBeforePopup;
+        frame->addView (padKick[2]);
+        size.offset(47, 0);
+        padKick[3] = new VSTGUI::CVinylKickButton (size,this, 'Pd03', kickOff.get(), kickOn.get(), offset);
+        padKick[3]->setPopupMenu(popupPad);
+        padKick[3]->BeforePopup=&AVinylEditorView::callBeforePopup;
+        frame->addView (padKick[3]);
+        size.offset(-141, 47);
+        padKick[4] = new VSTGUI::CVinylKickButton (size,this, 'Pd04', kickOff.get(), kickOn.get(), offset);
+        padKick[4]->setPopupMenu(popupPad);
+        padKick[4]->BeforePopup=&AVinylEditorView::callBeforePopup;
+        frame->addView (padKick[4]);
+        size.offset(47, 0);
+        padKick[5] = new VSTGUI::CVinylKickButton (size,this, 'Pd05', kickOff.get(), kickOn.get(), offset);
+        padKick[5]->setPopupMenu(popupPad);
+        padKick[5]->BeforePopup=&AVinylEditorView::callBeforePopup;
+        frame->addView (padKick[5]);
+        size.offset(47, 0);
+        padKick[6] = new VSTGUI::CVinylKickButton (size,this, 'Pd06', kickOff.get(), kickOn.get(), offset);
+        padKick[6]->setPopupMenu(popupPad);
+        padKick[6]->BeforePopup=&AVinylEditorView::callBeforePopup;
+        frame->addView(padKick[6]);
+        size.offset(47, 0);
+        padKick[7] = new VSTGUI::CVinylKickButton (size,this, 'Pd07', kickOff.get(), kickOn.get(), offset);
+        padKick[7]->setPopupMenu(popupPad);
+        padKick[7]->BeforePopup=&AVinylEditorView::callBeforePopup;
+        frame->addView(padKick[7]);
+        size.offset(-141, 47);
+        padKick[8] = new VSTGUI::CVinylKickButton (size,this, 'Pd08', kickOff.get(), kickOn.get(), offset);
+        padKick[8]->setPopupMenu(popupPad);
+        padKick[8]->BeforePopup=&AVinylEditorView::callBeforePopup;
+        frame->addView(padKick[8]);
+        size.offset(47, 0);
+        padKick[9] = new VSTGUI::CVinylKickButton (size,this, 'Pd09', kickOff.get(), kickOn.get(), offset);
+        padKick[9]->setPopupMenu(popupPad);
+        padKick[9]->BeforePopup=&AVinylEditorView::callBeforePopup;
+        frame->addView(padKick[9]);
+        size.offset(47, 0);
+        padKick[10] = new VSTGUI::CVinylKickButton (size,this, 'Pd10', kickOff.get(), kickOn.get(), offset);
+        padKick[10]->setPopupMenu(popupPad);
+        padKick[10]->BeforePopup=&AVinylEditorView::callBeforePopup;
+        frame->addView(padKick[10]);
+        size.offset(47, 0);
+        padKick[11] = new VSTGUI::CVinylKickButton (size,this, 'Pd11', kickOff.get(), kickOn.get(), offset);
+        padKick[11]->setPopupMenu(popupPad);
+        padKick[11]->BeforePopup=&AVinylEditorView::callBeforePopup;
+        frame->addView(padKick[11]);
+        size.offset(-141, 47);
+        padKick[12] = new VSTGUI::CVinylKickButton (size,this, 'Pd12', kickOff.get(), kickOn.get(), offset);
+        padKick[12]->setPopupMenu(popupPad);
+        padKick[12]->BeforePopup=&AVinylEditorView::callBeforePopup;
+        frame->addView(padKick[12]);
+        size.offset(47, 0);
+        padKick[13] = new VSTGUI::CVinylKickButton (size,this, 'Pd13', kickOff.get(), kickOn.get(), offset);
+        padKick[13]->setPopupMenu(popupPad);
+        padKick[13]->BeforePopup=&AVinylEditorView::callBeforePopup;
+        frame->addView(padKick[13]);
+        size.offset(47, 0);
+        padKick[14] = new VSTGUI::CVinylKickButton (size,this, 'Pd14', kickOff.get(), kickOn.get(), offset);
+        padKick[14]->setPopupMenu(popupPad);
+        padKick[14]->BeforePopup=&AVinylEditorView::callBeforePopup;
+        frame->addView (padKick[14]);
+        size.offset(47, 0);
+        padKick[15] = new VSTGUI::CVinylKickButton (size,this, 'Pd15', kickOff.get(), kickOn.get(), offset);
+        padKick[15]->setPopupMenu(popupPad);
+        padKick[15]->BeforePopup=&AVinylEditorView::callBeforePopup;
+        frame->addView(padKick[15]);
+    }
+    //
 
-    checkOn = new VSTGUI::CBitmap(VSTGUI::CResourceDescription("sync_check_on.png"));
+    ////Wave View Window
+    {
+        auto glass = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("glass.png"));
+        size(0,0,343,83);
+        size.offset(270,54);
+        wavView = new VSTGUI::CWaveView(size, this, 'Wave', glass.get(), 0);
+        frame->addView(wavView);
+    }
 
-	size.offset (58, 0);
-    syncBox = new VSTGUI::CVinylCheckBox (size,this, 'Sync', checkOn ,checkOff,offset);
-    frame->addView(syncBox);
-	checkOn->forget ();
 
-    checkOn = new VSTGUI::CBitmap(VSTGUI::CResourceDescription("revers_check_on.png"));
-	size.offset (58, 0);
-    rvrsBox = new VSTGUI::CVinylCheckBox (size,this, 'Rvrs', checkOn ,checkOff,offset);
-	frame->addView (rvrsBox);
-	checkOn->forget ();
-	checkOff->forget ();
+    ///////CheckBoxes/////////////////////////////////////////////////////////////////////
+    {
+        auto checkOff = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("loop_check.png"));
+        {
+            auto checkOn = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("loop_check_on.png"));
+            size(0, 0, 55, 16);
+            size.offset(267, 32);
+            loopBox = new VSTGUI::CVinylCheckBox (size,this, 'Loop', checkOn.get(), checkOff.get(), offset);
+            frame->addView(loopBox);
+        }
+
+        {
+            auto checkOn = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("sync_check_on.png"));
+
+            size.offset(58, 0);
+            syncBox = new VSTGUI::CVinylCheckBox (size,this, 'Sync', checkOn.get(), checkOff.get(), offset);
+            frame->addView(syncBox);
+        }
+
+        {
+            auto checkOn = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("revers_check_on.png"));
+            size.offset(58, 0);
+            rvrsBox = new VSTGUI::CVinylCheckBox (size,this, 'Rvrs', checkOn.get(), checkOff.get(), offset);
+            frame->addView(rvrsBox);
+        }
+
+    }
 
     ///////Sample Knobs
-    handle = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("smal_handler.png"));
-    background = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("smal_slider.png"));
+    {
+        auto handle = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("smal_handler.png"));
+        auto background = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("smal_slider.png"));
 
-	size (0, 0, 55, 12);
-	size.offset (467, 34);
-    ampSlide = new VSTGUI::CHorizontalSlider (size, this, 'Ampl', offset, size.getWidth (), handle, background, offset, VSTGUI::CSliderBase::kLeft);
-	frame->addView (ampSlide);
+        size(0, 0, 55, 12);
+        size.offset(467, 34);
+        ampSlide = new VSTGUI::CHorizontalSlider (size, this, 'Ampl', offset, size.getWidth(), handle.get(), background.get(), offset, VSTGUI::CSliderBase::kLeft);
+        frame->addView(ampSlide);
 
-	size.offset (89, 0);
-    tuneSlide = new VSTGUI::CHorizontalSlider (size, this, 'Tune', offset, size.getWidth (), handle, background, offset, VSTGUI::CSliderBase::kLeft);
-	frame->addView (tuneSlide);
-
-    handle->forget ();
-	background->forget ();
-
-
-	//////////TimeCodeLearn
-    checkOff = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("tclearn_check.png"));
-    checkOn = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("tclearn_check_on.png"));
-	size (0, 0, 39, 8);
-	size.offset (272, 124);
-    tcLearnBox = new VSTGUI::CVinylCheckBox (size,this, 'TCLr', checkOff, checkOn, offset);
-	frame->addView (tcLearnBox);
-	checkOn->forget ();
-	checkOff->forget ();
-	checkOn = 0;
-	checkOff = 0;
+        size.offset (89, 0);
+        tuneSlide = new VSTGUI::CHorizontalSlider (size, this, 'Tune', offset, size.getWidth(), handle.get(), background.get(), offset, VSTGUI::CSliderBase::kLeft);
+        frame->addView(tuneSlide);
+    }
 
 
-	/////////////////////////////////////////////////////////////
-    VSTGUI::CBitmap* comboOn = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("yellow_combo.png"));
-    VSTGUI::CBitmap* comboOff = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("sample_combo.png"));
-	size (0, 0, 354, 18);
-	size.offset (263, 8);
-    samplePopup = new VSTGUI::COptionMenu(size,this,'Comb',comboOff,comboOn,VSTGUI::CVinylPopupMenu::kNoTextStyle);
-	samplePopup->addEntry(sampleBase,"Select sample");
-    samplePopup->addEntry("-",3,VSTGUI::CMenuItem::kSeparator);
-	samplePopup->addEntry("Add new sample in base",2,0);
-    samplePopup->addEntry("Replace this sample",3,VSTGUI::CMenuItem::kDisabled);
-    samplePopup->addEntry("Delete this sample from base",4,VSTGUI::CMenuItem::kDisabled);
-
-	frame->addView (samplePopup);
-
-	comboOn->forget();
-	comboOff->forget();
-	comboOn = 0;
-	comboOff = 0;
+    //////////TimeCodeLearn
+    {
+        auto checkOff = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("tclearn_check.png"));
+        auto checkOn = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("tclearn_check_on.png"));
+        size(0, 0, 39, 8);
+        size.offset(272, 124);
+        tcLearnBox = new VSTGUI::CVinylCheckBox (size,this, 'TCLr', checkOff.get(), checkOn.get(), offset);
+        frame->addView(tcLearnBox);
+    }
 
 
-    VSTGUI::CBitmap * fxBit = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("distorsion.png"));
-	size (0, 0, 10, 11);
-	size.offset (271, 55);
-    dispDistorsion = new VSTGUI::CVuMeter (size, fxBit, 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
-	frame->addView (dispDistorsion);
-	fxBit->forget ();
-    fxBit = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("preroll.png"));
-	size.offset (12, 0);
-    dispPreRoll = new VSTGUI::CVuMeter (size, fxBit, 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
-	frame->addView (dispPreRoll);
-	fxBit->forget ();
-    fxBit = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("postroll.png"));
-	size.offset (12, 0);
-    dispPostRoll = new VSTGUI::CVuMeter (size, fxBit, 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
-	frame->addView (dispPostRoll);
-	fxBit->forget ();
-    fxBit = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("hold.png"));
-	size.offset (12, 0);
-    dispHold = new VSTGUI::CVuMeter (size, fxBit, 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
-	frame->addView (dispHold);
-	fxBit->forget ();
-    fxBit = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("freeze.png"));
-	size.offset (12, 0);
-    dispFreeze = new VSTGUI::CVuMeter (size, fxBit, 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
-	frame->addView (dispFreeze);
-	fxBit->forget ();
-    fxBit = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("vintage.png"));
-	size.offset (12, 0);
-    dispVintage = new VSTGUI::CVuMeter (size, fxBit, 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
-	frame->addView (dispVintage);
-	fxBit->forget ();
-    fxBit = new VSTGUI::CBitmap (VSTGUI::CResourceDescription("locktone.png"));
-	size.offset (12, 0);
-    dispLockTone = new VSTGUI::CVuMeter (size, fxBit, 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
-	frame->addView (dispLockTone);
-	fxBit->forget ();
+    /////////////////////////////////////////////////////////////
+    {
+        auto comboOn = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("yellow_combo.png"));
+        auto comboOff = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("sample_combo.png"));
+        size(0, 0, 354, 18);
+        size.offset(263, 8);
+        samplePopup = new VSTGUI::COptionMenu(size, this, 'Comb', comboOff.get(), comboOn.get(), VSTGUI::CVinylPopupMenu::kNoTextStyle);
+        samplePopup->addEntry(sampleBase, "Select sample");
+        samplePopup->addEntry("-", 3, VSTGUI::CMenuItem::kSeparator);
+        samplePopup->addEntry("Add new sample in base", 2, 0);
+        samplePopup->addEntry("Replace this sample", 3, VSTGUI::CMenuItem::kDisabled);
+        samplePopup->addEntry("Delete this sample from base", 4, VSTGUI::CMenuItem::kDisabled);
 
-	fxBit = 0;
+        frame->addView(samplePopup);
+    }
 
-	/////////////Text and labels ////////////////////////////////
-	size (0, 0, 50, 10);
-	size.offset (422, 230);
-    pitchValue = new VSTGUI::CTextLabel (size,"0.00%",0,VSTGUI::CVinylPopupMenu::kNoFrame);
+
+    {
+        auto fxBit = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("distorsion.png"));
+        size(0, 0, 10, 11);
+        size.offset(271, 55);
+        dispDistorsion = new VSTGUI::CVuMeter (size, fxBit.get(), 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
+        frame->addView(dispDistorsion);
+    }
+    {
+        auto fxBit = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("preroll.png"));
+        size.offset (12, 0);
+        dispPreRoll = new VSTGUI::CVuMeter (size, fxBit.get(), 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
+        frame->addView(dispPreRoll);
+    }
+    {
+        auto fxBit = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("postroll.png"));
+        size.offset (12, 0);
+        dispPostRoll = new VSTGUI::CVuMeter (size, fxBit.get(), 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
+        frame->addView(dispPostRoll);
+    }
+    {
+    auto fxBit = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("hold.png"));
+    size.offset (12, 0);
+    dispHold = new VSTGUI::CVuMeter (size, fxBit.get(), 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
+    frame->addView(dispHold);
+    }
+    {
+    auto fxBit = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("freeze.png"));
+    size.offset (12, 0);
+    dispFreeze = new VSTGUI::CVuMeter (size, fxBit.get(), 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
+    frame->addView(dispFreeze);
+    }
+    {
+    auto fxBit = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("vintage.png"));
+    size.offset (12, 0);
+    dispVintage = new VSTGUI::CVuMeter (size, fxBit.get(), 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
+    frame->addView(dispVintage);
+    }
+    {
+    auto fxBit = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("locktone.png"));
+    size.offset (12, 0);
+    dispLockTone = new VSTGUI::CVuMeter (size, fxBit.get(), 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
+    frame->addView(dispLockTone);
+    }
+
+    /////////////Text and labels ////////////////////////////////
+    size(0, 0, 50, 10);
+    size.offset(422, 230);
+    pitchValue = new VSTGUI::CTextLabel (size, "0.00%", 0, VSTGUI::CVinylPopupMenu::kNoFrame);
     pitchValue->setHoriAlign(VSTGUI::kCenterText);
-    pitchValue->setBackColor(VSTGUI::CColor(0,0,0,0));
+    pitchValue->setBackColor(VSTGUI::CColor(0, 0, 0, 0));
 
-    pitchValue->setFontColor(VSTGUI::CColor(200,200,200,200));
-	pitchValue->setAntialias(true);
-    VSTGUI::CFontDesc * litleFont = new VSTGUI::CFontDesc(*(pitchValue->getFont()));
-	litleFont->setSize(10);
+    pitchValue->setFontColor(VSTGUI::CColor(200, 200, 200, 200));
+    pitchValue->setAntialias(true);
+    auto litleFont = make_forgetable<VSTGUI::CFontDesc>(*(pitchValue->getFont()));
+    litleFont->setSize(10);
     litleFont->setStyle(VSTGUI::kNormalFace);
-	pitchValue->setFont(litleFont);
-	frame->addView (pitchValue);
+    pitchValue->setFont(litleFont.get());
+    frame->addView(pitchValue);
 
-	size (0, 0, 40, 10);
-	size.offset (572, 124);
-    speedValue = new VSTGUI::CTextLabel (size,"|| 0.000",0,VSTGUI::CVinylPopupMenu::kNoFrame);
+    size(0, 0, 40, 10);
+    size.offset(572, 124);
+    speedValue = new VSTGUI::CTextLabel (size, "|| 0.000", 0, VSTGUI::CVinylPopupMenu::kNoFrame);
     speedValue->setHoriAlign(VSTGUI::kLeftText);
-    speedValue->setBackColor(VSTGUI::CColor(0,0,0,0));
-	//speedValue->setFrameColor(CColor(0,0,0,0));
-    speedValue->setFontColor(VSTGUI::CColor(10,255,10,100));
-	speedValue->setAntialias(true);
-	speedValue->setFont(litleFont);
-	frame->addView (speedValue);
+    speedValue->setBackColor(VSTGUI::CColor(0, 0, 0, 0));
+    speedValue->setFontColor(VSTGUI::CColor(10, 255, 10, 100));
+    speedValue->setAntialias(true);
+    speedValue->setFont(litleFont.get());
+    frame->addView(speedValue);
 
-	size (0, 0, 40, 25);
-	//size.offset (568, 52);
-	size.offset (271, 52);
-    sampleNumber = new VSTGUI::CTextLabel (size," ",0,VSTGUI::CVinylPopupMenu::kNoFrame);
+    size(0, 0, 40, 25);
+    size.offset(271, 52);
+    sampleNumber = new VSTGUI::CTextLabel (size, " ", 0, VSTGUI::CVinylPopupMenu::kNoFrame);
     sampleNumber->setHoriAlign(VSTGUI::kLeftText);
-    sampleNumber->setBackColor(VSTGUI::CColor(0,0,0,0));
-    sampleNumber->setFontColor(VSTGUI::CColor(10,255,10,100));
-	sampleNumber->setAntialias(true);
-	sampleNumber->setFont(litleFont);
-	frame->addView (sampleNumber);
-	litleFont->forget();
+    sampleNumber->setBackColor(VSTGUI::CColor(0, 0, 0, 0));
+    sampleNumber->setFontColor(VSTGUI::CColor(10,255,10, 100));
+    sampleNumber->setAntialias(true);
+    sampleNumber->setFont(litleFont.get());
+    frame->addView(sampleNumber);
 
-
-	size (0, 0, 210, 22); //15
-	size.offset (367, 7);  //12
+    size(0, 0, 210, 22); //15
+    size.offset(367, 7);  //12
     nameEdit = new VSTGUI::CTextEdit (size, this, 'Name', " ", 0, VSTGUI::CVinylPopupMenu::kNoFrame);
     nameEdit->setHoriAlign(VSTGUI::kLeftText);
     nameEdit->setBackColor(VSTGUI::CColor(0,0,0,0));
-	//nameEdit->setFont(litleFont);
-    VSTGUI::CFontDesc * medFont = new VSTGUI::CFontDesc(*(nameEdit->getFont()));
-	medFont->setSize(12);
+    auto medFont = make_forgetable<VSTGUI::CFontDesc>(*(nameEdit->getFont()));
+    medFont->setSize(12);
     medFont->setStyle(VSTGUI::kBoldFace);
-	nameEdit->setFont(medFont);
-	frame->addView (nameEdit);
-	//size.offset (0, 14);
-	//fileEdit = new CTextEdit (size, this, 'TexF', " ", 0, kNoFrame);
-	//fileEdit->setHoriAlign(kLeftText);
-	//fileEdit->setBackColor(CColor(0,0,0,0));
-	//fileEdit->setFont(litleFont);
-	//frame->addView (fileEdit);
-	//litleFont->forget();
-	medFont->forget();
+    nameEdit->setFont(medFont.get());
+    frame->addView(nameEdit);
 
-	size (0, 0, 40, 35);
-	size.offset (198, 12);
-    sceneValue = new VSTGUI::CTextLabel (size,"1",0,VSTGUI::CVinylPopupMenu::kNoFrame);
+    size(0, 0, 40, 35);
+    size.offset(198, 12);
+    sceneValue = new VSTGUI::CTextLabel (size, "1", 0, VSTGUI::CVinylPopupMenu::kNoFrame);
     sceneValue->setHoriAlign(VSTGUI::kCenterText);
     sceneValue->setBackColor(VSTGUI::CColor(0,0,0,0));
-	//sceneValue->setFrameColor(CColor(0,0,0,0));
     sceneValue->setFontColor(VSTGUI::CColor(0,0,0,255));
-	sceneValue->setAntialias(true);
-    VSTGUI::CFontDesc * bigFont = new VSTGUI::CFontDesc(*(sceneValue->getFont()));
-	bigFont->setSize(28);
+    sceneValue->setAntialias(true);
+    auto bigFont = make_forgetable<VSTGUI::CFontDesc>(*(sceneValue->getFont()));
+    bigFont->setSize(28);
     bigFont->setStyle(VSTGUI::kBoldFace);
-	sceneValue->setFont(bigFont);
-	frame->addView (sceneValue);
-	bigFont->forget();
+    sceneValue->setFont(bigFont.get());
+    frame->addView(sceneValue);
 
 
-
-
-
-	update (kGainId, getController ()->getParamNormalized (kGainId));
-	update (kVolumeId, getController ()->getParamNormalized (kVolumeId));
-	update (kVolCurveId, getController ()->getParamNormalized (kVolCurveId));
-	update (kPitchId, getController ()->getParamNormalized (kPitchId));
-	update (kPitchSwitchId, getController ()->getParamNormalized (kPitchSwitchId));
-	update (kCurrentSceneId, getController ()->getParamNormalized (kCurrentSceneId));
-	update (kCurrentEntryId, getController ()->getParamNormalized (kCurrentEntryId));
-	//update (kDistorsionId, getController ()->getParamNormalized (kDistorsionId));
-	//update (kPreRollId, getController ()->getParamNormalized (kPreRollId));
-	//update (kPostRollId, getController ()->getParamNormalized (kPostRollId));
-	//update (kPunchInId, getController ()->getParamNormalized (kPunchInId));
-	//update (kPunchOutId, getController ()->getParamNormalized (kPunchOutId));
+    update(kGainId, getController()->getParamNormalized(kGainId));
+    update(kVolumeId, getController()->getParamNormalized(kVolumeId));
+    update(kVolCurveId, getController()->getParamNormalized(kVolCurveId));
+    update(kPitchId, getController()->getParamNormalized(kPitchId));
+    update(kPitchSwitchId, getController()->getParamNormalized(kPitchSwitchId));
+    update(kCurrentSceneId, getController()->getParamNormalized(kCurrentSceneId));
+    update(kCurrentEntryId, getController()->getParamNormalized(kCurrentEntryId));
 
     getFrame()->open(parent, platformType, nullptr);
 
-
-    //Steinberg::IdleUpdateHandler::start ();
-
-	return true;
+    return true;
 }
-
-//------------------------------------------------------------------------
-/*void AVinylEditorView::messageTextChanged ()
-{
-	AVinylController* controller = dynamic_cast<AVinylController*> (getController ());
-	if (controller)
-	{
-		String text (controller->getDefaultMessageText ());
-		char8 asciiText[128];
-		text.copyTo8 (asciiText, 0, 127);
-		textEdit->setText (asciiText);
-	}
-}*/
 
 //------------------------------------------------------------------------
 void PLUGIN_API AVinylEditorView::close ()
 {
-	//
     while(!sampleBitmaps.empty()) {
         sampleBitmaps.back()->forget();
         sampleBitmaps.pop_back();
-	}
-	//sampleBitmaps.removeAll ();
+    }
 
- //    if (frame) {
-    // 	frame->forget();
-    // 	frame = 0;
-    // }
+    gainKnob = 0;
+    scenKnob = 0;
+    ampSlide = 0;
+    tuneSlide = 0;
+    nameEdit = 0;
 
-	gainKnob = 0;
-	scenKnob = 0;
-	ampSlide = 0;
-	tuneSlide = 0;
-	nameEdit = 0;
-	//fileEdit = 0;
-	pitchSlider = 0;
-	volumeSlider = 0;
-	for (int i=0; i < ENumberOfPads; i++) {
-		padKick[i] = 0;
-	}
-	for (int i=0; i < ENumberOfPads; i++) {
-		padType[i] = 0;
-	}
-	loopBox = 0;
-	syncBox = 0;
-	rvrsBox = 0;
-	tcLearnBox = 0;
-	pitchValue = 0;
-	sceneValue = 0;
-	speedValue = 0;
-	sampleNumber = 0;
-	vuLeftMeter = 0;
-	vuRightMeter = 0;
+    pitchSlider = 0;
+    volumeSlider = 0;
+    for (int i=0; i < ENumberOfPads; i++) {
+        padKick[i] = 0;
+    }
+    for (int i=0; i < ENumberOfPads; i++) {
+        padType[i] = 0;
+    }
+    loopBox = 0;
+    syncBox = 0;
+    rvrsBox = 0;
+    tcLearnBox = 0;
+    pitchValue = 0;
+    sceneValue = 0;
+    speedValue = 0;
+    sampleNumber = 0;
+    vuLeftMeter = 0;
+    vuRightMeter = 0;
 
-	dispDistorsion = 0;
-	dispPreRoll = 0;
-	dispPostRoll = 0;
-	dispHold = 0;
-	dispFreeze = 0;
-	dispVintage = 0;
-	dispLockTone = 0;
-	//dispPunchIn = 0;
-	//dispPunchOut = 0;
+    dispDistorsion = 0;
+    dispPreRoll = 0;
+    dispPostRoll = 0;
+    dispHold = 0;
+    dispFreeze = 0;
+    dispVintage = 0;
+    dispLockTone = 0;
 
-	curvSwitch = 0;
-	pitchSwitch = 0;
-	//sampleCombo = 0;
-	samplePopup = 0;
-	popupPad->forget ();
-	popupPad = 0;
-	sampleBase->forget();
-	sampleBase = 0;
-	padBase->forget();
-	padBase = 0;
-	effectBase1->forget();
-	effectBase1 = 0;
-	effectBase2->forget();
-	effectBase2 = 0;
+    curvSwitch = 0;
+    pitchSwitch = 0;
+    samplePopup = 0;
+    popupPad->forget();
+    popupPad = 0;
+    sampleBase->forget();
+    sampleBase = 0;
+    padBase->forget();
+    padBase = 0;
+    effectBase1->forget();
+    effectBase1 = 0;
+    effectBase2->forget();
+    effectBase2 = 0;
 
-	wavView = 0;
+    wavView = 0;
 
-    //getFrame()->unregisterMouseObserver (this);
     getFrame()->removeAll(true);
     int32_t refCount = getFrame()->getNbReference();
     if (refCount == 1) {
@@ -870,434 +748,359 @@ void PLUGIN_API AVinylEditorView::close ()
     } else {
         getFrame()->forget();
     }
-
 }
 
 //------------------------------------------------------------------------
 void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
 {
-	switch (pControl->getTag ())
-	{
-		//------------------
-		CASE_VALUE_CHANGED('Gain',kGainId)
-		CASE_VALUE_CHANGED('Fadr',kVolumeId)
-		CASE_VALUE_CHANGED('Scen',kCurrentSceneId)
-		CASE_VALUE_CHANGED('Pith',kPitchId)
-		CASE_VALUE_CHANGED('PtCr',kPitchSwitchId)
-		CASE_VALUE_CHANGED('Curv',kVolCurveId)
-		CASE_VALUE_CHANGED('Loop',kLoopId)
-		CASE_VALUE_CHANGED('Sync',kSyncId)
-		CASE_VALUE_CHANGED('Rvrs',kReverseId)
-		CASE_VALUE_CHANGED('Ampl',kAmpId)
-		CASE_VALUE_CHANGED('Tune',kTuneId)
-		CASE_VALUE_CHANGED('TCLr',kTimecodeLearnId)
-		//------------------
-		/*case 'Scen':
-		{
-			controller->setParamNormalized (kCurrentSceneId, pControl->getValueNormalized());
-			controller->performEdit (kCurrentSceneId, pControl->getValueNormalized ());
-			if(sceneValue){
-				String128 tmp;
-				controller->getParamStringByValue(kCurrentSceneId,pControl->getValueNormalized (), tmp);
-				String textval (tmp);
-				sceneValue->setText(textval);
-			}
-		}	break;*/
-		//------------------
-		CASE_PAD_CHANGED('Pd00',0)
-		CASE_PAD_CHANGED('Pd01',1)
-		CASE_PAD_CHANGED('Pd02',2)
-		CASE_PAD_CHANGED('Pd03',3)
-		CASE_PAD_CHANGED('Pd04',4)
-		CASE_PAD_CHANGED('Pd05',5)
-		CASE_PAD_CHANGED('Pd06',6)
-		CASE_PAD_CHANGED('Pd07',7)
-		CASE_PAD_CHANGED('Pd08',8)
-		CASE_PAD_CHANGED('Pd09',9)
-		CASE_PAD_CHANGED('Pd10',10)
-		CASE_PAD_CHANGED('Pd11',11)
-		CASE_PAD_CHANGED('Pd12',12)
-		CASE_PAD_CHANGED('Pd13',13)
-		CASE_PAD_CHANGED('Pd14',14)
-		CASE_PAD_CHANGED('Pd15',15)
-		//------------------
-		case 'Name':
-		{
-			if (sampleBase) sampleBase->getEntry(currentEntry)->setTitle(nameEdit->getText());
-			if (padBase) padBase->getEntry(currentEntry)->setTitle(nameEdit->getText());
-			IMessage* msg = controller->allocateMessage ();
-			if (msg)
-			{
-				String sampleName (nameEdit->getText());
-				msg->setMessageID ("renameEntry");
-				msg->getAttributes ()->setInt("SampleNumber", currentEntry);
-				msg->getAttributes ()->setString("SampleName", sampleName);
-				controller->sendMessage (msg);
-				msg->release ();
-			}
+    switch (pControl->getTag ())
+    {
+    //------------------
+    CASE_VALUE_CHANGED('Gain', kGainId)
+    CASE_VALUE_CHANGED('Fadr', kVolumeId)
+    CASE_VALUE_CHANGED('Scen', kCurrentSceneId)
+    CASE_VALUE_CHANGED('Pith', kPitchId)
+    CASE_VALUE_CHANGED('PtCr', kPitchSwitchId)
+    CASE_VALUE_CHANGED('Curv', kVolCurveId)
+    CASE_VALUE_CHANGED('Loop', kLoopId)
+    CASE_VALUE_CHANGED('Sync', kSyncId)
+    CASE_VALUE_CHANGED('Rvrs', kReverseId)
+    CASE_VALUE_CHANGED('Ampl', kAmpId)
+    CASE_VALUE_CHANGED('Tune', kTuneId)
+    CASE_VALUE_CHANGED('TCLr', kTimecodeLearnId)
+    //------------------
+    CASE_PAD_CHANGED('Pd00', 0)
+    CASE_PAD_CHANGED('Pd01', 1)
+    CASE_PAD_CHANGED('Pd02', 2)
+    CASE_PAD_CHANGED('Pd03', 3)
+    CASE_PAD_CHANGED('Pd04', 4)
+    CASE_PAD_CHANGED('Pd05', 5)
+    CASE_PAD_CHANGED('Pd06', 6)
+    CASE_PAD_CHANGED('Pd07', 7)
+    CASE_PAD_CHANGED('Pd08', 8)
+    CASE_PAD_CHANGED('Pd09', 9)
+    CASE_PAD_CHANGED('Pd10', 10)
+    CASE_PAD_CHANGED('Pd11', 11)
+    CASE_PAD_CHANGED('Pd12', 12)
+    CASE_PAD_CHANGED('Pd13', 13)
+    CASE_PAD_CHANGED('Pd14', 14)
+    CASE_PAD_CHANGED('Pd15', 15)
+    //------------------
+    case 'Name':
+    {
+        if (sampleBase) sampleBase->getEntry(currentEntry)->setTitle(nameEdit->getText());
+        if (padBase) padBase->getEntry(currentEntry)->setTitle(nameEdit->getText());
+        IMessage* msg = controller->allocateMessage ();
+        if (msg)
+        {
+            String sampleName (nameEdit->getText());
+            msg->setMessageID ("renameEntry");
+            msg->getAttributes ()->setInt("SampleNumber", currentEntry);
+            msg->getAttributes ()->setString("SampleName", sampleName);
+            controller->sendMessage (msg);
+            msg->release ();
+        }
 
-		}	break;
-		//------------------
-		case 'PpUp':
-		{
-            int menuIndex;
-            VSTGUI::COptionMenu * SelectedMenu = popupPad->getLastItemMenu(menuIndex);
-				if (SelectedMenu == padBase){
-					//MessageBox(0,STR("SelectSample"),STR("Pad"),MB_OK);
-					setPadMessage(padForSetting+1,PadEntry::kSamplePad,menuIndex);
-				}
-				if (SelectedMenu == effectBase1){
-					//MessageBox(0,STR("Base1"),STR("Effect"),MB_OK);
-					setPadMessage(padForSetting+1,PadEntry::kSwitchPad,switchedFx[menuIndex]);
-				}
-				if (SelectedMenu == effectBase2){
-					//MessageBox(0,STR("Base2"),STR("Effect"),MB_OK);
-					setPadMessage(padForSetting+1,PadEntry::kKickPad,punchFx[menuIndex]);
-				}
-				if (SelectedMenu == popupPad) {
-					if (menuIndex==0){
-						//MessageBox(0,STR("Assign"),STR("MIDI"),MB_OK);
-						setPadMessage(padForSetting+1,PadEntry::kAssigMIDI);
-					}
-					if (menuIndex==6){
-						//MessageBox(0,STR("Clear"),STR("Pad"),MB_OK);
-						setPadMessage(padForSetting+1,PadEntry::kEmptyPad,-1);
-					}
-				}
+    }	break;
+    //------------------
+    case 'PpUp':
+    {
+        int menuIndex;
+        VSTGUI::COptionMenu * SelectedMenu = popupPad->getLastItemMenu(menuIndex);
+        if (SelectedMenu == padBase) {
+            setPadMessage(padForSetting + 1, PadEntry::kSamplePad, menuIndex);
+        }
+        if (SelectedMenu == effectBase1) {
+            setPadMessage(padForSetting + 1, PadEntry::kSwitchPad, switchedFx[menuIndex]);
+        }
+        if (SelectedMenu == effectBase2) {
+            setPadMessage(padForSetting + 1, PadEntry::kKickPad, punchFx[menuIndex]);
+        }
+        if (SelectedMenu == popupPad) {
+            if (menuIndex==0){
+                setPadMessage(padForSetting + 1, PadEntry::kAssigMIDI);
+            }
+            if (menuIndex==6){
+                setPadMessage(padForSetting + 1, PadEntry::kEmptyPad, -1);
+            }
+        }
 
 
-		}	break;
-		//------------------
-		case 'Comb':
-		{
-            int menuIndex;
-            VSTGUI::COptionMenu * SelectedMenu = samplePopup->getLastItemMenu(menuIndex);
-				if (SelectedMenu == sampleBase){
-					float normalValue = (float)menuIndex/(float)(EMaximumSamples-1);
-					controller->setParamNormalized (kCurrentEntryId, normalValue);
-					controller->performEdit (kCurrentEntryId, normalValue);
-					//sampleBase->setCurrent(menuIndex,true);
-					//currentEntry = menuIndex;
-	//String tttmm;
-	//tttmm = tttmm.printf("%d",menuIndex);
-	//MessageBox(0,tttmm.text16(),STR("currentEntry"),MB_OK);
+    }	break;
+    //------------------
+    case 'Comb':
+    {
+        int menuIndex;
+        VSTGUI::COptionMenu * SelectedMenu = samplePopup->getLastItemMenu(menuIndex);
+        if (SelectedMenu == sampleBase) {
+            float normalValue = (float)menuIndex/(float)(EMaximumSamples-1);
+            controller->setParamNormalized (kCurrentEntryId, normalValue);
+            controller->performEdit (kCurrentEntryId, normalValue);
+        }
+        if (SelectedMenu == samplePopup) {
+            if (menuIndex==2){
 
-					//if(sampleNumber){
-					//	sampleBase->getEntry(currentEntry)->setChecked(true);
-					//	String textval;
-					//	sampleNumber->setText(textval.printf("#%03d",currentEntry+1));
-					//}
-				}
-				if (SelectedMenu == samplePopup) {
-					if (menuIndex==2){
+                ////////////Open FileSelector Multy/////////////////////////
+                VSTGUI::CNewFileSelector* selector = VSTGUI::CNewFileSelector::create (frame, VSTGUI::CNewFileSelector::kSelectFile);
+                if (selector)
+                {
+                    selector->kSelectEndMessage = "LoadingFile";
+                    selector->setDefaultExtension (VSTGUI::CFileExtension ("WAVE", "wav"));
+                    selector->setTitle("Choose Samples for load in base");
+                    selector->setAllowMultiFileSelection(true);
+                    selector->run(this);
+                    selector->forget();
+                }
+            }
+            if (menuIndex==3){
+                ////////////Open FileSelector Single/////////////////////////
+                VSTGUI::CNewFileSelector* selector = VSTGUI::CNewFileSelector::create (frame, VSTGUI::CNewFileSelector::kSelectFile);
+                if (selector)
+                {
+                    selector->kSelectEndMessage = "ReplaceFile";
+                    selector->setDefaultExtension(VSTGUI::CFileExtension ("WAVE", "wav"));
+                    selector->setTitle("Choose Sample for replace");
+                    selector->setAllowMultiFileSelection(false);
+                    selector->run(this);
+                    selector->forget();
+                }
+            }
+            if (menuIndex==4){
+                //TODO: create own dialogue
+                //if (IDYES==MessageBox(0,STR("Are you sure?"),STR("Delete from base"),MB_YESNO|MB_ICONWARNING|MB_DEFBUTTON2|MB_APPLMODAL)) {
+                IMessage* msg = controller->allocateMessage ();
+                if (msg)
+                {
+                    msg->setMessageID("deleteEntry");
+                    msg->getAttributes()->setInt("SampleNumber", currentEntry);
+                    //msg->getAttributes()->setString("SampleName", STR(SelectedMenu->getEntry(menuIndex)->getTitle()));
+                    controller->sendMessage(msg);
+                    msg->release();
+                }
+                //}
+            }
+        }
+    }	break;
 
-						////////////Open FileSelector Multy/////////////////////////
-                        VSTGUI::CNewFileSelector* selector = VSTGUI::CNewFileSelector::create (frame, VSTGUI::CNewFileSelector::kSelectFile);
-			       		if (selector)
-						{
-								selector->kSelectEndMessage = "LoadingFile";
-                                selector->setDefaultExtension (VSTGUI::CFileExtension ("WAVE", "wav"));
-								selector->setTitle("Choose Samples for load in base");
-								selector->setAllowMultiFileSelection(true);
-			       				selector->run (this);
-			       				selector->forget ();
-			       		}
-			       	}
-			       	if (menuIndex==3){
-						////////////Open FileSelector Single/////////////////////////
-                        VSTGUI::CNewFileSelector* selector = VSTGUI::CNewFileSelector::create (frame, VSTGUI::CNewFileSelector::kSelectFile);
-			       		if (selector)
-			       		{
-								selector->kSelectEndMessage = "ReplaceFile";
-                                selector->setDefaultExtension (VSTGUI::CFileExtension ("WAVE", "wav"));
-			       				selector->setTitle("Choose Sample for replace");
-								selector->setAllowMultiFileSelection(false);
-			       				selector->run (this);
-			       				selector->forget ();
-			       		}
-					}
-					if (menuIndex==4){
-                        //TODO: create own dialogue
-                        //if (IDYES==MessageBox(0,STR("Are you sure?"),STR("Delete from base"),MB_YESNO|MB_ICONWARNING|MB_DEFBUTTON2|MB_APPLMODAL)) {
-							IMessage* msg = controller->allocateMessage ();
-							if (msg)
-							{
-								msg->setMessageID ("deleteEntry");
-								msg->getAttributes ()->setInt("SampleNumber", currentEntry);
-								//msg->getAttributes ()->setString("SampleName", STR(SelectedMenu->getEntry(menuIndex)->getTitle()));
-								controller->sendMessage (msg);
-								msg->release ();
-							}
-                        //}
-			       	}
-				}
-		}	break;
-
-	}
+    }
 }
 
 //------------------------------------------------------------------------
 void AVinylEditorView::controlBeginEdit (VSTGUI::CControl* pControl)
 {
-	switch (pControl->getTag ())
-	{
-		//------------------
-		CASE_BEGIN_EDIT ('Gain',kGainId)
-		CASE_BEGIN_EDIT ('Pith',kPitchId)
-		CASE_BEGIN_EDIT ('Fadr',kVolumeId)
-		CASE_BEGIN_EDIT ('Scen',kCurrentSceneId)
-		CASE_BEGIN_EDIT ('Comb',kCurrentEntryId)
-		CASE_BEGIN_EDIT ('Loop',kLoopId)
-		CASE_BEGIN_EDIT ('Sync',kSyncId)
-		CASE_BEGIN_EDIT ('Rvrs',kReverseId)
-		CASE_BEGIN_EDIT ('Ampl',kAmpId)
-		CASE_BEGIN_EDIT ('Tune',kTuneId)
-		CASE_BEGIN_EDIT ('PtCr',kPitchSwitchId)
-		CASE_BEGIN_EDIT ('Curv',kVolCurveId)
-		CASE_BEGIN_EDIT ('TCLr',kTimecodeLearnId)
-	}
+    switch (pControl->getTag ())
+    {
+        //------------------
+        CASE_BEGIN_EDIT ('Gain', kGainId)
+        CASE_BEGIN_EDIT ('Pith', kPitchId)
+        CASE_BEGIN_EDIT ('Fadr', kVolumeId)
+        CASE_BEGIN_EDIT ('Scen', kCurrentSceneId)
+        CASE_BEGIN_EDIT ('Comb', kCurrentEntryId)
+        CASE_BEGIN_EDIT ('Loop', kLoopId)
+        CASE_BEGIN_EDIT ('Sync', kSyncId)
+        CASE_BEGIN_EDIT ('Rvrs', kReverseId)
+        CASE_BEGIN_EDIT ('Ampl', kAmpId)
+        CASE_BEGIN_EDIT ('Tune', kTuneId)
+        CASE_BEGIN_EDIT ('PtCr', kPitchSwitchId)
+        CASE_BEGIN_EDIT ('Curv', kVolCurveId)
+        CASE_BEGIN_EDIT ('TCLr', kTimecodeLearnId)
+    }
 }
 
 //------------------------------------------------------------------------
 void AVinylEditorView::controlEndEdit (VSTGUI::CControl* pControl)
 {
-	switch (pControl->getTag ())
-	{
-		//------------------
-		CASE_END_EDIT ('Gain',kGainId)
-		CASE_END_EDIT ('Pith',kPitchId)
-		CASE_END_EDIT ('Fadr',kVolumeId)
-		CASE_END_EDIT ('Scen',kCurrentSceneId)
-		CASE_END_EDIT ('Comb',kCurrentEntryId)
-		CASE_END_EDIT ('Loop',kLoopId)
-		CASE_END_EDIT ('Sync',kSyncId)
-		CASE_END_EDIT ('Rvrs',kReverseId)
-		CASE_END_EDIT ('Ampl',kAmpId)
-		CASE_END_EDIT ('Tune',kTuneId)
-		CASE_END_EDIT ('PtCr',kPitchSwitchId)
-		CASE_END_EDIT ('Curv',kVolCurveId)
-		CASE_END_EDIT ('TCLr',kTimecodeLearnId)
-	}
+    switch (pControl->getTag ())
+    {
+        //------------------
+        CASE_END_EDIT ('Gain',kGainId)
+        CASE_END_EDIT ('Pith',kPitchId)
+        CASE_END_EDIT ('Fadr',kVolumeId)
+        CASE_END_EDIT ('Scen',kCurrentSceneId)
+        CASE_END_EDIT ('Comb',kCurrentEntryId)
+        CASE_END_EDIT ('Loop',kLoopId)
+        CASE_END_EDIT ('Sync',kSyncId)
+        CASE_END_EDIT ('Rvrs',kReverseId)
+        CASE_END_EDIT ('Ampl',kAmpId)
+        CASE_END_EDIT ('Tune',kTuneId)
+        CASE_END_EDIT ('PtCr',kPitchSwitchId)
+        CASE_END_EDIT ('Curv',kVolCurveId)
+        CASE_END_EDIT ('TCLr',kTimecodeLearnId)
+    }
 }
 
 //------------------------------------------------------------------------
 void AVinylEditorView::update (ParamID tag, ParamValue value)
 {
-	switch (tag)
-	{
-		//------------------
-		CASE_UPDATE (kGainId,gainKnob)
-		CASE_UPDATE (kAmpId,ampSlide)
-		CASE_UPDATE (kTuneId,tuneSlide)
-		CASE_UPDATE (kVolumeId,volumeSlider)
-		//CASE_UPDATE (kLoopId,loopBox)
-		CASE_UPDATE (kSyncId,syncBox)
-		CASE_UPDATE (kReverseId,rvrsBox)
-		CASE_UPDATE (kTimecodeLearnId,tcLearnBox)
-		//CASE_UPDATE (kPitchSwitchId,pitchSwitch)
-		CASE_UPDATE (kVolCurveId,curvSwitch)
+    switch (tag)
+    {
+        //------------------
+        CASE_UPDATE (kGainId,gainKnob)
+        CASE_UPDATE (kAmpId,ampSlide)
+        CASE_UPDATE (kTuneId,tuneSlide)
+        CASE_UPDATE (kVolumeId,volumeSlider)
+        CASE_UPDATE (kSyncId,syncBox)
+        CASE_UPDATE (kReverseId,rvrsBox)
+        CASE_UPDATE (kTimecodeLearnId,tcLearnBox)
+        CASE_UPDATE (kVolCurveId,curvSwitch)
 
-		//CASE_UPDATE_MINUS(kDistorsionId,dispDistorsion)
-		//CASE_UPDATE_MINUS(kPreRollId,dispPreRoll)
-		//CASE_UPDATE_MINUS(kPostRollId,dispPostRoll)
-		//CASE_UPDATE_MINUS(kPunchInId,dispPunchIn)
-		//CASE_UPDATE_MINUS(kPunchOutId,dispPunchOut)
-		//------------------
-		case kLoopId:
-			if (loopBox)
-			{
-                loopBox->setValueNormalized ((float)value);
-			}
-			if(wavView){
-				wavView->setLoop(loopBox->getChecked());
-			}
-			break;
-		//------------------
-		case kPitchId:
-			if (pitchSlider)
-			{
-                pitchSlider->setValueNormalized ((float)value);
-			}
-			if((pitchValue)&&(pitchSwitch)&&(pitchSlider)){
+        //------------------
+    case kLoopId:
+        if (loopBox) {
+            loopBox->setValueNormalized ((float)value);
+            if(wavView){
+                wavView->setLoop(loopBox->getChecked());
+            }
+        }
+        break;
+    //------------------
+    case kPitchId:
+        if (pitchSlider)
+        {
+            pitchSlider->setValueNormalized ((float)value);
+        }
+        if((pitchValue)&&(pitchSwitch)&&(pitchSlider)){
+            String textval;
+            if (pitchSwitch->getPosition() == 0) {
+                textval = "0.00%";
+            } else
+                if (pitchSwitch->getPosition() == 2) {
+                    textval.printf(STR("%0.2f%"),pitchSlider->getValue()*100.0 - 50.0);
+                } else
+                    textval.printf(STR("%0.2f%"),pitchSlider->getValue()*20.0 - 10.0);
+            pitchValue->setText(VSTGUI::UTF8String(textval));
+        }
+        break;
+    //------------------
+    case kPitchSwitchId:
+        if (pitchSwitch)
+        {
+            pitchSwitch->setValueNormalized ((float)value);
+        }
+        if((pitchValue)&&(pitchSwitch)&&(pitchSlider)){
+            String textval;
+            if (pitchSwitch->getPosition() == 0) {
+                textval = "0.00%";
+            } else
+                if (pitchSwitch->getPosition() == 2) {
+                    textval.printf(STR("%0.2f%"), pitchSlider->getValue() * 100.0 - 50.0);
+                } else {
+                    textval.printf(STR("%0.2f%"), pitchSlider->getValue() * 20.0 - 10.0);
+                }
+            pitchValue->setText(VSTGUI::UTF8String(textval));
+        }
+        break;
+    //------------------
+    case kCurrentSceneId:
+        if (scenKnob)
+        {
+            scenKnob->setValueNormalized((float)value);
+        }
+        if(sceneValue){
+            int currentScene = floor(value * float(EMaximumScenes - 1) + 0.5);
+            String textval;
+            textval = textval.printf("%d",currentScene + 1);
+            sceneValue->setText(VSTGUI::UTF8String(textval));
+        }
+        break;
+    case kCurrentEntryId:
+    {
+        int newCurEntry = floor(value * float(EMaximumSamples - 1) + 0.5);
+        if (newCurEntry != currentEntry) {
+            currentEntry = floor(value * float(EMaximumSamples - 1) + 0.5);
+
+            if ((currentEntry < sampleBitmaps.size()) && (currentEntry >= 0)) {
+
+                if (wavView) {
+                    wavView->setWave(sampleBitmaps.at(currentEntry));
+                    wavView->setPosition(0);
+                }
+                if (sampleBase) {
+                    sampleBase->setCurrent(currentEntry, true);
+                }
                 String textval;
-				if (pitchSwitch->getPosition() == 0) {
-					textval = "0.00%";
-				} else
-				if (pitchSwitch->getPosition() == 2) {
-					textval.printf(STR("%0.2f%"),pitchSlider->getValue()*100.0 - 50.0);
-				} else
-					textval.printf(STR("%0.2f%"),pitchSlider->getValue()*20.0 - 10.0);
-                pitchValue->setText(VSTGUI::UTF8String(textval));
-			}
-			break;
-		//------------------
-		case kPitchSwitchId:
-			if (pitchSwitch)
-			{
-                pitchSwitch->setValueNormalized ((float)value);
-			}
-			if((pitchValue)&&(pitchSwitch)&&(pitchSlider)){
-				String textval;
-				if (pitchSwitch->getPosition() == 0) {
-					textval = "0.00%";
-				} else
-				if (pitchSwitch->getPosition() == 2) {
-					textval.printf(STR("%0.2f%"),pitchSlider->getValue()*100.0 - 50.0);
-				} else
-					textval.printf(STR("%0.2f%"),pitchSlider->getValue()*20.0 - 10.0);
-                pitchValue->setText(VSTGUI::UTF8String(textval));
-			}
-			break;
-		//------------------
-		case kCurrentSceneId:
-			if (scenKnob)
-			{
-                scenKnob->setValueNormalized ((float)value);
-			}
-			if(sceneValue){
-				//int currentScene = ceil(value * (float)(MaximumScenes-1));
-				//int currentScene = floor(value * (float)(MaximumScenes-1));
-				int currentScene = floor(value * (float)(EMaximumScenes-1)+0.5);
-				//String128 tmp;
-				//controller->getParamStringByValue(kCurrentSceneId,value, tmp);
-				//String textval (tmp);
-                String textval;
-                textval = textval.printf("%d",currentScene + 1);
-                sceneValue->setText(VSTGUI::UTF8String(textval));
-			}
-			break;
-		case kCurrentEntryId:
-			{
-				//currentEntry = ceil(value * (float)(MaximumSamples-1));
-				//currentEntry = floor(value * (float)(MaximumSamples-1));
-				int newCurEntry = floor(value * (float)(EMaximumSamples-1)+0.5);
-				if (newCurEntry != currentEntry) {
-					currentEntry = floor(value * (float)(EMaximumSamples-1)+0.5);
+                if (sampleNumber) {
+                    sampleNumber->setText(VSTGUI::UTF8String(textval.printf("#%03d", currentEntry + 1)));
+                }
+                if (nameEdit && sampleBase) {
+                    nameEdit->setText(sampleBase->getEntry(currentEntry)->getTitle());
+                }
+            }
+        }
+    }
+    break;
+    case kVuLeftId:
+        lastVuLeftMeterValue = float(value);
+        break;
+    case kVuRightId:
+        lastVuRightMeterValue = float(value);
+        break;
+    case kDistorsionId:
+        lastDistort = float(value) > 0.5f;
+        break;
+    case kPreRollId:
+        lastPreRoll = float(value) > 0.5f;
+        break;
+    case kPostRollId:
+        lastPostRoll = float(value) > 0.5f;
+        break;
+    case kHoldId:
+        lastHold = float(value) > 0.5;
+        break;
+    case kFreezeId:
+        lastFreeze = float(value) > 0.5;
+        break;
+    case kVintageId:
+        lastVintage = float(value) > 0.5;
+        break;
+    case kLockToneId:
+        lastLockTone = float(value) > 0.5;
+        break;
 
-	//String tttmm;
+    case kPositionId:
+        if (wavView) {
+            wavView->setPosition(float(value));
+        }
+        break;
 
-	//tttmm = tttmm.printf("%f, %f, %d",value,value * (float)(MaximumSamples-1),currentEntry);
-	//MessageBox(0,tttmm.text16(),STR("currentEntry"),MB_OK);
-
-
-                    if ((currentEntry < sampleBitmaps.size())&&(currentEntry>=0)) {
-
-						if (wavView){ wavView->setWave(sampleBitmaps.at(currentEntry));
-									wavView->setPosition(0);}
-					//sampleBase->getEntry(currentEntry)->setChecked(true);
-						if (sampleBase) sampleBase->setCurrent(currentEntry,true);
-						String textval;
-                        if (sampleNumber) sampleNumber->setText(VSTGUI::UTF8String(textval.printf("#%03d",currentEntry+1)));
-						if (nameEdit) nameEdit->setText(sampleBase->getEntry(currentEntry)->getTitle());
-					}
-				}
-			}
-			break;
-		case kVuLeftId:
-			lastVuLeftMeterValue = (float)value;
-			break;
-		case kVuRightId:
-			lastVuRightMeterValue = (float)value;
-			break;
-		case kDistorsionId:
-			lastDistort = (float)value > 0.5;
-			break;
-		case kPreRollId:
-			lastPreRoll = (float)value > 0.5;
-			break;
-		case kPostRollId:
-			lastPostRoll = (float)value > 0.5;
-			break;
-		case kHoldId:
-			lastHold = (float)value > 0.5;
-			break;
-		case kFreezeId:
-			lastFreeze = (float)value > 0.5;
-			break;
-		case kVintageId:
-			lastVintage = (float)value > 0.5;
-			break;
-		case kLockToneId:
-			lastLockTone = (float)value > 0.5;
-			break;
-
-		case kPositionId:
-			//lastPosition = (float)value;
-			if (wavView) wavView->setPosition((float)value);
-			//wavView->setValueNormalized((float)value,false);
-			break;
-
-	}
-	//if ((tag>=kPadId)&&(tag<(kPadId+ENumberOfPads))) {
-	//		padKick[tag-kPadId]->setActive((float)value>0.5);
-	//}
+    }
 }
 
 //------------------------------------------------------------------------
 VSTGUI::CMessageResult AVinylEditorView::notify (CBaseObject* sender, const char* message)
 {
 
-    if (message == VSTGUI::CVSTGUITimer::kMsgTimer)
-	{
-		if (vuLeftMeter)
-		{
-			vuLeftMeter->setValue ((vuLeftMeter->getValue() * 4.0 + (1.0 - lastVuLeftMeterValue))/5.0);
-			lastVuLeftMeterValue = 0.f;
-		}
-		if (vuRightMeter)
-		{
-			vuRightMeter->setValue ((vuRightMeter->getValue() * 4.0 + (1.0 - lastVuRightMeterValue))/5.0);
-			lastVuRightMeterValue = 0.f;
-		}
-		if (dispDistorsion)
-		{
-			if (lastDistort) dispDistorsion->setValue (0);
-			else dispDistorsion->setValue (1);
-		}
-		if (dispPreRoll)
-		{
-			if (lastPreRoll) dispPreRoll->setValue (0);
-			else dispPreRoll->setValue (1);
-		}
-		if (dispPostRoll)
-		{
-			if (lastPostRoll) dispPostRoll->setValue (0);
-			else dispPostRoll->setValue (1);
-		}
-		if (dispHold)
-		{
-			if (lastHold) dispHold->setValue (0);
-			else dispHold->setValue (1);
-		}
-		if (dispFreeze)
-		{
-			if (lastFreeze) dispFreeze->setValue (0);
-			else dispFreeze->setValue (1);
-		}
-		if (dispVintage)
-		{
-			if (lastVintage) dispVintage->setValue (0);
-			else dispVintage->setValue (1);
-		}
-		if (dispLockTone)
-		{
-			if (lastLockTone) dispLockTone->setValue (0);
-			else dispLockTone->setValue (1);
-		}
-		/*if ((speedValue)&&(lastSpeedValue != fSpeedMonitor))
-		{
-			String tmp;
-			if (fSpeedMonitor>0)
-				tmp = tmp.printf(">%0.3f",fabs(fSpeedMonitor));
-			else if (fSpeedMonitor<0)
-				tmp = tmp.printf("<%0.3f",fabs(fSpeedMonitor));
-			else
-				tmp = tmp.printf("  %0.3f",fabs(fSpeedMonitor));
-			speedValue->setText(tmp);
-			lastSpeedValue = fSpeedMonitor;
-		}*/
-
-	}
+    if (message == VSTGUI::CVSTGUITimer::kMsgTimer) {
+        if (vuLeftMeter) {
+            vuLeftMeter->setValue((vuLeftMeter->getValue() * 4.0 + (1.0 - lastVuLeftMeterValue)) / 5.0);
+            lastVuLeftMeterValue = 0.f;
+        }
+        if (vuRightMeter) {
+            vuRightMeter->setValue((vuRightMeter->getValue() * 4.0 + (1.0 - lastVuRightMeterValue)) / 5.0);
+            lastVuRightMeterValue = 0.f;
+        }
+        if (dispDistorsion) {
+            dispDistorsion->setValue(lastDistort ? 0 : 1);
+        }
+        if (dispPreRoll) {
+            dispPreRoll->setValue(lastPreRoll ? 0 : 1);
+        }
+        if (dispPostRoll) {
+            dispPostRoll->setValue(lastPostRoll ? 0 : 1);
+        }
+        if (dispHold) {
+            dispHold->setValue(lastHold ? 0 : 1);
+        }
+        if (dispFreeze) {
+            dispFreeze->setValue (lastFreeze ? 0 : 1);
+        }
+        if (dispVintage) {
+            dispVintage->setValue (lastVintage ? 0 : 1);
+        }
+        if (dispLockTone) {
+            dispLockTone->setValue (lastLockTone ? 0 : 1);
+        }
+    }
     if (message == VSTGUI::CNewFileSelector::kSelectEndMessage) {
         VSTGUI::CNewFileSelector* sel = dynamic_cast<VSTGUI::CNewFileSelector*>(sender);
         if (sel) {
@@ -1312,9 +1115,9 @@ VSTGUI::CMessageResult AVinylEditorView::notify (CBaseObject* sender, const char
                         using namespace std::filesystem;
                         msg->setMessageID ("loadNewEntry");
                         msg->getAttributes ()->setString("File",
-                                                         String(sel->getSelectedFile(i)));
+                                                        String(sel->getSelectedFile(i)));
                         msg->getAttributes ()->setString("Sample",
-                                                         path(sel->getSelectedFile(i)).filename().u16string().data());
+                                                        path(sel->getSelectedFile(i)).filename().u16string().data());
                         controller->sendMessage (msg);
                         msg->release ();
                     }
@@ -1337,99 +1140,97 @@ VSTGUI::CMessageResult AVinylEditorView::notify (CBaseObject* sender, const char
         }
     }
 
-	return VSTGUIEditor::notify (sender, message);
+    return VSTGUIEditor::notify (sender, message);
 }
 
 void AVinylEditorView::setSpeedMonitor(double _speed)
 {
-   if (_speed != lastSpeedValue) {
-		lastSpeedValue = _speed;
-		if (speedValue) {
-			String tmp;
-			if (lastSpeedValue>0)
-				tmp = tmp.printf("> %0.3f",fabs(lastSpeedValue));
-			else if (lastSpeedValue<0)
-				tmp = tmp.printf("< %0.3f",fabs(lastSpeedValue));
-			else
-				tmp = tmp.printf("|| %0.3f",fabs(lastSpeedValue));
+    if (_speed != lastSpeedValue) {
+        lastSpeedValue = _speed;
+        if (speedValue) {
+            String tmp;
+            if (lastSpeedValue > 0) {
+                tmp = tmp.printf("> %0.3f",fabs(lastSpeedValue));
+            } else if (lastSpeedValue < 0) {
+                tmp = tmp.printf("< %0.3f",fabs(lastSpeedValue));
+            } else {
+                tmp = tmp.printf("|| %0.3f",fabs(lastSpeedValue));
+            }
             speedValue->setText(VSTGUI::UTF8String(tmp));
-       }
+        }
 
-   }
+    }
 }
 
 void AVinylEditorView::setPositionMonitor(double _position)
 {
-   if (_position != lastPositionValue) {
-		lastPositionValue = _position;
-		if (wavView) {
-			wavView->setPosition((float)_position);
-       }
+    if (_position != lastPositionValue) {
+        lastPositionValue = _position;
+        if (wavView) {
+            wavView->setPosition((float)_position);
+        }
 
-   }
+    }
 }
 
 VSTGUI::CBitmap * AVinylEditorView::generateWaveform(SampleEntry * newEntry)
 {
-	int bitmapWidth = ((double)(newEntry->GetBufferLength()))*0.0015;
-	if (bitmapWidth<400) {
-	   bitmapWidth = 400;
-	}else if (bitmapWidth % 2) {
-	   bitmapWidth++;
-	}
-	//int bitmapWidth = newEntry->GetBufferLength()*3.0/44100.0;
-	if (bitmapWidth <2) {
-       return 0; 
-	}
-	bool drawBeats =  newEntry->GetACIDbeats()>0;
-	//long beatPeriodic = drawBeats?bitmapWidth/(2 * newEntry->GetACIDbeats()):0;
-	double beatPeriodic = drawBeats?(double)bitmapWidth/(2.0f * newEntry->GetACIDbeats()):0;
+    int bitmapWidth = (double(newEntry->GetBufferLength())) * 0.0015;
+    if (bitmapWidth<400) {
+        bitmapWidth = 400;
+    }else if (bitmapWidth % 2) {
+        bitmapWidth++;
+    }
+
+    if (bitmapWidth <2) {
+        return 0;
+    }
+    bool drawBeats =  newEntry->GetACIDbeats() > 0;
+
+    double beatPeriodic = drawBeats ? double(bitmapWidth) / (2.0 * newEntry->GetACIDbeats()) : 0;
     VSTGUI::CBitmap * Digits = new VSTGUI::CBitmap(VSTGUI::CResourceDescription("digits.png"));
-    VSTGUI::CBitmap * waveForm = new VSTGUI::CBitmap(bitmapWidth,83);
-	if (waveForm) {
-    VSTGUI::CBitmapPixelAccess * PixelMap = VSTGUI::CBitmapPixelAccess::create(waveForm);
-    VSTGUI::CBitmapPixelAccess * PixelDigits = VSTGUI::CBitmapPixelAccess::create(Digits);
-	PixelMap->setPosition(0,61);
-    PixelMap->setColor(VSTGUI::CColor(0,255,0,220));
-	for (int i = 1; i <= bitmapWidth/2; i++) {
-		Sample32 height = newEntry->GetPeakSample((i-1)*((newEntry->GetBufferLength()-1)/(bitmapWidth/2)),i*((newEntry->GetBufferLength()-1)/(bitmapWidth/2)));
-		PixelMap->setPosition((i-1)*2,61);
-        PixelMap->setColor(VSTGUI::CColor(0,255,0,120));
-		for (int j = 1; j < 40*height; j++) {
-			PixelMap->setPosition((i-1)*2,61-j*2);
-            PixelMap->setColor(VSTGUI::CColor(100*(1.0-j/(60.0*height)),255,0,40+180*sqr(1.0-j/(60.0*height))));
-			if ((61+j*2)<=81) {
-				PixelMap->setPosition((i-1)*2,61+j*2);
-                PixelMap->setColor(VSTGUI::CColor(100*(1.0-j/(60.0*height)),255,0,80.0*sqr(1.0-j/(60.0*height))));
-			}
-		}
-	}
-	for (int i = 1; i <= bitmapWidth/2; i++) {
-		//if ((drawBeats)&&((((double)i-1.0) / beatPeriodic) >= (double)((int)(((double)i-1.0) / beatPeriodic)))&&((((double)i-1.0) / beatPeriodic) < (double)((int)(((double)i) / beatPeriodic)+1.0))) {
-		if ((drawBeats)&&((i == 1)||(((double)((int)(((double)i-2.0) / beatPeriodic)))!=((double)((int)(((double)i-1.0) / beatPeriodic)))))) {
-			//for (int j = 0; j < 60; j++) {
-			//	PixelMap->setPosition((i-1)*2,j);
-			//	PixelMap->setColor(CColor(255,255,255,85-j*1.45));
-			//}
-			for (int j = 0; j <= 5; j++) {
-				for(int k=0; k<= 5; k++) {
-				   PixelMap->setPosition((i-1)*2+j + 2,76+k);
-				   PixelDigits->setPosition((((i-1) / (int)beatPeriodic)%10)*5 + j,k);
-                   VSTGUI::CColor DigPixel;
-				   PixelDigits->getColor(DigPixel);
-				   PixelMap->setColor(DigPixel);
-				}
-			}
-			for (int j = 61; j < 85; j+=2) {
-				PixelMap->setPosition((i-1)*2,j);
-                PixelMap->setColor(VSTGUI::CColor(255,255,255,(j-58)*6+10));
-			}
-		}
-	}
-	PixelMap->forget();
-	PixelDigits->forget();
-	Digits->forget();
-	return waveForm;
+    VSTGUI::CBitmap * waveForm = new VSTGUI::CBitmap(bitmapWidth, 83);
+    if (waveForm) {
+        VSTGUI::CBitmapPixelAccess * PixelMap = VSTGUI::CBitmapPixelAccess::create(waveForm);
+        VSTGUI::CBitmapPixelAccess * PixelDigits = VSTGUI::CBitmapPixelAccess::create(Digits);
+        PixelMap->setPosition(0,61);
+        PixelMap->setColor(VSTGUI::CColor(0,255,0,220));
+        for (int i = 1; i <= bitmapWidth / 2; i++) {
+            Sample32 height = newEntry->GetPeakSample((i - 1) * ((newEntry->GetBufferLength() - 1) / (bitmapWidth / 2)),
+                                                      i * ((newEntry->GetBufferLength() - 1) / (bitmapWidth / 2)));
+            PixelMap->setPosition((i-1)*2,61);
+            PixelMap->setColor(VSTGUI::CColor(0,255,0,120));
+            for (int j = 1; j < 40*height; j++) {
+                PixelMap->setPosition((i-1)*2,61-j*2);
+                PixelMap->setColor(VSTGUI::CColor(100*(1.0-j/(60.0*height)),255,0,40+180*sqr(1.0-j/(60.0*height))));
+                if ((61+j*2)<=81) {
+                    PixelMap->setPosition((i-1)*2,61+j*2);
+                    PixelMap->setColor(VSTGUI::CColor(100*(1.0-j/(60.0*height)),255,0,80.0*sqr(1.0-j/(60.0*height))));
+                }
+            }
+        }
+        for (int i = 1; i <= bitmapWidth / 2; i++) {
+            //if ((drawBeats)&&((((double)i-1.0) / beatPeriodic) >= (double)((int)(((double)i-1.0) / beatPeriodic)))&&((((double)i-1.0) / beatPeriodic) < (double)((int)(((double)i) / beatPeriodic)+1.0))) {
+            if (drawBeats && ((i == 1) || ((int((i - 2.0) / beatPeriodic)) != (int((i - 1.0) / beatPeriodic))))) {
+                for (int j = 0; j <= 5; j++) {
+                    for(int k=0; k<= 5; k++) {
+                        PixelMap->setPosition((i-1)*2+j + 2,76+k);
+                        PixelDigits->setPosition((((i-1) / (int)beatPeriodic)%10)*5 + j,k);
+                        VSTGUI::CColor DigPixel;
+                        PixelDigits->getColor(DigPixel);
+                        PixelMap->setColor(DigPixel);
+                    }
+                }
+                for (int j = 61; j < 85; j+=2) {
+                    PixelMap->setPosition((i-1)*2,j);
+                    PixelMap->setColor(VSTGUI::CColor(255, 255, 255, (j - 58) * 6 + 10));
+                }
+            }
+        }
+        PixelMap->forget();
+        PixelDigits->forget();
+        Digits->forget();
+        return waveForm;
     }else return 0;
 }
 
@@ -1437,29 +1238,27 @@ void AVinylEditorView::delEntry(int64 delEntryIndex)
 {
     if ((delEntryIndex>=0)&&(delEntryIndex < sampleBitmaps.size())) {
 
-//String ttmm;
-
-//ttmm = ttmm.printf("%d",delEntryIndex);
-
-//MessageBox(0,ttmm.text16(),STR("123"),MB_OK);
         VSTGUI::CBitmap * waveForm = sampleBitmaps.at(delEntryIndex);
 
         sampleBitmaps.erase(sampleBitmaps.begin() + delEntryIndex);
-       	waveForm->forget();
-		if (sampleBase) {
-       		sampleBase->removeEntry(delEntryIndex);
-			if (padBase) padBase->removeEntry(delEntryIndex);
-			if (currentEntry>=sampleBase->getNbEntries()) currentEntry = sampleBase->getNbEntries()-1;
-       		if (sampleBase->getNbEntries()==0) {
-                sampleBase->addEntry(EEmptyBaseTitle,0,VSTGUI::CMenuItem::kTitle|VSTGUI::CMenuItem::kDisabled);
+        waveForm->forget();
+        if (sampleBase) {
+            sampleBase->removeEntry(delEntryIndex);
+            if (padBase) {
+                padBase->removeEntry(delEntryIndex);
+            }
+            if (currentEntry>=sampleBase->getNbEntries()) {
+                currentEntry = sampleBase->getNbEntries() - 1;
+            }
+            if (sampleBase->getNbEntries()==0) {
+                sampleBase->addEntry(EEmptyBaseTitle, 0, VSTGUI::CMenuItem::kTitle|VSTGUI::CMenuItem::kDisabled);
                 if (padBase) {
-                    padBase->addEntry(EEmptyBaseTitle,0,VSTGUI::CMenuItem::kTitle|VSTGUI::CMenuItem::kDisabled);
+                    padBase->addEntry(EEmptyBaseTitle, 0, VSTGUI::CMenuItem::kTitle|VSTGUI::CMenuItem::kDisabled);
                 }
-				currentEntry = 0;
+                currentEntry = 0;
                 if (wavView) {
                     wavView->setWave(0);
                 }
-				//if (fileEdit)	fileEdit->setText(0);
                 if (nameEdit) {
                     nameEdit->setText(0);
                 }
@@ -1467,97 +1266,94 @@ void AVinylEditorView::delEntry(int64 delEntryIndex)
                     sampleNumber->setText(" ");
                 }
 
-				if (samplePopup) {
-					samplePopup->getEntry(3)->setEnabled(false);
-					samplePopup->getEntry(4)->setEnabled(false);
-					if (EMaximumSamples > samplePopup->getNbEntries()) {
-					   samplePopup->getEntry(2)->setEnabled(true);
-					}
-				}
-			}else{
-				////////////////////////////////////////////////////////////////
-				////////////SyncroParameters
-				////////////////////////////////////////////////////////////////
-				controller->setParamNormalized (kCurrentEntryId, (float)currentEntry/(EMaximumSamples-1));
-				controller->performEdit (kCurrentEntryId, (float)currentEntry/(EMaximumSamples-1));
-
-			}
-       	}
-	}
+                if (samplePopup) {
+                    samplePopup->getEntry(3)->setEnabled(false);
+                    samplePopup->getEntry(4)->setEnabled(false);
+                    if (EMaximumSamples > samplePopup->getNbEntries()) {
+                        samplePopup->getEntry(2)->setEnabled(true);
+                    }
+                }
+            } else {
+                controller->setParamNormalized (kCurrentEntryId, (float)currentEntry/(EMaximumSamples-1));
+                controller->performEdit (kCurrentEntryId, (float)currentEntry/(EMaximumSamples-1));
+            }
+        }
+    }
 }
 
 void AVinylEditorView::initEntry(SampleEntry * newEntry)
 {
-	if (newEntry) {
-
+    if (newEntry) {
 
         VSTGUI::CBitmap * waveForm;
 
-       	int32 Index = newEntry->GetIndex()-1;
-        if (Index<sampleBitmaps.size()) {
+        int32 Index = newEntry->GetIndex()-1;
+        if (Index < sampleBitmaps.size()) {
 
-			waveForm = generateWaveform(newEntry);
+            waveForm = generateWaveform(newEntry);
             VSTGUI::CBitmap * oldBitmap = sampleBitmaps.at(Index);
             sampleBitmaps[Index] = waveForm;
-			oldBitmap->forget();
-           	//sampleBitmaps.add(waveForm);
+            oldBitmap->forget();
 
-           	if (sampleBase) {
-				sampleBase->getEntry(Index)->setTitle(newEntry->GetName());
-           	}
-			if (padBase) {
-				padBase->getEntry(Index)->setTitle(newEntry->GetName());
-           	}
-		}else
-		{
-			waveForm = generateWaveform(newEntry);
+            if (sampleBase) {
+                sampleBase->getEntry(Index)->setTitle(newEntry->GetName());
+            }
+            if (padBase) {
+                padBase->getEntry(Index)->setTitle(newEntry->GetName());
+            }
+        } else {
+            waveForm = generateWaveform(newEntry);
             if (waveForm) sampleBitmaps.push_back(waveForm);
 
 
-			if (sampleBase) {
-				if (strcmp(sampleBase->getEntry(0)->getTitle(),EEmptyBaseTitle)==0) {
-       				sampleBase->removeAllEntry();
-					if (padBase) padBase->removeAllEntry();
-					if (samplePopup) {
-						samplePopup->getEntry(3)->setEnabled(true);
-						samplePopup->getEntry(4)->setEnabled(true);
-						if (EMaximumSamples <= samplePopup->getNbEntries()) {
-						   samplePopup->getEntry(2)->setEnabled(false);
-						}
-           			}
-       			}
-                sampleBase->addEntry(newEntry->GetName(),sampleBase->getNbEntries(),VSTGUI::CMenuItem::kChecked);
-				if (padBase) padBase->addEntry(newEntry->GetName(),sampleBase->getNbEntries(),0);
-			}
-		}
-				//String tmp;
-				//tmp = tmp.printf("%d",currentEntry);
-				//MessageBox(0,tmp.text(),STR("123"),MB_OK);
+            if (sampleBase) {
+                if (strcmp(sampleBase->getEntry(0)->getTitle(),EEmptyBaseTitle)==0) {
+                    sampleBase->removeAllEntry();
+                    if (padBase) padBase->removeAllEntry();
+                    if (samplePopup) {
+                        samplePopup->getEntry(3)->setEnabled(true);
+                        samplePopup->getEntry(4)->setEnabled(true);
+                        if (EMaximumSamples <= samplePopup->getNbEntries()) {
+                            samplePopup->getEntry(2)->setEnabled(false);
+                        }
+                    }
+                }
+                sampleBase->addEntry(newEntry->GetName(),sampleBase->getNbEntries(), VSTGUI::CMenuItem::kChecked);
+                if (padBase) padBase->addEntry(newEntry->GetName(), sampleBase->getNbEntries(),0);
+            }
+        }
 
-		if ((newEntry->GetIndex()-1) == currentEntry) {
-			////////////////////////////////////////////////////////////////////////
-			if (samplePopup) sampleBase->setCurrent(currentEntry,true);
-			if (wavView) 	{wavView->setWave(waveForm); wavView->setLoop(newEntry->Loop);}
-	       	//if (fileEdit)	fileEdit->setText(newEntry->GetFileName());
-			if (nameEdit)	nameEdit->setText(newEntry->GetName());
-            if (sampleNumber) {String tmp;sampleNumber->setText(VSTGUI::UTF8String(tmp.printf("#%03d",newEntry->GetIndex())));}
-	       	////////////////////////////////////////////////////////////////////////
-		}
-   }
+        if ((newEntry->GetIndex() - 1) == currentEntry) {
+            if (samplePopup) {
+                sampleBase->setCurrent(currentEntry, true);
+            }
+            if (wavView) {
+                wavView->setWave(waveForm);
+                wavView->setLoop(newEntry->Loop);
+            }
+            if (nameEdit) {
+                nameEdit->setText(newEntry->GetName());
+            }
+            if (sampleNumber) {
+                String tmp;
+                sampleNumber->setText(VSTGUI::UTF8String(tmp.printf("#%03d",newEntry->GetIndex())));
+            }
+        }
+    }
 }
 
 void AVinylEditorView::setPadState(int _pad, bool _state)
 {
-	padKick[_pad]->setActive(_state);
+    padKick[_pad]->setActive(_state);
 }
 void  AVinylEditorView::setPadType(int _pad,int _type)
 {
-	padType[_pad]->setPosition(_type);
+    padType[_pad]->setPosition(_type);
 }
 
 void  AVinylEditorView::setPadTag(int _pad,int _tag)
 {
-   PadTag[_pad] = _tag;
+    PadTag[_pad] = _tag;
 }
 
 bool AVinylEditorView::callBeforePopup(VSTGUI::IControlListener *listener, VSTGUI::CControl* pControl)
@@ -1566,26 +1362,7 @@ bool AVinylEditorView::callBeforePopup(VSTGUI::IControlListener *listener, VSTGU
     if (!view) {
         return false;
     }
-	//int PadNumber;
     view->padForSetting = pControl->getTag() - 'Pd00';
-    // switch (pControl->getTag()) {
-    // 	case 'Pd00': padForSetting = 0;break;
-    // 	case 'Pd01': padForSetting = 1;break;
-    // 	case 'Pd02': padForSetting = 2;break;
-    // 	case 'Pd03': padForSetting = 3;break;
-    // 	case 'Pd04': padForSetting = 4;break;
-    // 	case 'Pd05': padForSetting = 5;break;
-    // 	case 'Pd06': padForSetting = 6;break;
-    // 	case 'Pd07': padForSetting = 7;break;
-    // 	case 'Pd08': padForSetting = 8;break;
-    // 	case 'Pd09': padForSetting = 9;break;
-    // 	case 'Pd10': padForSetting = 10;break;
-    // 	case 'Pd11': padForSetting = 11;break;
-    // 	case 'Pd12': padForSetting = 12;break;
-    // 	case 'Pd13': padForSetting = 13;break;
-    // 	case 'Pd14': padForSetting = 14;break;
-    // 	case 'Pd15': padForSetting = 15;break;
-    // }
 
     switch (view->padType[view->padForSetting]->getPosition()) {
     case PadEntry::kSamplePad:
@@ -1598,7 +1375,7 @@ bool AVinylEditorView::callBeforePopup(VSTGUI::IControlListener *listener, VSTGU
         if (view->effectBase2) {
             view->effectBase2->setCurrent(-1,false);
         }
-    break;
+        break;
     case PadEntry::kSwitchPad:
         if (view->padBase) {
             view->padBase->setCurrent(-1,false);
@@ -1609,7 +1386,7 @@ bool AVinylEditorView::callBeforePopup(VSTGUI::IControlListener *listener, VSTGU
         if (view->effectBase2) {
             view->effectBase2->setCurrent(-1,false);
         }
-    break;
+        break;
     case PadEntry::kKickPad:
         if (view->padBase) {
             view->padBase->setCurrent(-1,false);
@@ -1620,7 +1397,7 @@ bool AVinylEditorView::callBeforePopup(VSTGUI::IControlListener *listener, VSTGU
         if (view->effectBase2) {
             view->effectBase2->setCurrent(bitNumber(view->PadTag[view->padForSetting]),false);
         }
-    break;
+        break;
     default:
         if (view->padBase) {
             view->padBase->setCurrent(-1,false);
@@ -1632,37 +1409,35 @@ bool AVinylEditorView::callBeforePopup(VSTGUI::IControlListener *listener, VSTGU
             view->effectBase2->setCurrent(-1,false);
         }
         break;
-	}
-	return true;
+    }
+    return true;
 }
 
 void AVinylEditorView::setPadMessage(int _pad,int _type,int _tag)
 {
-	IMessage* msg = controller->allocateMessage ();
-	if (msg)
-	{
-		msg->setMessageID ("setPad");
-		msg->getAttributes ()->setInt("PadNumber", _pad);
-		msg->getAttributes ()->setInt("PadType", _type);
-		msg->getAttributes ()->setInt("PadTag", _tag);
-		controller->sendMessage (msg);
-		msg->release ();
-	}
-
+    IMessage* msg = controller->allocateMessage ();
+    if (msg)
+    {
+        msg->setMessageID("setPad");
+        msg->getAttributes()->setInt("PadNumber", _pad);
+        msg->getAttributes()->setInt("PadType", _type);
+        msg->getAttributes()->setInt("PadTag", _tag);
+        controller->sendMessage(msg);
+        msg->release();
+    }
 }
 
 void AVinylEditorView::setPadMessage(int _pad,int _type)
 {
-	IMessage* msg = controller->allocateMessage ();
-	if (msg)
-	{
-		msg->setMessageID ("setPad");
-		msg->getAttributes ()->setInt("PadNumber", _pad);
-		msg->getAttributes ()->setInt("PadType", _type);
-		controller->sendMessage (msg);
-		msg->release ();
-	}
-
+    IMessage* msg = controller->allocateMessage ();
+    if (msg)
+    {
+        msg->setMessageID("setPad");
+        msg->getAttributes()->setInt("PadNumber", _pad);
+        msg->getAttributes()->setInt("PadType", _type);
+        controller->sendMessage(msg);
+        msg->release();
+    }
 }
 
 }} // namespaces

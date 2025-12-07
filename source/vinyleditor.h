@@ -60,7 +60,7 @@ public:
     void setSpeedMonitor(double _speed);
     void setPositionMonitor(double _position);
 //------------------------------------------------------------------------
-protected:
+private:
 
     VSTGUI::CKnob* gainKnob;
     VSTGUI::CKnob* scenKnob;
@@ -124,7 +124,7 @@ protected:
 
 	//int64 currentScene;
     std::vector<VSTGUI::CBitmap*> sampleBitmaps;
-private:
+
     static bool callBeforePopup(VSTGUI::IControlListener*, VSTGUI::CControl*);
 	void setPadMessage(int _pad,int _type,int _tag);
 	void setPadMessage(int _pad,int _type);
