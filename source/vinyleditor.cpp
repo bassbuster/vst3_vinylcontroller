@@ -64,7 +64,7 @@ namespace {
 
 template <typename T, typename ... Args>
 auto make_shared(Args&&... arg) {
-    return VSTGUI::SharedPointer<T>(new T(std::forward<Args>(arg)...), false);
+    return VSTGUI::SharedPointer<T>(new T(std::forward<Args>(arg)...)/*, false*/);
 }
 
 }
@@ -746,7 +746,7 @@ void PLUGIN_API AVinylEditorView::close ()
     getFrame()->removeAll(true);
     int32_t refCount = getFrame()->getNbReference();
     if (refCount == 1) {
-        getFrame()->close ();
+        getFrame()->close();
         frame = nullptr;
     } else {
         getFrame()->forget();

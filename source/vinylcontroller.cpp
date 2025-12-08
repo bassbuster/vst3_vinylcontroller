@@ -15,7 +15,7 @@ namespace {
 
 template <typename T, typename ... Args>
 auto make_shared(Args&&... arg) {
-    return Steinberg::IPtr<T>(new T(std::forward<Args>(arg)...), false);
+    return Steinberg::IPtr<T>(new T(std::forward<Args>(arg)...));
 }
 
 }
