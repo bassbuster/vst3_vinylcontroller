@@ -11,6 +11,15 @@
 #include <stdio.h>
 #include <math.h>
 
+namespace {
+
+template <typename T, typename ... Args>
+auto make_shared(Args&&... arg) {
+    return Steinberg::IPtr<T>(new T(std::forward<Args>(arg)...), false);
+}
+
+}
+
 namespace Steinberg {
 namespace Vst {
 
@@ -32,8 +41,8 @@ public:
 //------------------------------------------------------------------------
 GainParameter::GainParameter (const char* title, int32 flags, int32 id)
 {
-	Steinberg::UString (info.title, USTRINGSIZE (info.title)).assign (USTRING (title));
-	Steinberg::UString (info.units, USTRINGSIZE (info.units)).assign (USTRING ("dB"));
+    Steinberg::UString(info.title, USTRINGSIZE(info.title)).assign(USTRING(title));
+    Steinberg::UString(info.units, USTRINGSIZE(info.units)).assign(USTRING("dB"));
 	
 	info.flags = flags;
 	info.id = id;
@@ -48,12 +57,9 @@ GainParameter::GainParameter (const char* title, int32 flags, int32 id)
 void GainParameter::toString (ParamValue normValue, String128 string) const
 {
 	char text[32];
-	if (normValue > 0.0001)
-	{
+    if (normValue > 0.0001) {
 		sprintf (text, "%.2f", 20 * log10 ((float)normValue));
-	}
-	else
-	{
+    } else {
 		strcpy (text, "-oo");
 	}
 
@@ -63,13 +69,11 @@ void GainParameter::toString (ParamValue normValue, String128 string) const
 //------------------------------------------------------------------------
 bool GainParameter::fromString (const TChar* string, ParamValue& normValue) const
 {
-	String wrapper ((TChar*)string); // don't know buffer size here!
+    String wrapper((TChar*)string); // don't know buffer size here!
 	double tmp = 0.0;
-	if (wrapper.scanFloat (tmp))
-	{
+    if (wrapper.scanFloat (tmp)) {
 		// allow only values between -oo and 0dB
-		if (tmp > 0.0)
-		{
+        if (tmp > 0.0) {
 			tmp = -tmp;
 		}
 
@@ -78,21 +82,6 @@ bool GainParameter::fromString (const TChar* string, ParamValue& normValue) cons
 	}
 	return false;
 }
-
-//------------------------------------------------------------------------
-// GainParameter Declaration
-// example of custom parameter (overwriting to and fromString)
-//------------------------------------------------------------------------
-//class NumberParameter : public Parameter
-//{
-//public:
-//	NumberParameter (int32 flags,int32 minValue,int32 maxValue, int32 id);
-//
-//	virtual void toString (ParamValue normValue, String128 string) const;
-//	virtual bool fromString (const TChar* string, ParamValue& normValue) const;
-//};
-
-
 
 //------------------------------------------------------------------------
 // AGainController Implementation
@@ -106,46 +95,34 @@ tresult PLUGIN_API AVinylController::initialize (FUnknown* context)
 	midiVolume = gVolume;
 	midiTune = gTune;
 
-	tresult result = EditControllerEx1::initialize (context);
-	if (result != kResultOk)
-	{
+    tresult result = EditControllerEx1::initialize(context);
+    if (result != kResultOk) {
 		return result;
 	}
 
 	//--- Create Units-------------
 	UnitInfo unitInfo;
-	Unit* unit;
+    //Unit* unit;
 
 	// create root only if you want to use the programListId
 	unitInfo.id = kRootUnitId;	// always for Root Unit
 	unitInfo.parentUnitId = kNoParentUnitId;	// always for Root Unit
-	Steinberg::UString (unitInfo.name, USTRINGSIZE (unitInfo.name)).assign (USTRING ("Root"));
+    Steinberg::UString(unitInfo.name, USTRINGSIZE(unitInfo.name)).assign(USTRING("Root"));
 	unitInfo.programListId = kNoProgramListId;
-	
-	unit = new Unit (unitInfo);
-	addUnit (unit);
 
-	// create a unit1 for the gain
-	//unitInfo.id = 1;
-	//unitInfo.parentUnitId = kRootUnitId;	// attached to the root unit
-	
-	//Steinberg::UString (unitInfo.name, USTRINGSIZE (unitInfo.name)).assign (USTRING ("Unit1"));
-	
-	//unitInfo.programListId = kNoProgramListId;
-	
-	//unit = new Unit (unitInfo);
-	//addUnit (unit);
+    auto unit = make_shared<Unit>(unitInfo);
+    addUnit(unit);
 
 	//---Create Parameters------------
 	
 	//---Gain parameter--
-	GainParameter* gainParam = new GainParameter ("Gain",ParameterInfo::kCanAutomate, kGainId);
-	parameters.addParameter (gainParam);
-	gainParam->setUnitID (kRootUnitId);
+    auto gainParam = make_shared<GainParameter>("Gain",ParameterInfo::kCanAutomate, kGainId);
+    parameters.addParameter(gainParam);
+    gainParam->setUnitID(kRootUnitId);
 
-	GainParameter* volumeParam = new GainParameter ("Volume",ParameterInfo::kCanAutomate, kVolumeId);
-	parameters.addParameter (volumeParam);
-	volumeParam->setUnitID (kRootUnitId);
+    auto volumeParam = make_shared<GainParameter>("Volume",ParameterInfo::kCanAutomate, kVolumeId);
+    parameters.addParameter(volumeParam);
+    volumeParam->setUnitID(kRootUnitId);
 
 	//---VuMeter parameter---
 	parameters.addParameter (STR16 ("VuLeft"), 0, 0, 0, ParameterInfo::kIsReadOnly, kVuLeftId);
@@ -161,23 +138,23 @@ tresult PLUGIN_API AVinylController::initialize (FUnknown* context)
 	parameters.addParameter (STR16 ("Vintage"), 0, 1, 0, ParameterInfo::kIsReadOnly, kVintageId);
 	parameters.addParameter (STR16 ("LockTone"), 0, 1, 0, ParameterInfo::kIsReadOnly, kLockToneId);
 
-	RangeParameter* pitchParam = new RangeParameter (STR16 ("Pitch"), kPitchId,STR16 ("%"),0,1,0.5,511, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
-	parameters.addParameter (pitchParam);
+    auto pitchParam = make_shared<RangeParameter>(STR16 ("Pitch"), kPitchId,STR16 ("%"),0,1,0.5,511, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
+    parameters.addParameter(pitchParam);
 
 	//RangeParameter* padsParam = new RangeParameter (STR16 ("ActivePad"), kCurrentPadId,STR16 ("Number"),1,NumberOfPads,1,NumberOfPads-1, ParameterInfo::kCanAutomate, kRootUnitId);
 	//parameters.addParameter (padsParam);
 
-	RangeParameter* sampleParam = new RangeParameter (STR16 ("CurrentSample"), kCurrentEntryId,STR16 ("Number"),1,EMaximumSamples,1,EMaximumSamples-1, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
-	parameters.addParameter (sampleParam);
+    auto sampleParam = make_shared<RangeParameter>(STR16 ("CurrentSample"), kCurrentEntryId,STR16 ("Number"),1,EMaximumSamples,1,EMaximumSamples-1, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
+    parameters.addParameter(sampleParam);
 
-	RangeParameter* sceneParam = new RangeParameter (STR16 ("CurrentScene"), kCurrentSceneId,STR16 ("Number"),1,EMaximumScenes,1,EMaximumScenes-1, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
-	parameters.addParameter (sceneParam);
+    auto sceneParam = make_shared<RangeParameter>(STR16 ("CurrentScene"), kCurrentSceneId,STR16 ("Number"),1,EMaximumScenes,1,EMaximumScenes-1, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
+    parameters.addParameter(sceneParam);
 
-	RangeParameter* switchParam = new RangeParameter (STR16 ("PitchSwitch"), kPitchSwitchId,STR16 ("Switch"),0,2,0,2, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
-	parameters.addParameter (switchParam);
+    auto switchParam = make_shared<RangeParameter>(STR16 ("PitchSwitch"), kPitchSwitchId,STR16 ("Switch"),0,2,0,2, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
+    parameters.addParameter(switchParam);
 
-	RangeParameter* curveParam = new RangeParameter (STR16 ("VolumeCurve"), kVolCurveId,STR16 ("Curve"),0,2,0,2, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
-	parameters.addParameter (curveParam);
+    auto curveParam = make_shared<RangeParameter>(STR16 ("VolumeCurve"), kVolCurveId,STR16 ("Curve"),0,2,0,2, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
+    parameters.addParameter(curveParam);
 
 	//---Bypass parameter---
 	parameters.addParameter (STR16 ("Bypass"), 0, 1, 0, ParameterInfo::kCanAutomate|ParameterInfo::kIsBypass, kBypassId);
@@ -188,34 +165,10 @@ tresult PLUGIN_API AVinylController::initialize (FUnknown* context)
 	parameters.addParameter (STR16 ("Sync"), 0, 1, 0, 0, kSyncId);
 	parameters.addParameter (STR16 ("Reverse"), 0, 1, 0, 0, kReverseId);
 
-	RangeParameter* ampParam = new RangeParameter (STR16 ("Amp"), kAmpId,STR16 ("<>"),0,1,0.5,511, ParameterInfo::kIsWrapAround, kRootUnitId);
+    auto ampParam = make_shared<RangeParameter>(STR16 ("Amp"), kAmpId,STR16 ("<>"),0,1,0.5,511, ParameterInfo::kIsWrapAround, kRootUnitId);
 	parameters.addParameter (ampParam);
-	RangeParameter* tuneParam = new RangeParameter (STR16 ("Tune"), kTuneId,STR16 ("<>"),0,1,0.5,511, ParameterInfo::kIsWrapAround, kRootUnitId);
+    auto tuneParam = make_shared<RangeParameter>(STR16 ("Tune"), kTuneId,STR16 ("<>"),0,1,0.5,511, ParameterInfo::kIsWrapAround, kRootUnitId);
 	parameters.addParameter (tuneParam);
-	//parameters.addParameter (STR16 ("Amp"), 0, 1, 0.5, 0, kAmpId);
-	//parameters.addParameter (STR16 ("Tune"), 0, 1, 0.5, 0, kTuneId);
-
-
-	/*for (int i = 0; i < ENumberOfPads; i++) {
-		String tmp;
-		tmp = tmp.printf("Pad%02d",i+1);
-		parameters.addParameter (tmp.text16(), 0, 1, 0, ParameterInfo::kIsReadOnly, kPadId+i);
-	}
-	for (int i = 0; i < ENumberOfPads; i++) {
-		String tmp;
-		tmp = tmp.printf("PadType%02d",i+1);
-		parameters.addParameter (tmp.text16(), 0, 2, 0, ParameterInfo::kIsReadOnly, kPadTypeId+i);
-	}
-	for (int i = 0; i < ENumberOfPads; i++) {
-		String tmp;
-		tmp = tmp.printf("PadVal%02d",i+1);
-		parameters.addParameter (tmp.text16(), 0, 2, 0, ParameterInfo::kIsReadOnly, kPadValueId+i);
-	}*/
-
-	//---Custom state init------------
-
-	//String str ("Hello World!");
-	//str.copyTo (defaultMessageText, 0, 127);
 
     return result;
 }
@@ -237,58 +190,64 @@ tresult PLUGIN_API AVinylController::setComponentState (IBStream* state)
 
         int8 byteOrder;
         if (state->read(&byteOrder, sizeof (int8)) == kResultTrue) {
-            READ_SAVED_FLOAT(savedGain)
-            READ_SAVED_FLOAT(savedVolume)
-            READ_SAVED_FLOAT(savedPitch)
-            READ_SAVED_DWORD(savedEntry)
-            READ_SAVED_DWORD(savedScene)
-            READ_SAVED_FLOAT(savedSwitch)
-            READ_SAVED_FLOAT(savedCurve)
 
-            //READ_SAVED_FLOAT(savedGain,kGainId)
-            //READ_SAVED_FLOAT(savedVolume,kVolumeId)
-            //READ_SAVED_FLOAT(savedPitch,kPitchId)
-            //READ_SAVED_DWORD(savedEntry,kCurrentEntryId)
-            //READ_SAVED_DWORD(savedScene,kCurrentSceneId)
-            //READ_SAVED_FLOAT(savedSwitch,kPitchSwitchId)
-            //READ_SAVED_FLOAT(savedCurve,kVolCurveId)
-
-            if (byteOrder != BYTEORDER) {
-        //#if BYTEORDER == kBigEndian
-                SWAP_32 (savedGain)
-                SWAP_32 (savedVolume)
-                SWAP_32 (savedPitch)
-                SWAP_32 (savedEntry)
-                SWAP_32 (savedScene)
-                SWAP_32 (savedSwitch)
-                SWAP_32 (savedCurve)
-                SWAP_32 (savedGain)
-        //#endif
+            float savedGain = 0.f;
+            if (state->read(&savedGain, sizeof(float)) != kResultOk) {
+                return kResultFalse;
             }
 
-            setParamNormalized (kGainId, savedGain);
-            setParamNormalized (kVolumeId, savedVolume);
-            setParamNormalized (kPitchId, savedPitch);
-            setParamNormalized (kCurrentEntryId, (float)savedEntry/(float)(EMaximumSamples-1));
-            setParamNormalized (kCurrentSceneId, (float)savedScene/(float)(EMaximumScenes-1));
-            setParamNormalized (kPitchSwitchId, savedSwitch);
-            setParamNormalized (kVolCurveId, savedCurve);
+            float savedVolume = 0.f;
+            if (state->read(&savedVolume, sizeof(float)) != kResultOk) {
+                return kResultFalse;
+            }
 
+            float savedPitch = 0.f;
+            if (state->read(&savedPitch, sizeof(float)) != kResultOk) {
+                return kResultFalse;
+            }
 
+            DWORD savedEntry = 0;
+            if (state->read(&savedEntry, sizeof(float)) != kResultOk) {
+                return kResultFalse;
+            }
 
-            // jump the GainReduction
-            //state->seek (sizeof (float), IBStream::kIBSeekCur);
+            DWORD savedScene = 0;
+            if (state->read(&savedScene, sizeof(float)) != kResultOk) {
+                return kResultFalse;
+            }
 
-            // read the bypass
+            float savedSwitch = 0.f;
+            if (state->read(&savedSwitch, sizeof(float)) != kResultOk) {
+                return kResultFalse;
+            }
+
+            float savedCurve = 0.f;
+            if (state->read(&savedCurve, sizeof(float)) != kResultOk) {
+                return kResultFalse;
+            }
+
+            if (byteOrder != BYTEORDER) {
+                SWAP_32(savedGain)
+                SWAP_32(savedVolume)
+                SWAP_32(savedPitch)
+                SWAP_32(savedEntry)
+                SWAP_32(savedScene)
+                SWAP_32(savedSwitch)
+                SWAP_32(savedCurve)
+                SWAP_32(savedGain)
+            }
+
+            setParamNormalized(kGainId, savedGain);
+            setParamNormalized(kVolumeId, savedVolume);
+            setParamNormalized(kPitchId, savedPitch);
+            setParamNormalized(kCurrentEntryId, savedEntry/float(EMaximumSamples - 1));
+            setParamNormalized(kCurrentSceneId, savedScene/float(EMaximumScenes - 1));
+            setParamNormalized(kPitchSwitchId, savedSwitch);
+            setParamNormalized(kVolCurveId, savedCurve);
+
             int8 bypassState;
-            if (state->read (&bypassState, sizeof (bypassState)) == kResultTrue)
-            {
-            //    if (byteOrder != BYTEORDER) {
-            //#if BYTEORDER == kBigEndian
-            //        SWAP_32 (bypassState)
-            //#endif
-            //    }
-                setParamNormalized (kBypassId, bypassState ? 1. : 0.);
+            if (state->read(&bypassState, sizeof(bypassState)) == kResultTrue) {
+                setParamNormalized(kBypassId, bypassState ? 1. : 0.);
             }
         } else {
             return kResultFalse;
@@ -301,10 +260,8 @@ tresult PLUGIN_API AVinylController::setComponentState (IBStream* state)
 IPlugView* PLUGIN_API AVinylController::createView (const char* name)
 {
 	// someone wants my editor
-	if (name && strcmp (name, "editor") == 0)
-	{
-		AVinylEditorView* view = new AVinylEditorView (this);
-		return view;
+    if (name && strcmp (name, "editor") == 0) {
+        return new AVinylEditorView (this);
 	}
 	return 0;
 }
@@ -312,30 +269,47 @@ IPlugView* PLUGIN_API AVinylController::createView (const char* name)
 tresult PLUGIN_API AVinylController::setKnobmode (KnobMode  mode)
 {
 	return kResultOk;
-	/*switch (mode) {
-	case kCircularMode: return kResultOk;
-	case kRelativCircularMode: return kResultOk;
-	default:
-		return kResultFalse;
-	}*/
 }
 
 //------------------------------------------------------------------------
 tresult PLUGIN_API AVinylController::setState (IBStream* state)
 {
-	//tresult result = kResultFalse;
 
 	int8 byteOrder;
 	if (state->read (&byteOrder, sizeof (int8)) == kResultTrue)
-	{
+    {
 
-		READ_SAVED_DWORD(savedMidiGain)
-		READ_SAVED_DWORD(savedMidiScene)
-		READ_SAVED_DWORD(savedMidiMix)
-		READ_SAVED_DWORD(savedMidiPitch)
-		READ_SAVED_DWORD(savedMidiVolume)
-		READ_SAVED_DWORD(savedMidiTune)
-		if (byteOrder != BYTEORDER){
+        DWORD savedMidiGain = 0;
+        if (state->read(&savedMidiGain, sizeof(float)) != kResultOk) {
+            return kResultFalse;
+        }
+
+        DWORD savedMidiScene = 0;
+        if (state->read(&savedMidiScene, sizeof(float)) != kResultOk) {
+            return kResultFalse;
+        }
+
+        DWORD savedMidiMix = 0;
+        if (state->read(&savedMidiMix, sizeof(float)) != kResultOk) {
+            return kResultFalse;
+        }
+
+        DWORD savedMidiPitch = 0;
+        if (state->read(&savedMidiPitch, sizeof(float)) != kResultOk) {
+            return kResultFalse;
+        }
+
+        DWORD savedMidiVolume = 0;
+        if (state->read(&savedMidiVolume, sizeof(float)) != kResultOk) {
+            return kResultFalse;
+        }
+
+        DWORD savedMidiTune = 0;
+        if (state->read(&savedMidiTune, sizeof(float)) != kResultOk) {
+            return kResultFalse;
+        }
+
+        if (byteOrder != BYTEORDER){
 			SWAP_32(savedMidiGain)
 			SWAP_32(savedMidiScene)
 			SWAP_32(savedMidiMix)
@@ -349,35 +323,8 @@ tresult PLUGIN_API AVinylController::setState (IBStream* state)
 		midiPitch = savedMidiPitch;
 		midiVolume = savedMidiVolume;
 		midiTune = savedMidiTune;
-		/////////////////////////////////MIDIReMAP
-		////////////////////////////////
-		//MessageBox(0,STR("READSTATE"),STR("READSTATE"),MB_OK);
-
-		//restartComponent(kMidiCCAssignmentChanged);
 		return kResultOk;
 	}
-	//if ((result = state->read (defaultMessageText, 128 * sizeof (TChar))) != kResultTrue)
-	//{
-	//	return result;
-	//}
-
-	// if the byteorder doesn't match, byte swap the text array ...
-	//if (byteOrder != BYTEORDER)
-	//{
-	//	for (int32 i = 0; i < 128; i++)
-	//	{
-	//		SWAP_16 (defaultMessageText[i])
-	//	}
-	//}
-
-	// update our editors
-	//for (int32 i = 0; i < viewsArray.total (); i++)
-	//{
-	//	if (viewsArray.at (i))
-	//	{
-	//		viewsArray.at (i)->messageTextChanged ();
-	//	}
-	//}
 	
 	return kResultFalse;
 }
@@ -390,21 +337,19 @@ tresult PLUGIN_API AVinylController::getState (IBStream* state)
 	// as we save a Unicode string, we must know the byteorder when setState is called
 	int8 byteOrder = BYTEORDER;
 
-	if (state->write (&byteOrder, sizeof (int8)) == kResultTrue)
-	{
+    if (state->write (&byteOrder, sizeof (int8)) == kResultTrue) {
 		DWORD toSaveGain = midiGain;
 		DWORD toSaveScene = midiScene;
 		DWORD toSaveMix = midiMix;
 		DWORD toSavePitch = midiPitch;
 		DWORD toSaveVolume = midiVolume;
 		DWORD toSaveTune = midiTune;
-		state->write (&toSaveGain, sizeof (DWORD));
-		state->write (&toSaveScene, sizeof (DWORD));
-		state->write (&toSaveMix, sizeof (DWORD));
-		state->write (&toSavePitch, sizeof (DWORD));
-		state->write (&toSaveVolume, sizeof (DWORD));
-		state->write (&toSaveTune, sizeof (DWORD));
-	//	return state->write (defaultMessageText, 128 * sizeof (TChar));
+        state->write(&toSaveGain, sizeof (DWORD));
+        state->write(&toSaveScene, sizeof (DWORD));
+        state->write(&toSaveMix, sizeof (DWORD));
+        state->write(&toSavePitch, sizeof (DWORD));
+        state->write(&toSaveVolume, sizeof (DWORD));
+        state->write(&toSaveTune, sizeof (DWORD));
 		return kResultOk;
 	}
 	return kResultFalse;
@@ -431,7 +376,7 @@ tresult PLUGIN_API AVinylController::setParamNormalized (ParamID tag, ParamValue
 	
     for (auto& view: viewsArray) {
         if (view) {
-            view->update (tag, value);
+            static_cast<AVinylEditorView*>(view.get())->update(tag, value);
 		}
 	}
 
@@ -451,39 +396,17 @@ tresult PLUGIN_API AVinylController::getParamValueByString (ParamID tag, TChar* 
 }
 
 //------------------------------------------------------------------------
-void AVinylController::addDependentView (AVinylEditorView* view)
-{
-    viewsArray.push_back(view);
-	IMessage* msg = allocateMessage ();
-	if (msg)
-	{
-		msg->setMessageID ("initView");
-		sendMessage (msg);
-		msg->release ();
-	}
-
-}
-
-//------------------------------------------------------------------------
-void AVinylController::removeDependentView (AVinylEditorView* view)
-{
-    viewsArray.erase(std::remove(viewsArray.begin(), viewsArray.end(), view), viewsArray.end());
-    // for (int32 i = 0; i < viewsArray.total (); i++)
-    // {
-    // 	if (viewsArray.at (i) == view)
-    // 	{
-    // 		viewsArray.removeAt (i);
-    // 		break;
-    // 	}
-    // }
-}
-
-//------------------------------------------------------------------------
 void AVinylController::editorAttached (EditorView* editor)
 {
     AVinylEditorView* view = dynamic_cast<AVinylEditorView*>(editor);
     if (view) {
-        addDependentView(view);
+        viewsArray.push_back(view);
+        IMessage* msg = allocateMessage();
+        if (msg) {
+            msg->setMessageID("initView");
+            sendMessage(msg);
+            msg->release();
+        }
 	}
 }
 
@@ -492,22 +415,9 @@ void AVinylController::editorRemoved (EditorView* editor)
 {
     AVinylEditorView* view = dynamic_cast<AVinylEditorView*>(editor);
     if (view) {
-        removeDependentView(view);
+        viewsArray.erase(std::remove(viewsArray.begin(), viewsArray.end(), view), viewsArray.end());
 	}
 }
-
-//------------------------------------------------------------------------
-//void AVinylController::setDefaultMessageText (String128 text)
-//{
-   //	String tmp (text);
-   //	tmp.copyTo (defaultMessageText, 0, 127);
-//}
-
-//------------------------------------------------------------------------
-//TChar* AVinylController::getDefaultMessageText ()
-//{
-//	return defaultMessageText;
-//}
 
 //------------------------------------------------------------------------
 tresult PLUGIN_API AVinylController::queryInterface (const char* iid, void** obj)
@@ -521,36 +431,27 @@ tresult PLUGIN_API AVinylController::getMidiControllerAssignment(int32 busIndex,
 																 CtrlNumber midiControllerNumber, ParamID& tag)
 {
 
-
-	// we support for the Gain parameter all Midi Channel
-	if (midiControllerNumber == midiGain)
-	{
-//MessageBox(0,STR("MIDIMAP"),STR("MIDIMAP"),MB_OK);
+    if (midiControllerNumber == midiGain) {
 		tag = kGainId;
 		return kResultTrue;
 	}
-	if (midiControllerNumber == midiScene)
-	{
+    if (midiControllerNumber == midiScene) {
 		tag = kCurrentSceneId;
 		return kResultTrue;
 	}
-	if (midiControllerNumber == midiMix)
-	{
+    if (midiControllerNumber == midiMix) {
 		tag = kVolumeId;
 		return kResultTrue;
 	}
-	if (midiControllerNumber == midiPitch)
-	{
+    if (midiControllerNumber == midiPitch) {
 		tag = kPitchId;
 		return kResultTrue;
 	}
-	if (midiControllerNumber == midiVolume)
-	{
+    if (midiControllerNumber == midiVolume) {
 		tag = kAmpId;
 		return kResultTrue;
 	}
-	if (midiControllerNumber == midiTune)
-	{
+    if (midiControllerNumber == midiTune) {
 		tag = kTuneId;
 		return kResultTrue;
 	}
@@ -561,56 +462,46 @@ tresult PLUGIN_API AVinylController::getMidiControllerAssignment(int32 busIndex,
 tresult PLUGIN_API AVinylController::notify (IMessage* message)
 {
 
-//MessageBox(0,STR("123"),STR("123"),MB_OK);
-	if (strcmp (message->getMessageID(), "delEntry") == 0)
-	{
+    if (strcmp (message->getMessageID(), "delEntry") == 0) {
 		int64 delEntryInd;
 		message->getAttributes()->getInt ("EntryIndex", delEntryInd);
-//String ttmm;
-//ttmm = ttmm.printf("%d",delEntryInd);
-
-//MessageBox(0,ttmm.text16(),STR("123"),MB_OK);
 
         for(auto& view: viewsArray) {
-            view->delEntry(delEntryInd);
+            static_cast<AVinylEditorView*>(view.get())->delEntry(delEntryInd);
 		}
 
 		return kResultTrue;
 	}
-	if (strcmp (message->getMessageID(), "addEntry") == 0)
-	{
+    if (strcmp (message->getMessageID(), "addEntry") == 0) {
 		int64 newEntryInt;
 		SampleEntry * newEntry;
 		message->getAttributes()->getInt ("Entry", newEntryInt);
 		newEntry = (SampleEntry *)newEntryInt;
         for(auto& view: viewsArray) {
-            view->initEntry(newEntry);
+            static_cast<AVinylEditorView*>(view.get())->initEntry(newEntry);
         }
 
 		return kResultTrue;
 	}
-	if (strcmp (message->getMessageID(), "updateSpeed") == 0)
-	{
+    if (strcmp (message->getMessageID(), "updateSpeed") == 0) {
 		double newSpeed;
 		message->getAttributes()->getFloat ("Speed", newSpeed);       
         for(auto& view: viewsArray) {
-            view->setSpeedMonitor(newSpeed);
+            static_cast<AVinylEditorView*>(view.get())->setSpeedMonitor(newSpeed);
         }
 
 		return kResultTrue;
 	}
-	if (strcmp (message->getMessageID(), "updatePosition") == 0)
-	{
+    if (strcmp (message->getMessageID(), "updatePosition") == 0) {
 		double newPosition;
 		message->getAttributes()->getFloat ("Position", newPosition);
         for(auto& view: viewsArray) {
-            view->setPositionMonitor(newPosition);
+            static_cast<AVinylEditorView*>(view.get())->setPositionMonitor(newPosition);
         }
 
 		return kResultTrue;
 	}
-	if (strcmp (message->getMessageID(), "updatePads") == 0)
-	{
+    if (strcmp (message->getMessageID(), "updatePads") == 0) {
 
 		for (int i = 0; i < ENumberOfPads; i++) {
 
@@ -620,25 +511,21 @@ tresult PLUGIN_API AVinylController::notify (IMessage* message)
 			if (message->getAttributes()->getInt (tmp.text8(), newState) == kResultTrue){
 
                 for(auto& view: viewsArray) {
-                    view->setPadState(i, (newState == 1));
+                    static_cast<AVinylEditorView*>(view.get())->setPadState(i, (newState == 1));
                 }
-
             }
 			tmp = tmp.printf("PadType%02d",i);
 			if (message->getAttributes()->getInt (tmp.text8(), newState) == kResultTrue){
 
-				//String ttmp;
-				//ttmp = ttmp.printf("%s = %d",tmp.text8(),newState);
-				//MessageBox(0,ttmp.text16(),STR("123"),MB_OK);
                 for(auto& view: viewsArray) {
-                    view->setPadType(i, newState);
+                    static_cast<AVinylEditorView*>(view.get())->setPadType(i, newState);
                 }
 
             }
 			tmp = tmp.printf("PadTag%02d",i);
             if (message->getAttributes()->getInt (tmp.text8(), newState) == kResultTrue) {
                 for(auto& view: viewsArray) {
-                    view->setPadTag(i, newState);
+                    static_cast<AVinylEditorView*>(view.get())->setPadTag(i, newState);
                 }
             }
 		}

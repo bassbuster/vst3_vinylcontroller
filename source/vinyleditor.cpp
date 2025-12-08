@@ -59,6 +59,16 @@ case a:                                                              \
     }                                                                     \
 }	break;
 
+
+namespace {
+
+template <typename T, typename ... Args>
+auto make_shared(Args&&... arg) {
+    return VSTGUI::SharedPointer<T>(new T(std::forward<Args>(arg)...), false);
+}
+
+}
+
 namespace Steinberg {
 namespace Vst {
 
@@ -209,45 +219,38 @@ tresult PLUGIN_API AVinylEditorView::queryInterface (const char* iid, void** obj
 }
 
 
-template <typename T, typename ... Args>
-auto make_forgetable(Args&&... arg)
-{
-    auto forget = [](T* obj) { obj->forget(); };
-    return std::unique_ptr<T, decltype(forget)>(new T(std::forward<Args>(arg)...), std::move(forget));
-}
-
 //------------------------------------------------------------------------
 bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType& platformType)
 {
     VSTGUI::CRect editorSize (0, 0, kEditorMaxWidth, kEditorHeight);
     VSTGUI::CRect size;
-    frame = new VSTGUI::CFrame (editorSize, this);
+    frame = new VSTGUI::CFrame(editorSize, this);
     {
-        auto frameback = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("background.png"));
-        frame->setBackground(frameback.get());
+        auto frameback = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("background.png"));
+        frame->setBackground(frameback);
     }
 
     ////////////////PopUp
 
-    sampleBase = new VSTGUI::COptionMenu(size, this, 'Base', 0, 0, VSTGUI::CVinylPopupMenu::kCheckStyle);
+    sampleBase = make_shared<VSTGUI::COptionMenu>(size, this, 'Base', nullptr, nullptr, VSTGUI::CVinylPopupMenu::kCheckStyle);
     sampleBase->addEntry(EEmptyBaseTitle, 0, VSTGUI::CMenuItem::kTitle | VSTGUI::CMenuItem::kDisabled);
 
-    padBase = new VSTGUI::COptionMenu(size, this, 'BsPd', 0, 0, VSTGUI::CVinylPopupMenu::kCheckStyle);
+    padBase = make_shared<VSTGUI::COptionMenu>(size, this, 'BsPd', nullptr, nullptr, VSTGUI::CVinylPopupMenu::kCheckStyle);
     padBase->addEntry(EEmptyBaseTitle, 0, VSTGUI::CMenuItem::kTitle | VSTGUI::CMenuItem::kDisabled);
 
-    effectBase1 = new VSTGUI::COptionMenu(size, this, 'BsE1', 0, 0, VSTGUI::CVinylPopupMenu::kCheckStyle);
-    for (size_t i = 0; i < sizeof(switchedFx)/sizeof(int); i++) {
+    effectBase1 = make_shared<VSTGUI::COptionMenu>(size, this, 'BsE1', nullptr, nullptr, VSTGUI::CVinylPopupMenu::kCheckStyle);
+    for (size_t i = 0; i < sizeof(switchedFx) / sizeof(int); i++) {
         effectBase1->addEntry(effectNames[bitNumber(switchedFx[i])], int32_t(i), 0);
     }
 
-    effectBase2 = new VSTGUI::COptionMenu(size, this, 'BsE2', 0, 0, VSTGUI::CVinylPopupMenu::kCheckStyle);
+    effectBase2 = make_shared<VSTGUI::COptionMenu>(size, this, 'BsE2', nullptr, nullptr, VSTGUI::CVinylPopupMenu::kCheckStyle);
     for (size_t i = 0; i < sizeof(punchFx)/sizeof(int); i++) {
         effectBase2->addEntry(effectNames[bitNumber(punchFx[i])], int32_t(i), 0);
     }
 
     {
-        auto menuOn = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("fx_yellow.png"));
-        popupPad = new VSTGUI::CVinylPopupMenu(this, 'PpUp', menuOn.get(), VSTGUI::CRect(-4,-4,4,4));
+        auto menuOn = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("fx_yellow.png"));
+        popupPad = make_shared<VSTGUI::CVinylPopupMenu>(this, 'PpUp', menuOn, VSTGUI::CRect(-4, -4, 4, 4));
     }
     popupPad->addEntry("Assign MIDI key",0,0);
     popupPad->addEntry("-", 1, VSTGUI::CMenuItem::kSeparator);
@@ -261,16 +264,16 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
     //---Knobs-------
     VSTGUI::CPoint offset (0,0);
     {
-        auto handle = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("knob_handle.png"));
-        auto background = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("gain_back.png"));
+        auto handle = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("knob_handle.png"));
+        auto background = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("gain_back.png"));
 
         size(0, 0, 24, 24);
         size.offset(17, 17);
-        gainKnob = new VSTGUI::CKnob(size, this, 'Gain', background.get(), handle.get(), offset);
+        gainKnob = make_shared<VSTGUI::CKnob>(size, this, 'Gain', background, handle, offset);
         frame->addView(gainKnob);
 
         size.offset (63, 0);
-        scenKnob = new VSTGUI::CKnob(size, this, 'Scen', background.get(), handle.get(), offset);
+        scenKnob = make_shared<VSTGUI::CKnob>(size, this, 'Scen', background, handle, offset);
         scenKnob->setMin(1);
         scenKnob->setMax(EMaximumScenes);
         frame->addView(scenKnob);
@@ -278,206 +281,206 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
 
     //---Pitch slider-------
     {
-        auto handle = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("pitch_handler.png"));
-        auto background = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("pitch_slider.png"));
+        auto handle = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("pitch_handler.png"));
+        auto background = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("pitch_slider.png"));
 
         size(0, 0, 350, 39);
         size.offset(267, 182);
-        pitchSlider = new VSTGUI::CHorizontalSlider (size, this, 'Pith', offset, size.getWidth(), handle.get(), background.get(), offset, VSTGUI::CSliderBase::kLeft);
+        pitchSlider = make_shared<VSTGUI::CHorizontalSlider>(size, this, 'Pith', offset, size.getWidth(), handle, background, offset, VSTGUI::CSliderBase::kLeft);
         frame->addView(pitchSlider);
     }
 
 
     //---Mix slider-------
     {
-        auto handle = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("volume_handler.png"));
-        auto background = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("volume_slider.png"));
+        auto handle = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("volume_handler.png"));
+        auto background = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("volume_slider.png"));
         size(0, 0, 38, 145);
         size.offset(9, 75);
-        volumeSlider = new VSTGUI::CVerticalSlider (size, this, 'Fadr', offset, size.getHeight (), handle.get(), background.get(), offset);
+        volumeSlider = make_shared<VSTGUI::CVerticalSlider>(size, this, 'Fadr', offset, size.getHeight (), handle, background, offset);
         frame->addView(volumeSlider);
     }
 
 
     //---VuMeter--------------------
     {
-        auto onBitmap = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("vu_on.png"));
-        auto offBitmap = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("vu_off.png"));
+        auto onBitmap = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("vu_on.png"));
+        auto offBitmap = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("vu_off.png"));
 
         size(0, 0, 352, 11);
         size.offset(265, 142);
-        vuLeftMeter = new VSTGUI::CVuMeter (size, onBitmap.get(), offBitmap.get(), 37, VSTGUI::CVuMeter::Style::kHorizontal);
+        vuLeftMeter = make_shared<VSTGUI::CVuMeter>(size, onBitmap, offBitmap, 37, VSTGUI::CVuMeter::Style::kHorizontal);
         frame->addView(vuLeftMeter);
         size.offset(0, 12);
-        vuRightMeter = new VSTGUI::CVuMeter (size, onBitmap.get(), offBitmap.get(), 37, VSTGUI::CVuMeter::Style::kHorizontal);
+        vuRightMeter = make_shared<VSTGUI::CVuMeter>(size, onBitmap, offBitmap, 37, VSTGUI::CVuMeter::Style::kHorizontal);
         frame->addView(vuRightMeter);
     }
 
     //---3posSwitch--------------------
     {
-        auto oPos1 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("curve_1.png"));
-        auto oPos2 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("curve_2.png"));
-        auto oPos3 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("curve_3.png"));
+        auto oPos1 = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("curve_1.png"));
+        auto oPos2 = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("curve_2.png"));
+        auto oPos3 = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("curve_3.png"));
 
         size(0, 0, 18, 10);
         size.offset(18, 225);
-        curvSwitch = new VSTGUI::C3PositionSwitchBox (size, this, 'Curv', oPos1.get(), oPos2.get(), oPos3.get(), offset);
-        frame->addView (curvSwitch);
+        curvSwitch = make_shared<VSTGUI::C3PositionSwitchBox>(size, this, 'Curv', oPos1, oPos2, oPos3, offset);
+        frame->addView(curvSwitch);
     }
 
     {
-        auto oPos1 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("pitch_1.png"));
-        auto oPos2 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("pitch_2.png"));
-        auto oPos3 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("pitch_3.png"));
+        auto oPos1 = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("pitch_1.png"));
+        auto oPos2 = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("pitch_2.png"));
+        auto oPos3 = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("pitch_3.png"));
         size(0, 0, 28, 10);
         size.offset(264, 226);
-        pitchSwitch = new VSTGUI::C3PositionSwitchBox (size, this, 'PtCr', oPos1.get(), oPos2.get(), oPos3.get(), offset);
+        pitchSwitch = make_shared<VSTGUI::C3PositionSwitchBox>(size, this, 'PtCr', oPos1, oPos2, oPos3, offset);
         frame->addView(pitchSwitch);
     }
 
 
     //---PadTypes--------------------
     {
-        auto padType1 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("fx_blue.png"));
-        auto padType2 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("fx_green.png"));
-        auto padType3 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("x_red.png"));
-        auto padType4 = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("x_empty.png"));
+        auto padType1 = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("fx_blue.png"));
+        auto padType2 = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("fx_green.png"));
+        auto padType3 = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("x_red.png"));
+        auto padType4 = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("x_empty.png"));
 
         size(0, 0, 47, 47);
         size.offset(61, 52);
-        padType[0] = new VSTGUI::C5PositionView(size, this, 'Pt00', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
-        frame->addView (padType[0]);
-        size.offset (47, 0);
-        padType[1] = new VSTGUI::C5PositionView(size, this, 'Pt01', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
-        frame->addView (padType[1]);
-        size.offset (47, 0);
-        padType[2] = new VSTGUI::C5PositionView(size, this, 'Pt02', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
-        frame->addView (padType[2]);
-        size.offset (47, 0);
-        padType[3] = new VSTGUI::C5PositionView(size, this, 'Pt03', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
-        frame->addView (padType[3]);
-        size.offset (-141, 47);
-        padType[4] = new VSTGUI::C5PositionView(size, this, 'Pt04', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
-        frame->addView (padType[4]);
-        size.offset (47, 0);
-        padType[5] = new VSTGUI::C5PositionView(size, this, 'Pt05', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
-        frame->addView (padType[5]);
-        size.offset (47, 0);
-        padType[6] = new VSTGUI::C5PositionView(size, this, 'Pt06', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
-        frame->addView (padType[6]);
-        size.offset (47, 0);
-        padType[7] = new VSTGUI::C5PositionView(size, this, 'Pt07', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
-        frame->addView (padType[7]);
-        size.offset (-141, 47);
-        padType[8] = new VSTGUI::C5PositionView(size, this, 'Pt08', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
-        frame->addView (padType[8]);
-        size.offset (47, 0);
-        padType[9] = new VSTGUI::C5PositionView(size, this, 'Pt09', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
-        frame->addView (padType[9]);
-        size.offset (47, 0);
-        padType[10] = new VSTGUI::C5PositionView(size, this, 'Pt10', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
-        frame->addView (padType[10]);
-        size.offset (47, 0);
-        padType[11] = new VSTGUI::C5PositionView(size, this, 'Pt11', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
-        frame->addView (padType[11]);
-        size.offset (-141, 47);
-        padType[12] = new VSTGUI::C5PositionView(size, this, 'Pt12', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
-        frame->addView (padType[12]);
-        size.offset (47, 0);
-        padType[13] = new VSTGUI::C5PositionView(size, this, 'Pt13', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
-        frame->addView (padType[13]);
-        size.offset (47, 0);
-        padType[14] = new VSTGUI::C5PositionView(size, this, 'Pt14', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
-        frame->addView (padType[14]);
-        size.offset (47, 0);
-        padType[15] = new VSTGUI::C5PositionView(size, this, 'Pt15', padType4.get(), padType1.get(), padType2.get(), padType3.get(), padType4.get(), offset);
-        frame->addView (padType[15]);
+        padType[0] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt00', padType4, padType1, padType2, padType3, padType4, offset);
+        frame->addView(padType[0]);
+        size.offset(47, 0);
+        padType[1] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt01', padType4, padType1, padType2, padType3, padType4, offset);
+        frame->addView(padType[1]);
+        size.offset(47, 0);
+        padType[2] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt02', padType4, padType1, padType2, padType3, padType4, offset);
+        frame->addView(padType[2]);
+        size.offset(47, 0);
+        padType[3] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt03', padType4, padType1, padType2, padType3, padType4, offset);
+        frame->addView(padType[3]);
+        size.offset(-141, 47);
+        padType[4] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt04', padType4, padType1, padType2, padType3, padType4, offset);
+        frame->addView(padType[4]);
+        size.offset(47, 0);
+        padType[5] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt05', padType4, padType1, padType2, padType3, padType4, offset);
+        frame->addView(padType[5]);
+        size.offset(47, 0);
+        padType[6] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt06', padType4, padType1, padType2, padType3, padType4, offset);
+        frame->addView(padType[6]);
+        size.offset(47, 0);
+        padType[7] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt07', padType4, padType1, padType2, padType3, padType4, offset);
+        frame->addView(padType[7]);
+        size.offset(-141, 47);
+        padType[8] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt08', padType4, padType1, padType2, padType3, padType4, offset);
+        frame->addView(padType[8]);
+        size.offset(47, 0);
+        padType[9] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt09', padType4, padType1, padType2, padType3, padType4, offset);
+        frame->addView(padType[9]);
+        size.offset(47, 0);
+        padType[10] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt10', padType4, padType1, padType2, padType3, padType4, offset);
+        frame->addView(padType[10]);
+        size.offset(47, 0);
+        padType[11] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt11', padType4, padType1, padType2, padType3, padType4, offset);
+        frame->addView(padType[11]);
+        size.offset(-141, 47);
+        padType[12] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt12', padType4, padType1, padType2, padType3, padType4, offset);
+        frame->addView(padType[12]);
+        size.offset(47, 0);
+        padType[13] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt13', padType4, padType1, padType2, padType3, padType4, offset);
+        frame->addView(padType[13]);
+        size.offset(47, 0);
+        padType[14] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt14', padType4, padType1, padType2, padType3, padType4, offset);
+        frame->addView(padType[14]);
+        size.offset(47, 0);
+        padType[15] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt15', padType4, padType1, padType2, padType3, padType4, offset);
+        frame->addView(padType[15]);
     }
 
     //---Pads--------------------
     {
-        auto kickOn = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("kick_button_act.png"));
-        auto kickOff = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("kick_button.png"));
+        auto kickOn = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("kick_button_act.png"));
+        auto kickOff = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("kick_button.png"));
 
         size(0, 0, 40, 40);
         size.offset(65, 56);
 
-        padKick[0] = new VSTGUI::CVinylKickButton (size,this, 'Pd00', kickOff.get(), kickOn.get(), offset);
+        padKick[0] = make_shared<VSTGUI::CVinylKickButton>(size,this, 'Pd00', kickOff, kickOn, offset);
         padKick[0]->setPopupMenu(popupPad);
         padKick[0]->BeforePopup = &AVinylEditorView::callBeforePopup;
         frame->addView(padKick[0]);
         size.offset(47, 0);
-        padKick[1] = new VSTGUI::CVinylKickButton (size,this, 'Pd01', kickOff.get(), kickOn.get(), offset);
+        padKick[1] = make_shared<VSTGUI::CVinylKickButton>(size,this, 'Pd01', kickOff, kickOn, offset);
         padKick[1]->setPopupMenu(popupPad);
         padKick[1]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView(padKick[1]);
         size.offset(47, 0);
-        padKick[2] = new VSTGUI::CVinylKickButton (size,this, 'Pd02', kickOff.get(), kickOn.get(), offset);
+        padKick[2] = make_shared<VSTGUI::CVinylKickButton>(size,this, 'Pd02', kickOff, kickOn, offset);
         padKick[2]->setPopupMenu(popupPad);
         padKick[2]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView (padKick[2]);
         size.offset(47, 0);
-        padKick[3] = new VSTGUI::CVinylKickButton (size,this, 'Pd03', kickOff.get(), kickOn.get(), offset);
+        padKick[3] = make_shared<VSTGUI::CVinylKickButton>(size,this, 'Pd03', kickOff, kickOn, offset);
         padKick[3]->setPopupMenu(popupPad);
         padKick[3]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView (padKick[3]);
         size.offset(-141, 47);
-        padKick[4] = new VSTGUI::CVinylKickButton (size,this, 'Pd04', kickOff.get(), kickOn.get(), offset);
+        padKick[4] = make_shared<VSTGUI::CVinylKickButton>(size,this, 'Pd04', kickOff, kickOn, offset);
         padKick[4]->setPopupMenu(popupPad);
         padKick[4]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView (padKick[4]);
         size.offset(47, 0);
-        padKick[5] = new VSTGUI::CVinylKickButton (size,this, 'Pd05', kickOff.get(), kickOn.get(), offset);
+        padKick[5] = make_shared<VSTGUI::CVinylKickButton>(size,this, 'Pd05', kickOff, kickOn, offset);
         padKick[5]->setPopupMenu(popupPad);
         padKick[5]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView (padKick[5]);
         size.offset(47, 0);
-        padKick[6] = new VSTGUI::CVinylKickButton (size,this, 'Pd06', kickOff.get(), kickOn.get(), offset);
+        padKick[6] = make_shared<VSTGUI::CVinylKickButton>(size,this, 'Pd06', kickOff, kickOn, offset);
         padKick[6]->setPopupMenu(popupPad);
         padKick[6]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView(padKick[6]);
         size.offset(47, 0);
-        padKick[7] = new VSTGUI::CVinylKickButton (size,this, 'Pd07', kickOff.get(), kickOn.get(), offset);
+        padKick[7] = make_shared<VSTGUI::CVinylKickButton>(size,this, 'Pd07', kickOff, kickOn, offset);
         padKick[7]->setPopupMenu(popupPad);
         padKick[7]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView(padKick[7]);
         size.offset(-141, 47);
-        padKick[8] = new VSTGUI::CVinylKickButton (size,this, 'Pd08', kickOff.get(), kickOn.get(), offset);
+        padKick[8] = make_shared<VSTGUI::CVinylKickButton>(size,this, 'Pd08', kickOff, kickOn, offset);
         padKick[8]->setPopupMenu(popupPad);
         padKick[8]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView(padKick[8]);
         size.offset(47, 0);
-        padKick[9] = new VSTGUI::CVinylKickButton (size,this, 'Pd09', kickOff.get(), kickOn.get(), offset);
+        padKick[9] = make_shared<VSTGUI::CVinylKickButton>(size,this, 'Pd09', kickOff, kickOn, offset);
         padKick[9]->setPopupMenu(popupPad);
         padKick[9]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView(padKick[9]);
         size.offset(47, 0);
-        padKick[10] = new VSTGUI::CVinylKickButton (size,this, 'Pd00' + 10, kickOff.get(), kickOn.get(), offset);
+        padKick[10] = make_shared<VSTGUI::CVinylKickButton>(size,this, 'Pd00' + 10, kickOff, kickOn, offset);
         padKick[10]->setPopupMenu(popupPad);
         padKick[10]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView(padKick[10]);
         size.offset(47, 0);
-        padKick[11] = new VSTGUI::CVinylKickButton (size,this, 'Pd00' + 11, kickOff.get(), kickOn.get(), offset);
+        padKick[11] = make_shared<VSTGUI::CVinylKickButton>(size,this, 'Pd00' + 11, kickOff, kickOn, offset);
         padKick[11]->setPopupMenu(popupPad);
         padKick[11]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView(padKick[11]);
         size.offset(-141, 47);
-        padKick[12] = new VSTGUI::CVinylKickButton (size,this, 'Pd00' + 12, kickOff.get(), kickOn.get(), offset);
+        padKick[12] = make_shared<VSTGUI::CVinylKickButton>(size,this, 'Pd00' + 12, kickOff, kickOn, offset);
         padKick[12]->setPopupMenu(popupPad);
         padKick[12]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView(padKick[12]);
         size.offset(47, 0);
-        padKick[13] = new VSTGUI::CVinylKickButton (size,this, 'Pd00' + 13, kickOff.get(), kickOn.get(), offset);
+        padKick[13] = make_shared<VSTGUI::CVinylKickButton>(size,this, 'Pd00' + 13, kickOff, kickOn, offset);
         padKick[13]->setPopupMenu(popupPad);
         padKick[13]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView(padKick[13]);
         size.offset(47, 0);
-        padKick[14] = new VSTGUI::CVinylKickButton (size,this, 'Pd00' + 14, kickOff.get(), kickOn.get(), offset);
+        padKick[14] = make_shared<VSTGUI::CVinylKickButton>(size,this, 'Pd00' + 14, kickOff, kickOn, offset);
         padKick[14]->setPopupMenu(popupPad);
         padKick[14]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView (padKick[14]);
         size.offset(47, 0);
-        padKick[15] = new VSTGUI::CVinylKickButton (size,this, 'Pd00' + 15, kickOff.get(), kickOn.get(), offset);
+        padKick[15] = make_shared<VSTGUI::CVinylKickButton>(size,this, 'Pd00' + 15, kickOff, kickOn, offset);
         padKick[15]->setPopupMenu(popupPad);
         padKick[15]->BeforePopup=&AVinylEditorView::callBeforePopup;
         frame->addView(padKick[15]);
@@ -486,76 +489,75 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
 
     ////Wave View Window
     {
-        auto glass = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("glass.png"));
+        auto glass = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("glass.png"));
         size(0,0,343,83);
         size.offset(270,54);
-        wavView = new VSTGUI::CWaveView(size, this, 'Wave', glass.get(), 0);
+        wavView = make_shared<VSTGUI::CWaveView>(size, this, 'Wave', glass, nullptr);
         frame->addView(wavView);
     }
 
 
     ///////CheckBoxes/////////////////////////////////////////////////////////////////////
     {
-        auto checkOff = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("loop_check.png"));
+        auto checkOff = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("loop_check.png"));
         {
-            auto checkOn = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("loop_check_on.png"));
+            auto checkOn = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("loop_check_on.png"));
             size(0, 0, 55, 16);
             size.offset(267, 32);
-            loopBox = new VSTGUI::CVinylCheckBox (size,this, 'Loop', checkOn.get(), checkOff.get(), offset);
+            loopBox = make_shared<VSTGUI::CVinylCheckBox>(size,this, 'Loop', checkOn, checkOff, offset);
             frame->addView(loopBox);
         }
 
         {
-            auto checkOn = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("sync_check_on.png"));
+            auto checkOn = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("sync_check_on.png"));
 
             size.offset(58, 0);
-            syncBox = new VSTGUI::CVinylCheckBox (size,this, 'Sync', checkOn.get(), checkOff.get(), offset);
+            syncBox = make_shared<VSTGUI::CVinylCheckBox>(size,this, 'Sync', checkOn, checkOff, offset);
             frame->addView(syncBox);
         }
 
         {
-            auto checkOn = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("revers_check_on.png"));
+            auto checkOn = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("revers_check_on.png"));
             size.offset(58, 0);
-            rvrsBox = new VSTGUI::CVinylCheckBox (size,this, 'Rvrs', checkOn.get(), checkOff.get(), offset);
+            rvrsBox = make_shared<VSTGUI::CVinylCheckBox>(size,this, 'Rvrs', checkOn, checkOff, offset);
             frame->addView(rvrsBox);
         }
-
     }
 
     ///////Sample Knobs
     {
-        auto handle = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("smal_handler.png"));
-        auto background = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("smal_slider.png"));
+        auto handle = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("smal_handler.png"));
+        auto background = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("smal_slider.png"));
 
         size(0, 0, 55, 12);
         size.offset(467, 34);
-        ampSlide = new VSTGUI::CHorizontalSlider (size, this, 'Ampl', offset, size.getWidth(), handle.get(), background.get(), offset, VSTGUI::CSliderBase::kLeft);
+        ampSlide = make_shared<VSTGUI::CHorizontalSlider>(size, this, 'Ampl', offset, size.getWidth(), handle, background, offset, VSTGUI::CSliderBase::kLeft);
         frame->addView(ampSlide);
 
         size.offset (89, 0);
-        tuneSlide = new VSTGUI::CHorizontalSlider (size, this, 'Tune', offset, size.getWidth(), handle.get(), background.get(), offset, VSTGUI::CSliderBase::kLeft);
+        tuneSlide = make_shared<VSTGUI::CHorizontalSlider>(size, this, 'Tune', offset, size.getWidth(), handle, background, offset, VSTGUI::CSliderBase::kLeft);
         frame->addView(tuneSlide);
     }
 
 
     //////////TimeCodeLearn
     {
-        auto checkOff = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("tclearn_check.png"));
-        auto checkOn = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("tclearn_check_on.png"));
+        auto checkOff = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("tclearn_check.png"));
+        auto checkOn = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("tclearn_check_on.png"));
         size(0, 0, 39, 8);
         size.offset(272, 124);
-        tcLearnBox = new VSTGUI::CVinylCheckBox (size,this, 'TCLr', checkOff.get(), checkOn.get(), offset);
+        tcLearnBox = make_shared<VSTGUI::CVinylCheckBox>(size,this, 'TCLr', checkOff, checkOn, offset);
         frame->addView(tcLearnBox);
     }
 
 
     /////////////////////////////////////////////////////////////
     {
-        auto comboOn = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("yellow_combo.png"));
-        auto comboOff = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("sample_combo.png"));
+        auto comboOn = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("yellow_combo.png"));
+        auto comboOff = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("sample_combo.png"));
         size(0, 0, 354, 18);
         size.offset(263, 8);
-        samplePopup = new VSTGUI::COptionMenu(size, this, 'Comb', comboOff.get(), comboOn.get(), VSTGUI::CVinylPopupMenu::kNoTextStyle);
+        samplePopup = make_shared<VSTGUI::COptionMenu>(size, this, 'Comb', comboOff, comboOn, VSTGUI::CVinylPopupMenu::kNoTextStyle);
         samplePopup->addEntry(sampleBase, "Select sample");
         samplePopup->addEntry("-", 3, VSTGUI::CMenuItem::kSeparator);
         samplePopup->addEntry("Add new sample in base", 2, 0);
@@ -567,106 +569,106 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
 
 
     {
-        auto fxBit = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("distorsion.png"));
+        auto fxBit = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("distorsion.png"));
         size(0, 0, 10, 11);
         size.offset(271, 55);
-        dispDistorsion = new VSTGUI::CVuMeter (size, fxBit.get(), 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
+        dispDistorsion = make_shared<VSTGUI::CVuMeter>(size, fxBit, nullptr, 1, VSTGUI::CVuMeter::Style::kHorizontal);
         frame->addView(dispDistorsion);
     }
     {
-        auto fxBit = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("preroll.png"));
+        auto fxBit = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("preroll.png"));
         size.offset(12, 0);
-        dispPreRoll = new VSTGUI::CVuMeter (size, fxBit.get(), 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
+        dispPreRoll = make_shared<VSTGUI::CVuMeter>(size, fxBit, nullptr, 1, VSTGUI::CVuMeter::Style::kHorizontal);
         frame->addView(dispPreRoll);
     }
     {
-        auto fxBit = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("postroll.png"));
+        auto fxBit = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("postroll.png"));
         size.offset(12, 0);
-        dispPostRoll = new VSTGUI::CVuMeter (size, fxBit.get(), 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
+        dispPostRoll = make_shared<VSTGUI::CVuMeter>(size, fxBit, nullptr, 1, VSTGUI::CVuMeter::Style::kHorizontal);
         frame->addView(dispPostRoll);
     }
     {
-    auto fxBit = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("hold.png"));
-    size.offset (12, 0);
-    dispHold = new VSTGUI::CVuMeter (size, fxBit.get(), 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
-    frame->addView(dispHold);
+        auto fxBit = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("hold.png"));
+        size.offset (12, 0);
+        dispHold = make_shared<VSTGUI::CVuMeter>(size, fxBit, nullptr, 1, VSTGUI::CVuMeter::Style::kHorizontal);
+        frame->addView(dispHold);
     }
     {
-    auto fxBit = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("freeze.png"));
-    size.offset (12, 0);
-    dispFreeze = new VSTGUI::CVuMeter (size, fxBit.get(), 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
-    frame->addView(dispFreeze);
+        auto fxBit = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("freeze.png"));
+        size.offset (12, 0);
+        dispFreeze = make_shared<VSTGUI::CVuMeter>(size, fxBit, nullptr, 1, VSTGUI::CVuMeter::Style::kHorizontal);
+        frame->addView(dispFreeze);
     }
     {
-    auto fxBit = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("vintage.png"));
-    size.offset (12, 0);
-    dispVintage = new VSTGUI::CVuMeter (size, fxBit.get(), 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
-    frame->addView(dispVintage);
+        auto fxBit = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("vintage.png"));
+        size.offset (12, 0);
+        dispVintage = make_shared<VSTGUI::CVuMeter>(size, fxBit, nullptr, 1, VSTGUI::CVuMeter::Style::kHorizontal);
+        frame->addView(dispVintage);
     }
     {
-    auto fxBit = make_forgetable<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("locktone.png"));
-    size.offset (12, 0);
-    dispLockTone = new VSTGUI::CVuMeter (size, fxBit.get(), 0, 1, VSTGUI::CVuMeter::Style::kHorizontal);
-    frame->addView(dispLockTone);
+        auto fxBit = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("locktone.png"));
+        size.offset (12, 0);
+        dispLockTone = make_shared<VSTGUI::CVuMeter>(size, fxBit, nullptr, 1, VSTGUI::CVuMeter::Style::kHorizontal);
+        frame->addView(dispLockTone);
     }
 
     /////////////Text and labels ////////////////////////////////
     size(0, 0, 50, 10);
     size.offset(422, 230);
-    pitchValue = new VSTGUI::CTextLabel (size, "0.00%", 0, VSTGUI::CVinylPopupMenu::kNoFrame);
+    pitchValue = make_shared<VSTGUI::CTextLabel>(size, "0.00%", nullptr, VSTGUI::CVinylPopupMenu::kNoFrame);
     pitchValue->setHoriAlign(VSTGUI::kCenterText);
     pitchValue->setBackColor(VSTGUI::CColor(0, 0, 0, 0));
 
     pitchValue->setFontColor(VSTGUI::CColor(200, 200, 200, 200));
     pitchValue->setAntialias(true);
-    auto litleFont = make_forgetable<VSTGUI::CFontDesc>(*(pitchValue->getFont()));
+    auto litleFont = make_shared<VSTGUI::CFontDesc>(*(pitchValue->getFont()));
     litleFont->setSize(10);
     litleFont->setStyle(VSTGUI::kNormalFace);
-    pitchValue->setFont(litleFont.get());
+    pitchValue->setFont(litleFont);
     frame->addView(pitchValue);
 
     size(0, 0, 40, 10);
     size.offset(572, 124);
-    speedValue = new VSTGUI::CTextLabel (size, "|| 0.000", 0, VSTGUI::CVinylPopupMenu::kNoFrame);
+    speedValue = make_shared<VSTGUI::CTextLabel>(size, "|| 0.000", nullptr, VSTGUI::CVinylPopupMenu::kNoFrame);
     speedValue->setHoriAlign(VSTGUI::kLeftText);
     speedValue->setBackColor(VSTGUI::CColor(0, 0, 0, 0));
     speedValue->setFontColor(VSTGUI::CColor(10, 255, 10, 100));
     speedValue->setAntialias(true);
-    speedValue->setFont(litleFont.get());
+    speedValue->setFont(litleFont);
     frame->addView(speedValue);
 
     size(0, 0, 40, 25);
     size.offset(271, 52);
-    sampleNumber = new VSTGUI::CTextLabel (size, " ", 0, VSTGUI::CVinylPopupMenu::kNoFrame);
+    sampleNumber = make_shared<VSTGUI::CTextLabel>(size, " ", nullptr, VSTGUI::CVinylPopupMenu::kNoFrame);
     sampleNumber->setHoriAlign(VSTGUI::kLeftText);
     sampleNumber->setBackColor(VSTGUI::CColor(0, 0, 0, 0));
     sampleNumber->setFontColor(VSTGUI::CColor(10,255,10, 100));
     sampleNumber->setAntialias(true);
-    sampleNumber->setFont(litleFont.get());
+    sampleNumber->setFont(litleFont);
     frame->addView(sampleNumber);
 
     size(0, 0, 210, 22); //15
     size.offset(367, 7);  //12
-    nameEdit = new VSTGUI::CTextEdit (size, this, 'Name', " ", 0, VSTGUI::CVinylPopupMenu::kNoFrame);
+    nameEdit = make_shared<VSTGUI::CTextEdit>(size, this, 'Name', " ", nullptr, VSTGUI::CVinylPopupMenu::kNoFrame);
     nameEdit->setHoriAlign(VSTGUI::kLeftText);
     nameEdit->setBackColor(VSTGUI::CColor(0,0,0,0));
-    auto medFont = make_forgetable<VSTGUI::CFontDesc>(*(nameEdit->getFont()));
+    auto medFont = make_shared<VSTGUI::CFontDesc>(*(nameEdit->getFont()));
     medFont->setSize(12);
     medFont->setStyle(VSTGUI::kBoldFace);
-    nameEdit->setFont(medFont.get());
+    nameEdit->setFont(medFont);
     frame->addView(nameEdit);
 
     size(0, 0, 40, 35);
     size.offset(198, 12);
-    sceneValue = new VSTGUI::CTextLabel (size, "1", 0, VSTGUI::CVinylPopupMenu::kNoFrame);
+    sceneValue = make_shared<VSTGUI::CTextLabel>(size, "1", nullptr, VSTGUI::CVinylPopupMenu::kNoFrame);
     sceneValue->setHoriAlign(VSTGUI::kCenterText);
     sceneValue->setBackColor(VSTGUI::CColor(0,0,0,0));
     sceneValue->setFontColor(VSTGUI::CColor(0,0,0,255));
     sceneValue->setAntialias(true);
-    auto bigFont = make_forgetable<VSTGUI::CFontDesc>(*(sceneValue->getFont()));
+    auto bigFont = make_shared<VSTGUI::CFontDesc>(*(sceneValue->getFont()));
     bigFont->setSize(28);
     bigFont->setStyle(VSTGUI::kBoldFace);
-    sceneValue->setFont(bigFont.get());
+    sceneValue->setFont(bigFont);
     frame->addView(sceneValue);
 
 
@@ -686,10 +688,11 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
 //------------------------------------------------------------------------
 void PLUGIN_API AVinylEditorView::close ()
 {
-    while(!sampleBitmaps.empty()) {
-        sampleBitmaps.back()->forget();
-        sampleBitmaps.pop_back();
-    }
+    // while(!sampleBitmaps.empty()) {
+    //     sampleBitmaps.back()->forget();
+    //     sampleBitmaps.pop_back();
+    // }
+    sampleBitmaps.clear();
 
     gainKnob = 0;
     scenKnob = 0;
@@ -727,15 +730,15 @@ void PLUGIN_API AVinylEditorView::close ()
     curvSwitch = 0;
     pitchSwitch = 0;
     samplePopup = 0;
-    popupPad->forget();
+    //popupPad->forget();
     popupPad = 0;
-    sampleBase->forget();
+    //sampleBase->forget();
     sampleBase = 0;
-    padBase->forget();
+    //padBase->forget();
     padBase = 0;
-    effectBase1->forget();
+    //effectBase1->forget();
     effectBase1 = 0;
-    effectBase2->forget();
+    //effectBase2->forget();
     effectBase2 = 0;
 
     wavView = 0;
@@ -838,39 +841,36 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             controller->performEdit (kCurrentEntryId, normalValue);
         }
         if (SelectedMenu == samplePopup) {
-            if (menuIndex==2){
+            if (menuIndex==2) {
 
                 ////////////Open FileSelector Multy/////////////////////////
-                VSTGUI::CNewFileSelector* selector = VSTGUI::CNewFileSelector::create (frame, VSTGUI::CNewFileSelector::kSelectFile);
-                if (selector)
-                {
+                auto selector = VSTGUI::SharedPointer(VSTGUI::CNewFileSelector::create(frame, VSTGUI::CNewFileSelector::kSelectFile), false);
+                if (selector) {
                     selector->kSelectEndMessage = "LoadingFile";
                     selector->setDefaultExtension (VSTGUI::CFileExtension ("WAVE", "wav"));
                     selector->setTitle("Choose Samples for load in base");
                     selector->setAllowMultiFileSelection(true);
                     selector->run(this);
-                    selector->forget();
+                    //selector->forget();
                 }
             }
             if (menuIndex==3){
                 ////////////Open FileSelector Single/////////////////////////
-                VSTGUI::CNewFileSelector* selector = VSTGUI::CNewFileSelector::create (frame, VSTGUI::CNewFileSelector::kSelectFile);
-                if (selector)
-                {
+                auto selector = VSTGUI::SharedPointer(VSTGUI::CNewFileSelector::create(frame, VSTGUI::CNewFileSelector::kSelectFile), false);
+                if (selector) {
                     selector->kSelectEndMessage = "ReplaceFile";
                     selector->setDefaultExtension(VSTGUI::CFileExtension ("WAVE", "wav"));
                     selector->setTitle("Choose Sample for replace");
                     selector->setAllowMultiFileSelection(false);
                     selector->run(this);
-                    selector->forget();
+                    //selector->forget();
                 }
             }
             if (menuIndex==4){
                 //TODO: create own dialogue
                 //if (IDYES==MessageBox(0,STR("Are you sure?"),STR("Delete from base"),MB_YESNO|MB_ICONWARNING|MB_DEFBUTTON2|MB_APPLMODAL)) {
-                IMessage* msg = controller->allocateMessage ();
-                if (msg)
-                {
+                IMessage* msg = controller->allocateMessage();
+                if (msg) {
                     msg->setMessageID("deleteEntry");
                     msg->getAttributes()->setInt("SampleNumber", currentEntry);
                     //msg->getAttributes()->setString("SampleName", STR(SelectedMenu->getEntry(menuIndex)->getTitle()));
@@ -1173,7 +1173,7 @@ void AVinylEditorView::setPositionMonitor(double _position)
     }
 }
 
-VSTGUI::CBitmap * AVinylEditorView::generateWaveform(SampleEntry * newEntry)
+AVinylEditorView::SharedPointer<VSTGUI::CBitmap> AVinylEditorView::generateWaveform(SampleEntry * newEntry)
 {
     int bitmapWidth = (double(newEntry->GetBufferLength())) * 0.0015;
     if (bitmapWidth<400) {
@@ -1183,16 +1183,16 @@ VSTGUI::CBitmap * AVinylEditorView::generateWaveform(SampleEntry * newEntry)
     }
 
     if (bitmapWidth <2) {
-        return 0;
+        return nullptr;
     }
     bool drawBeats =  newEntry->GetACIDbeats() > 0;
 
     double beatPeriodic = drawBeats ? double(bitmapWidth) / (2.0 * newEntry->GetACIDbeats()) : 0;
-    VSTGUI::CBitmap * Digits = new VSTGUI::CBitmap(VSTGUI::CResourceDescription("digits.png"));
-    VSTGUI::CBitmap * waveForm = new VSTGUI::CBitmap(bitmapWidth, 83);
+    auto Digits = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("digits.png"));
+    auto waveForm = make_shared<VSTGUI::CBitmap>(bitmapWidth, 83);
     if (waveForm && newEntry->GetBufferLength() > 0) {
-        VSTGUI::CBitmapPixelAccess * PixelMap = VSTGUI::CBitmapPixelAccess::create(waveForm);
-        VSTGUI::CBitmapPixelAccess * PixelDigits = VSTGUI::CBitmapPixelAccess::create(Digits);
+        auto PixelMap = VSTGUI::SharedPointer(VSTGUI::CBitmapPixelAccess::create(waveForm), false);
+        auto PixelDigits = VSTGUI::SharedPointer(VSTGUI::CBitmapPixelAccess::create(Digits), false);
         PixelMap->setPosition(0,61);
         PixelMap->setColor(VSTGUI::CColor(0,255,0,220));
         for (int i = 1; i <= bitmapWidth / 2; i++) {
@@ -1227,21 +1227,19 @@ VSTGUI::CBitmap * AVinylEditorView::generateWaveform(SampleEntry * newEntry)
                 }
             }
         }
-        PixelMap->forget();
-        PixelDigits->forget();
-        Digits->forget();
         return waveForm;
-    }else return 0;
+    }
+    return nullptr;
 }
 
 void AVinylEditorView::delEntry(size_t delEntryIndex)
 {
     if ((delEntryIndex >= 0) && (delEntryIndex < sampleBitmaps.size())) {
 
-        VSTGUI::CBitmap * waveForm = sampleBitmaps.at(delEntryIndex);
+        //VSTGUI::CBitmap * waveForm = sampleBitmaps.at(delEntryIndex);
 
         sampleBitmaps.erase(sampleBitmaps.begin() + delEntryIndex);
-        waveForm->forget();
+        //waveForm->forget();
         if (sampleBase) {
             sampleBase->removeEntry(int32_t(delEntryIndex));
             if (padBase) {
@@ -1284,27 +1282,26 @@ void AVinylEditorView::delEntry(size_t delEntryIndex)
 void AVinylEditorView::initEntry(SampleEntry * newEntry)
 {
     if (newEntry) {
+        auto waveForm = generateWaveform(newEntry);
+        if (!waveForm) {
+            // not readable format
+            return;
+        }
 
-        VSTGUI::CBitmap * waveForm;
-
-        size_t Index = newEntry->GetIndex() - 1;
-        if (Index < sampleBitmaps.size()) {
-
-            waveForm = generateWaveform(newEntry);
-            VSTGUI::CBitmap * oldBitmap = sampleBitmaps.at(Index);
-            sampleBitmaps[Index] = waveForm;
-            oldBitmap->forget();
+        size_t index = newEntry->GetIndex() - 1;
+        if (index < sampleBitmaps.size()) {
+            sampleBitmaps[index] = std::move(waveForm);
 
             if (sampleBase) {
-                sampleBase->getEntry(int32_t(Index))->setTitle(newEntry->GetName());
+                sampleBase->getEntry(int32_t(index))->setTitle(newEntry->GetName());
             }
             if (padBase) {
-                padBase->getEntry(int32_t(Index))->setTitle(newEntry->GetName());
+                padBase->getEntry(int32_t(index))->setTitle(newEntry->GetName());
             }
         } else {
-            waveForm = generateWaveform(newEntry);
-            if (waveForm) sampleBitmaps.push_back(waveForm);
 
+            index = sampleBitmaps.size();
+            sampleBitmaps.push_back(std::move(waveForm));
 
             if (sampleBase) {
                 if (strcmp(sampleBase->getEntry(0)->getTitle(),EEmptyBaseTitle)==0) {
@@ -1323,12 +1320,12 @@ void AVinylEditorView::initEntry(SampleEntry * newEntry)
             }
         }
 
-        if ((newEntry->GetIndex() - 1) == currentEntry) {
+        if (index == currentEntry) {
             if (samplePopup) {
                 sampleBase->setCurrent(currentEntry, true);
             }
             if (wavView) {
-                wavView->setWave(waveForm);
+                wavView->setWave(sampleBitmaps[index]);
                 wavView->setLoop(newEntry->Loop);
             }
             if (nameEdit) {

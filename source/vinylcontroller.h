@@ -37,22 +37,7 @@
 #include "public.sdk/source/vst/vsteditcontroller.h"
 #include "helpers/sampleentry.h"
 #include "vinylconfigconst.h"
-
-#define  READ_SAVED_FLOAT(savedParam)  							\
-	float savedParam = 0.f; 												\
-		if (state->read (&savedParam, sizeof (float)) != kResultOk) 		\
-		{                                                                   \
-			return kResultFalse;                                            \
-		}
-
-
-#define  READ_SAVED_DWORD(savedParam)  							\
-	DWORD savedParam = 0; 													\
-		if (state->read (&savedParam, sizeof (float)) != kResultOk) 		\
-		{                                                                   \
-			return kResultFalse;                                            \
-		}
-
+#include "vstgui/lib/vstguibase.h"
 
 namespace Steinberg {
 namespace Vst {
@@ -65,6 +50,8 @@ class AVinylEditorView;
 //------------------------------------------------------------------------
 class AVinylController: public EditControllerEx1, public IMidiMapping
 {
+    template<typename T>
+    using SharedPointer = IPtr<T>;
 public:
 //------------------------------------------------------------------------
 // create function required for plug-in factory,
@@ -102,16 +89,8 @@ public:
 	DELEGATE_REFCOUNT (EditController)
     tresult PLUGIN_API queryInterface (const char* iid, void** obj) override;
 
-	//---Internal functions-------
-	void addDependentView (AVinylEditorView* view);
-	void removeDependentView (AVinylEditorView* view);
-
-	//void setDefaultMessageText (String128 text);
-	//TChar* getDefaultMessageText ();
-//------------------------------------------------------------------------
-
 private:
-    std::vector<AVinylEditorView*> viewsArray;
+    std::vector<SharedPointer<EditorView>> viewsArray;
 	int midiGain;
 	int midiScene;
 	int midiMix;
@@ -119,7 +98,6 @@ private:
 	int midiVolume;
 	int midiTune;
 
-//	String128 defaultMessageText;
 };
 
 }} // namespaces
