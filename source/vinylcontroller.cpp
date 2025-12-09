@@ -15,7 +15,10 @@ namespace {
 
 template <typename T, typename ... Args>
 auto make_shared(Args&&... arg) {
-    return Steinberg::IPtr<T>(new T(std::forward<Args>(arg)...));
+    return Steinberg::IPtr<T>(new T(std::forward<Args>(arg)...),
+                              true /* vstsdk takes ownership instead of sharing,
+                                      probably to support old way of work with raw pointers,
+                                      so we need here one extra refcounter inc*/);
 }
 
 }
@@ -47,10 +50,10 @@ GainParameter::GainParameter (const char* title, int32 flags, int32 id)
 	info.flags = flags;
 	info.id = id;
 	info.stepCount = 0;
-	info.defaultNormalizedValue = 1.0f;
+    info.defaultNormalizedValue = 1.;
 	info.unitId = kRootUnitId;
 	
-	setNormalized (1.f);
+    setNormalized(1.);
 }
 
 //------------------------------------------------------------------------
@@ -58,12 +61,12 @@ void GainParameter::toString (ParamValue normValue, String128 string) const
 {
 	char text[32];
     if (normValue > 0.0001) {
-		sprintf (text, "%.2f", 20 * log10 ((float)normValue));
+        sprintf(text, "%.2f", 20. * log10(normValue));
     } else {
-		strcpy (text, "-oo");
+        strcpy(text, "-oo");
 	}
 
-	Steinberg::UString (string, 128).fromAscii (text);
+    Steinberg::UString(string, 128).fromAscii(text);
 }
 
 //------------------------------------------------------------------------
@@ -71,13 +74,13 @@ bool GainParameter::fromString (const TChar* string, ParamValue& normValue) cons
 {
     String wrapper((TChar*)string); // don't know buffer size here!
 	double tmp = 0.0;
-    if (wrapper.scanFloat (tmp)) {
+    if (wrapper.scanFloat(tmp)) {
 		// allow only values between -oo and 0dB
         if (tmp > 0.0) {
 			tmp = -tmp;
 		}
 
-		normValue = exp (log (10.f) * (float)tmp / 20.f);
+        normValue = exp(log(10.) * tmp / 20.);
 		return true;
 	}
 	return false;
@@ -86,7 +89,7 @@ bool GainParameter::fromString (const TChar* string, ParamValue& normValue) cons
 //------------------------------------------------------------------------
 // AGainController Implementation
 //------------------------------------------------------------------------
-tresult PLUGIN_API AVinylController::initialize (FUnknown* context)
+tresult PLUGIN_API AVinylController::initialize(FUnknown* context)
 {
 	midiGain = gGain;
 	midiScene = gScene;
@@ -116,27 +119,27 @@ tresult PLUGIN_API AVinylController::initialize (FUnknown* context)
 	//---Create Parameters------------
 	
 	//---Gain parameter--
-    auto gainParam = make_shared<GainParameter>("Gain",ParameterInfo::kCanAutomate, kGainId);
+    auto gainParam = make_shared<GainParameter>("Gain", ParameterInfo::kCanAutomate, kGainId);
     parameters.addParameter(gainParam);
     gainParam->setUnitID(kRootUnitId);
 
-    auto volumeParam = make_shared<GainParameter>("Volume",ParameterInfo::kCanAutomate, kVolumeId);
+    auto volumeParam = make_shared<GainParameter>("Volume", ParameterInfo::kCanAutomate, kVolumeId);
     parameters.addParameter(volumeParam);
     volumeParam->setUnitID(kRootUnitId);
 
 	//---VuMeter parameter---
-	parameters.addParameter (STR16 ("VuLeft"), 0, 0, 0, ParameterInfo::kIsReadOnly, kVuLeftId);
-	parameters.addParameter (STR16 ("VuRight"), 0, 0, 0, ParameterInfo::kIsReadOnly, kVuRightId);
-	parameters.addParameter (STR16 ("Position"), 0, 0, 0, ParameterInfo::kIsReadOnly, kPositionId);
-	parameters.addParameter (STR16 ("Punch In"), 0, 1, 0, ParameterInfo::kIsReadOnly, kPunchInId);
-	parameters.addParameter (STR16 ("Punch Out"), 0, 1, 0, ParameterInfo::kIsReadOnly, kPunchOutId);
-	parameters.addParameter (STR16 ("Distorsion"), 0, 1, 0, ParameterInfo::kIsReadOnly, kDistorsionId);
-	parameters.addParameter (STR16 ("Pre Roll"), 0, 1, 0, ParameterInfo::kIsReadOnly, kPreRollId);
-	parameters.addParameter (STR16 ("Post Roll"), 0, 1, 0, ParameterInfo::kIsReadOnly, kPostRollId);
-	parameters.addParameter (STR16 ("Hold"), 0, 1, 0, ParameterInfo::kIsReadOnly, kHoldId);
-	parameters.addParameter (STR16 ("Freeze"), 0, 1, 0, ParameterInfo::kIsReadOnly, kFreezeId);
-	parameters.addParameter (STR16 ("Vintage"), 0, 1, 0, ParameterInfo::kIsReadOnly, kVintageId);
-	parameters.addParameter (STR16 ("LockTone"), 0, 1, 0, ParameterInfo::kIsReadOnly, kLockToneId);
+    parameters.addParameter(STR16("VuLeft"), 0, 0, 0, ParameterInfo::kIsReadOnly, kVuLeftId);
+    parameters.addParameter(STR16("VuRight"), 0, 0, 0, ParameterInfo::kIsReadOnly, kVuRightId);
+    parameters.addParameter(STR16("Position"), 0, 0, 0, ParameterInfo::kIsReadOnly, kPositionId);
+    parameters.addParameter(STR16("Punch In"), 0, 1, 0, ParameterInfo::kIsReadOnly, kPunchInId);
+    parameters.addParameter(STR16("Punch Out"), 0, 1, 0, ParameterInfo::kIsReadOnly, kPunchOutId);
+    parameters.addParameter(STR16("Distorsion"), 0, 1, 0, ParameterInfo::kIsReadOnly, kDistorsionId);
+    parameters.addParameter(STR16("Pre Roll"), 0, 1, 0, ParameterInfo::kIsReadOnly, kPreRollId);
+    parameters.addParameter(STR16("Post Roll"), 0, 1, 0, ParameterInfo::kIsReadOnly, kPostRollId);
+    parameters.addParameter(STR16("Hold"), 0, 1, 0, ParameterInfo::kIsReadOnly, kHoldId);
+    parameters.addParameter(STR16("Freeze"), 0, 1, 0, ParameterInfo::kIsReadOnly, kFreezeId);
+    parameters.addParameter(STR16("Vintage"), 0, 1, 0, ParameterInfo::kIsReadOnly, kVintageId);
+    parameters.addParameter(STR16("LockTone"), 0, 1, 0, ParameterInfo::kIsReadOnly, kLockToneId);
 
     auto pitchParam = make_shared<RangeParameter>(STR16 ("Pitch"), kPitchId,STR16 ("%"),0,1,0.5,511, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
     parameters.addParameter(pitchParam);

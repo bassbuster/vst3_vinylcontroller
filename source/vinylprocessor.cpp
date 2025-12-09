@@ -849,7 +849,7 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
     // called when we load a preset, the model has to be reloaded
 
     int8 byteOrder;
-    if (state->read (&byteOrder, sizeof (int8)) == kResultTrue) {
+    if (state->read(&byteOrder, sizeof (int8)) == kResultTrue) {
 
         IBStreamer reader(state, byteOrder);
 

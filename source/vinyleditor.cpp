@@ -8,63 +8,14 @@
 #include <math.h>
 #include <filesystem>
 
-#define CASE_BEGIN_EDIT(a,b)                         	\
-case a:                                         	\
-{                                             	\
-        controller->beginEdit (b);                	\
-}	break;
-
-#define CASE_END_EDIT(a,b)								\
-case a:                                           \
-{                                               \
-        controller->endEdit (b);                    \
-}	break;
-
-#define CASE_UPDATE(a,b)                               	\
-case a:                                             \
-    if (b)                                          \
-{                                               \
-        b->setValueNormalized ((float)value); \
-}                                               \
-    break;
-
-#define CASE_UPDATE_MINUS(a,b)                              \
-case a:                                             \
-    if (b)                                          \
-{                                               \
-        b->setValueNormalized (1.0 - (float)value); \
-}                                               \
-    break;
-
-
-#define CASE_VALUE_CHANGED(a,b)                                           	\
-case a:                                                             \
-{                                                                   \
-        controller->setParamNormalized (b, pControl->getValueNormalized ()); 		\
-        controller->performEdit (b, pControl->getValueNormalized ());        		\
-}	break;
-
-#define CASE_PAD_CHANGED(a,b)                                                     \
-case a:                                                              \
-{                                                                         \
-        IMessage* msg = controller->allocateMessage ();                       \
-        if (msg)                                                              \
-    {                                                                     \
-            String sampleName (nameEdit->getText());                          \
-            msg->setMessageID ("touchPad");                                   \
-            msg->getAttributes ()->setInt("PadNumber", b);                    \
-            msg->getAttributes ()->setFloat("PadValue", pControl->getValueNormalized());                    \
-            controller->sendMessage (msg);                                    \
-            msg->release ();                                                  \
-    }                                                                     \
-}	break;
-
-
 namespace {
 
 template <typename T, typename ... Args>
 auto make_shared(Args&&... arg) {
-    return VSTGUI::SharedPointer<T>(new T(std::forward<Args>(arg)...)/*, false*/);
+    return VSTGUI::SharedPointer<T>(new T(std::forward<Args>(arg)...),
+                                    true /* vstsdk takes ownership instead of sharing,
+                                      probably to support old way of work with raw pointers,
+                                      so we need here one extra refcounter inc*/);
 }
 
 }
@@ -758,37 +709,291 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
 {
     switch (pControl->getTag ())
     {
-    //------------------
-    CASE_VALUE_CHANGED('Gain', kGainId)
-    CASE_VALUE_CHANGED('Fadr', kVolumeId)
-    CASE_VALUE_CHANGED('Scen', kCurrentSceneId)
-    CASE_VALUE_CHANGED('Pith', kPitchId)
-    CASE_VALUE_CHANGED('PtCr', kPitchSwitchId)
-    CASE_VALUE_CHANGED('Curv', kVolCurveId)
-    CASE_VALUE_CHANGED('Loop', kLoopId)
-    CASE_VALUE_CHANGED('Sync', kSyncId)
-    CASE_VALUE_CHANGED('Rvrs', kReverseId)
-    CASE_VALUE_CHANGED('Ampl', kAmpId)
-    CASE_VALUE_CHANGED('Tune', kTuneId)
-    CASE_VALUE_CHANGED('TCLr', kTimecodeLearnId)
-    //------------------
-    CASE_PAD_CHANGED('Pd00', 0)
-    CASE_PAD_CHANGED('Pd01', 1)
-    CASE_PAD_CHANGED('Pd02', 2)
-    CASE_PAD_CHANGED('Pd03', 3)
-    CASE_PAD_CHANGED('Pd04', 4)
-    CASE_PAD_CHANGED('Pd05', 5)
-    CASE_PAD_CHANGED('Pd06', 6)
-    CASE_PAD_CHANGED('Pd07', 7)
-    CASE_PAD_CHANGED('Pd08', 8)
-    CASE_PAD_CHANGED('Pd09', 9)
-    CASE_PAD_CHANGED('Pd00' + 10, 10)
-    CASE_PAD_CHANGED('Pd00' + 11, 11)
-    CASE_PAD_CHANGED('Pd00' + 12, 12)
-    CASE_PAD_CHANGED('Pd00' + 13, 13)
-    CASE_PAD_CHANGED('Pd00' + 14, 14)
-    CASE_PAD_CHANGED('Pd00' + 15, 15)
-    //------------------
+    case 'Gain':
+        controller->setParamNormalized(kGainId, pControl->getValueNormalized());
+        controller->performEdit(kGainId, pControl->getValueNormalized());
+        break;
+
+    case 'Fadr':
+        controller->setParamNormalized(kVolumeId, pControl->getValueNormalized());
+        controller->performEdit(kVolumeId, pControl->getValueNormalized());
+        break;
+
+    case 'Scen':
+        controller->setParamNormalized(kCurrentSceneId, pControl->getValueNormalized());
+        controller->performEdit(kCurrentSceneId, pControl->getValueNormalized());
+        break;
+
+    case 'Pith':
+        controller->setParamNormalized(kPitchId, pControl->getValueNormalized());
+        controller->performEdit(kPitchId, pControl->getValueNormalized());
+        break;
+
+    case 'PtCr':
+        controller->setParamNormalized(kPitchSwitchId, pControl->getValueNormalized());
+        controller->performEdit(kPitchSwitchId, pControl->getValueNormalized());
+        break;
+
+    case 'Curv':
+        controller->setParamNormalized(kVolCurveId, pControl->getValueNormalized());
+        controller->performEdit(kVolCurveId, pControl->getValueNormalized());
+        break;
+
+    case 'Loop':
+        controller->setParamNormalized(kLoopId, pControl->getValueNormalized());
+        controller->performEdit(kLoopId, pControl->getValueNormalized());
+        break;
+
+    case 'Sync':
+        controller->setParamNormalized(kSyncId, pControl->getValueNormalized());
+        controller->performEdit(kSyncId, pControl->getValueNormalized());
+        break;
+
+    case 'Rvrs':
+        controller->setParamNormalized(kReverseId, pControl->getValueNormalized());
+        controller->performEdit(kReverseId, pControl->getValueNormalized());
+        break;
+
+    case 'Ampl':
+        controller->setParamNormalized(kAmpId, pControl->getValueNormalized());
+        controller->performEdit(kAmpId, pControl->getValueNormalized());
+        break;
+
+    case 'Tune':
+        controller->setParamNormalized(kTuneId, pControl->getValueNormalized());
+        controller->performEdit(kTuneId, pControl->getValueNormalized());
+        break;
+
+    case 'TCLr':
+        controller->setParamNormalized(kTimecodeLearnId, pControl->getValueNormalized());
+        controller->performEdit(kTimecodeLearnId, pControl->getValueNormalized());
+        break;
+        //------------------
+
+    case 'Pd00': {
+        IMessage *msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit->getText());
+            msg->setMessageID("touchPad");
+            msg->getAttributes()->setInt("PadNumber", 0);
+            msg->getAttributes()->setFloat("PadValue",
+                                           pControl->getValueNormalized());
+            controller->sendMessage(msg);
+            msg->release();
+        }
+    }
+        break;
+
+    case 'Pd01': {
+        IMessage *msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit->getText());
+            msg->setMessageID("touchPad");
+            msg->getAttributes()->setInt("PadNumber", 1);
+            msg->getAttributes()->setFloat("PadValue",
+                                           pControl->getValueNormalized());
+            controller->sendMessage(msg);
+            msg->release();
+        }
+    }
+        break;
+
+    case 'Pd02': {
+        IMessage *msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit->getText());
+            msg->setMessageID("touchPad");
+            msg->getAttributes()->setInt("PadNumber", 2);
+            msg->getAttributes()->setFloat("PadValue",
+                                           pControl->getValueNormalized());
+            controller->sendMessage(msg);
+            msg->release();
+        }
+    }
+        break;
+
+    case 'Pd03': {
+        IMessage *msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit->getText());
+            msg->setMessageID("touchPad");
+            msg->getAttributes()->setInt("PadNumber", 3);
+            msg->getAttributes()->setFloat("PadValue",
+                                           pControl->getValueNormalized());
+            controller->sendMessage(msg);
+            msg->release();
+        }
+    }
+        break;
+
+    case 'Pd04': {
+        IMessage *msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit->getText());
+            msg->setMessageID("touchPad");
+            msg->getAttributes()->setInt("PadNumber", 4);
+            msg->getAttributes()->setFloat("PadValue",
+                                           pControl->getValueNormalized());
+            controller->sendMessage(msg);
+            msg->release();
+        }
+    }
+        break;
+
+    case 'Pd05': {
+        IMessage *msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit->getText());
+            msg->setMessageID("touchPad");
+            msg->getAttributes()->setInt("PadNumber", 5);
+            msg->getAttributes()->setFloat("PadValue",
+                                           pControl->getValueNormalized());
+            controller->sendMessage(msg);
+            msg->release();
+        }
+    }
+        break;
+
+    case 'Pd06': {
+        IMessage *msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit->getText());
+            msg->setMessageID("touchPad");
+            msg->getAttributes()->setInt("PadNumber", 6);
+            msg->getAttributes()->setFloat("PadValue",
+                                           pControl->getValueNormalized());
+            controller->sendMessage(msg);
+            msg->release();
+        }
+    }
+        break;
+
+    case 'Pd07': {
+        IMessage *msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit->getText());
+            msg->setMessageID("touchPad");
+            msg->getAttributes()->setInt("PadNumber", 7);
+            msg->getAttributes()->setFloat("PadValue",
+                                           pControl->getValueNormalized());
+            controller->sendMessage(msg);
+            msg->release();
+        }
+    }
+        break;
+
+    case 'Pd08': {
+        IMessage *msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit->getText());
+            msg->setMessageID("touchPad");
+            msg->getAttributes()->setInt("PadNumber", 8);
+            msg->getAttributes()->setFloat("PadValue",
+                                           pControl->getValueNormalized());
+            controller->sendMessage(msg);
+            msg->release();
+        }
+    }
+        break;
+
+    case 'Pd09': {
+        IMessage *msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit->getText());
+            msg->setMessageID("touchPad");
+            msg->getAttributes()->setInt("PadNumber", 9);
+            msg->getAttributes()->setFloat("PadValue",
+                                           pControl->getValueNormalized());
+            controller->sendMessage(msg);
+            msg->release();
+        }
+    }
+        break;
+
+    case 'Pd00' + 10: {
+        IMessage *msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit->getText());
+            msg->setMessageID("touchPad");
+            msg->getAttributes()->setInt("PadNumber", 10);
+            msg->getAttributes()->setFloat("PadValue",
+                                           pControl->getValueNormalized());
+            controller->sendMessage(msg);
+            msg->release();
+        }
+    }
+        break;
+
+    case 'Pd00' + 11: {
+        IMessage *msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit->getText());
+            msg->setMessageID("touchPad");
+            msg->getAttributes()->setInt("PadNumber", 11);
+            msg->getAttributes()->setFloat("PadValue",
+                                           pControl->getValueNormalized());
+            controller->sendMessage(msg);
+            msg->release();
+        }
+    }
+        break;
+
+    case 'Pd00' + 12: {
+        IMessage *msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit->getText());
+            msg->setMessageID("touchPad");
+            msg->getAttributes()->setInt("PadNumber", 12);
+            msg->getAttributes()->setFloat("PadValue",
+                                           pControl->getValueNormalized());
+            controller->sendMessage(msg);
+            msg->release();
+        }
+    }
+        break;
+
+    case 'Pd00' + 13: {
+        IMessage *msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit->getText());
+            msg->setMessageID("touchPad");
+            msg->getAttributes()->setInt("PadNumber", 13);
+            msg->getAttributes()->setFloat("PadValue",
+                                           pControl->getValueNormalized());
+            controller->sendMessage(msg);
+            msg->release();
+        }
+    }
+        break;
+
+    case 'Pd00' + 14: {
+        IMessage *msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit->getText());
+            msg->setMessageID("touchPad");
+            msg->getAttributes()->setInt("PadNumber", 14);
+            msg->getAttributes()->setFloat("PadValue",
+                                           pControl->getValueNormalized());
+            controller->sendMessage(msg);
+            msg->release();
+        }
+    }
+        break;
+
+    case 'Pd00' + 15: {
+        IMessage *msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit->getText());
+            msg->setMessageID("touchPad");
+            msg->getAttributes()->setInt("PadNumber", 15);
+            msg->getAttributes()->setFloat("PadValue",
+                                           pControl->getValueNormalized());
+            controller->sendMessage(msg);
+            msg->release();
+        }
+    }
+        break;
+
     case 'Name':
     {
         if (sampleBase) sampleBase->getEntry(int32_t(currentEntry))->setTitle(nameEdit->getText());
@@ -888,22 +1093,48 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
 //------------------------------------------------------------------------
 void AVinylEditorView::controlBeginEdit (VSTGUI::CControl* pControl)
 {
-    switch (pControl->getTag ())
-    {
-        //------------------
-        CASE_BEGIN_EDIT ('Gain', kGainId)
-        CASE_BEGIN_EDIT ('Pith', kPitchId)
-        CASE_BEGIN_EDIT ('Fadr', kVolumeId)
-        CASE_BEGIN_EDIT ('Scen', kCurrentSceneId)
-        CASE_BEGIN_EDIT ('Comb', kCurrentEntryId)
-        CASE_BEGIN_EDIT ('Loop', kLoopId)
-        CASE_BEGIN_EDIT ('Sync', kSyncId)
-        CASE_BEGIN_EDIT ('Rvrs', kReverseId)
-        CASE_BEGIN_EDIT ('Ampl', kAmpId)
-        CASE_BEGIN_EDIT ('Tune', kTuneId)
-        CASE_BEGIN_EDIT ('PtCr', kPitchSwitchId)
-        CASE_BEGIN_EDIT ('Curv', kVolCurveId)
-        CASE_BEGIN_EDIT ('TCLr', kTimecodeLearnId)
+    switch (pControl->getTag ()) {
+    case 'Gain':
+        controller->beginEdit(kGainId);
+        break;
+    case 'Pith':
+        controller->beginEdit(kPitchId);
+        break;
+    case 'Fadr':
+        controller->beginEdit(kVolumeId);
+        break;
+    case 'Scen':
+        controller->beginEdit(kCurrentSceneId);
+        break;
+    case 'Comb':
+        controller->beginEdit(kCurrentEntryId);
+        break;
+    case 'Loop':
+        controller->beginEdit(kLoopId);
+        break;
+    case 'Sync':
+        controller->beginEdit(kSyncId);
+        break;
+    case 'Rvrs':
+        controller->beginEdit(kReverseId);
+        break;
+    case 'Ampl':
+        controller->beginEdit(kAmpId);
+        break;
+    case 'Tune':
+        controller->beginEdit(kTuneId);
+        break;
+    case 'PtCr':
+        controller->beginEdit(kPitchSwitchId);
+        break;
+    case 'Curv':
+        controller->beginEdit(kVolCurveId);
+        break;
+    case 'TCLr':
+        controller->beginEdit(kTimecodeLearnId);
+        break;
+    default:
+        break;
     }
 }
 
@@ -912,20 +1143,47 @@ void AVinylEditorView::controlEndEdit (VSTGUI::CControl* pControl)
 {
     switch (pControl->getTag ())
     {
-        //------------------
-        CASE_END_EDIT ('Gain',kGainId)
-        CASE_END_EDIT ('Pith',kPitchId)
-        CASE_END_EDIT ('Fadr',kVolumeId)
-        CASE_END_EDIT ('Scen',kCurrentSceneId)
-        CASE_END_EDIT ('Comb',kCurrentEntryId)
-        CASE_END_EDIT ('Loop',kLoopId)
-        CASE_END_EDIT ('Sync',kSyncId)
-        CASE_END_EDIT ('Rvrs',kReverseId)
-        CASE_END_EDIT ('Ampl',kAmpId)
-        CASE_END_EDIT ('Tune',kTuneId)
-        CASE_END_EDIT ('PtCr',kPitchSwitchId)
-        CASE_END_EDIT ('Curv',kVolCurveId)
-        CASE_END_EDIT ('TCLr',kTimecodeLearnId)
+    case 'Gain':
+        controller->endEdit(kGainId);
+        break;
+    case 'Pith':
+        controller->endEdit(kPitchId);
+        break;
+    case 'Fadr':
+        controller->endEdit(kVolumeId);
+        break;
+    case 'Scen':
+        controller->endEdit(kCurrentSceneId);
+        break;
+    case 'Comb':
+        controller->endEdit(kCurrentEntryId);
+        break;
+    case 'Loop':
+        controller->endEdit(kLoopId);
+        break;
+    case 'Sync':
+        controller->endEdit(kSyncId);
+        break;
+    case 'Rvrs':
+        controller->endEdit(kReverseId);
+        break;
+    case 'Ampl':
+        controller->endEdit(kAmpId);
+        break;
+    case 'Tune':
+        controller->endEdit(kTuneId);
+        break;
+    case 'PtCr':
+        controller->endEdit(kPitchSwitchId);
+        break;
+    case 'Curv':
+        controller->endEdit(kVolCurveId);
+        break;
+    case 'TCLr':
+        controller->endEdit(kTimecodeLearnId);
+        break;
+    default:
+        break;
     }
 }
 
@@ -934,17 +1192,54 @@ void AVinylEditorView::update (ParamID tag, ParamValue value)
 {
     switch (tag)
     {
-        //------------------
-        CASE_UPDATE (kGainId,gainKnob)
-        CASE_UPDATE (kAmpId,ampSlide)
-        CASE_UPDATE (kTuneId,tuneSlide)
-        CASE_UPDATE (kVolumeId,volumeSlider)
-        CASE_UPDATE (kSyncId,syncBox)
-        CASE_UPDATE (kReverseId,rvrsBox)
-        CASE_UPDATE (kTimecodeLearnId,tcLearnBox)
-        CASE_UPDATE (kVolCurveId,curvSwitch)
+    case kGainId:
+        if (gainKnob) {
+            gainKnob->setValueNormalized((float)value);
+        }
+        break;
 
-        //------------------
+    case kAmpId:
+        if (ampSlide) {
+            ampSlide->setValueNormalized((float)value);
+        }
+        break;
+
+    case kTuneId:
+        if (tuneSlide) {
+            tuneSlide->setValueNormalized((float)value);
+        }
+        break;
+
+    case kVolumeId:
+        if (volumeSlider) {
+            volumeSlider->setValueNormalized((float)value);
+        }
+        break;
+
+    case kSyncId:
+        if (syncBox) {
+            syncBox->setValueNormalized((float)value);
+        }
+        break;
+
+    case kReverseId:
+        if (rvrsBox) {
+            rvrsBox->setValueNormalized((float)value);
+        }
+        break;
+
+    case kTimecodeLearnId:
+        if (tcLearnBox) {
+            tcLearnBox->setValueNormalized((float)value);
+        }
+        break;
+
+    case kVolCurveId:
+        if (curvSwitch) {
+            curvSwitch->setValueNormalized((float)value);
+        }
+        break;
+
     case kLoopId:
         if (loopBox) {
             loopBox->setValueNormalized ((float)value);
@@ -953,7 +1248,7 @@ void AVinylEditorView::update (ParamID tag, ParamValue value)
             }
         }
         break;
-    //------------------
+
     case kPitchId:
         if (pitchSlider)
         {
@@ -971,7 +1266,7 @@ void AVinylEditorView::update (ParamID tag, ParamValue value)
             pitchValue->setText(VSTGUI::UTF8String(textval));
         }
         break;
-    //------------------
+
     case kPitchSwitchId:
         if (pitchSwitch)
         {
@@ -990,7 +1285,7 @@ void AVinylEditorView::update (ParamID tag, ParamValue value)
             pitchValue->setText(VSTGUI::UTF8String(textval));
         }
         break;
-    //------------------
+
     case kCurrentSceneId:
         if (scenKnob)
         {
@@ -1003,6 +1298,7 @@ void AVinylEditorView::update (ParamID tag, ParamValue value)
             sceneValue->setText(VSTGUI::UTF8String(textval));
         }
         break;
+
     case kCurrentEntryId:
     {
         int64_t newCurEntry = floor(value * float(EMaximumSamples - 1) + 0.5);
@@ -1028,31 +1324,40 @@ void AVinylEditorView::update (ParamID tag, ParamValue value)
             }
         }
     }
-    break;
+        break;
+
     case kVuLeftId:
         lastVuLeftMeterValue = float(value);
         break;
+
     case kVuRightId:
         lastVuRightMeterValue = float(value);
         break;
+
     case kDistorsionId:
         lastDistort = float(value) > 0.5f;
         break;
+
     case kPreRollId:
         lastPreRoll = float(value) > 0.5f;
         break;
+
     case kPostRollId:
         lastPostRoll = float(value) > 0.5f;
         break;
+
     case kHoldId:
         lastHold = float(value) > 0.5;
         break;
+
     case kFreezeId:
         lastFreeze = float(value) > 0.5;
         break;
+
     case kVintageId:
         lastVintage = float(value) > 0.5;
         break;
+
     case kLockToneId:
         lastLockTone = float(value) > 0.5;
         break;
@@ -1062,7 +1367,8 @@ void AVinylEditorView::update (ParamID tag, ParamValue value)
             wavView->setPosition(float(value));
         }
         break;
-
+    default:
+        break;
     }
 }
 
