@@ -329,22 +329,22 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
         padType[9] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt09', padType4, padType1, padType2, padType3, padType4, offset);
         frame->addView(padType[9]);
         size.offset(47, 0);
-        padType[10] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt10', padType4, padType1, padType2, padType3, padType4, offset);
+        padType[10] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt00' + 10, padType4, padType1, padType2, padType3, padType4, offset);
         frame->addView(padType[10]);
         size.offset(47, 0);
-        padType[11] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt11', padType4, padType1, padType2, padType3, padType4, offset);
+        padType[11] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt00' + 11, padType4, padType1, padType2, padType3, padType4, offset);
         frame->addView(padType[11]);
         size.offset(-141, 47);
-        padType[12] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt12', padType4, padType1, padType2, padType3, padType4, offset);
+        padType[12] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt00' + 12, padType4, padType1, padType2, padType3, padType4, offset);
         frame->addView(padType[12]);
         size.offset(47, 0);
-        padType[13] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt13', padType4, padType1, padType2, padType3, padType4, offset);
+        padType[13] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt00' + 13, padType4, padType1, padType2, padType3, padType4, offset);
         frame->addView(padType[13]);
         size.offset(47, 0);
-        padType[14] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt14', padType4, padType1, padType2, padType3, padType4, offset);
+        padType[14] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt00' + 14, padType4, padType1, padType2, padType3, padType4, offset);
         frame->addView(padType[14]);
         size.offset(47, 0);
-        padType[15] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt15', padType4, padType1, padType2, padType3, padType4, offset);
+        padType[15] = make_shared<VSTGUI::C5PositionView>(size, this, 'Pt00' + 15, padType4, padType1, padType2, padType3, padType4, offset);
         frame->addView(padType[15]);
     }
 
@@ -610,7 +610,7 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
     frame->addView(nameEdit);
 
     size(0, 0, 40, 35);
-    size.offset(198, 12);
+    size.offset(198, 11);
     sceneValue = make_shared<VSTGUI::CTextLabel>(size, "1", nullptr, VSTGUI::CVinylPopupMenu::kNoFrame);
     sceneValue->setHoriAlign(VSTGUI::kCenterText);
     sceneValue->setBackColor(VSTGUI::CColor(0,0,0,0));
@@ -1378,12 +1378,12 @@ VSTGUI::CMessageResult AVinylEditorView::notify (CBaseObject* sender, const char
 
     if (message == VSTGUI::CVSTGUITimer::kMsgTimer) {
         if (vuLeftMeter) {
-            vuLeftMeter->setValue((vuLeftMeter->getValue() * 4.0 + (1.0 - lastVuLeftMeterValue)) / 5.0);
-            lastVuLeftMeterValue = 0.f;
+            vuLeftMeter->setValue((vuLeftMeter->getValue() * 4. + (1. - lastVuLeftMeterValue)) / 5.);
+            lastVuLeftMeterValue = 1.f;
         }
         if (vuRightMeter) {
-            vuRightMeter->setValue((vuRightMeter->getValue() * 4.0 + (1.0 - lastVuRightMeterValue)) / 5.0);
-            lastVuRightMeterValue = 0.f;
+            vuRightMeter->setValue((vuRightMeter->getValue() * 4. + (1. - lastVuRightMeterValue)) / 5.);
+            lastVuRightMeterValue = 1.f;
         }
         if (dispDistorsion) {
             dispDistorsion->setValue(lastDistort ? 1 : 0);

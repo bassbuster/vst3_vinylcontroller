@@ -141,13 +141,13 @@ tresult PLUGIN_API AVinylController::initialize(FUnknown* context)
     parameters.addParameter(STR16("Vintage"), 0, 1, 0, ParameterInfo::kIsReadOnly, kVintageId);
     parameters.addParameter(STR16("LockTone"), 0, 1, 0, ParameterInfo::kIsReadOnly, kLockToneId);
 
-    auto pitchParam = make_shared<RangeParameter>(STR16 ("Pitch"), kPitchId,STR16 ("%"),0,1,0.5,511, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
+    auto pitchParam = make_shared<RangeParameter>(STR16("Pitch"), kPitchId, STR16("%"), 0, 1, 0.5, 511, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
     parameters.addParameter(pitchParam);
 
 	//RangeParameter* padsParam = new RangeParameter (STR16 ("ActivePad"), kCurrentPadId,STR16 ("Number"),1,NumberOfPads,1,NumberOfPads-1, ParameterInfo::kCanAutomate, kRootUnitId);
 	//parameters.addParameter (padsParam);
 
-    auto sampleParam = make_shared<RangeParameter>(STR16 ("CurrentSample"), kCurrentEntryId,STR16 ("Number"),1,EMaximumSamples,1,EMaximumSamples-1, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
+    auto sampleParam = make_shared<RangeParameter>(STR16("CurrentSample"), kCurrentEntryId,STR16 ("Number"),1,EMaximumSamples,1,EMaximumSamples-1, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
     parameters.addParameter(sampleParam);
 
     auto sceneParam = make_shared<RangeParameter>(STR16 ("CurrentScene"), kCurrentSceneId,STR16 ("Number"),1,EMaximumScenes,1,EMaximumScenes-1, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);

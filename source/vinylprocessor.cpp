@@ -266,7 +266,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
     params.setQueue(paramChanges);
 
     ParameterWriter vuLeftWriter(kVuLeftId, outParamChanges);
-    ParameterWriter vuRightWriter(kPositionId, outParamChanges);
+    ParameterWriter vuRightWriter(kVuRightId, outParamChanges);
     ParameterWriter positionWriter(kPositionId, outParamChanges);
 
     ParameterWriter loopWriter(kLoopId, outParamChanges);
@@ -923,14 +923,14 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
             std::vector<tchar> bufname(savedNameLen + 1);
             std::vector<tchar> buffile(savedFileNameLen + 1);
 
-            reader.readInt16uArray((uint16_t *)bufname.data(), bufname.size());
-            reader.readInt16uArray((uint16_t *)buffile.data(), buffile.size());
+            reader.readInt16uArray((uint16_t *)bufname.data(), int32_t(bufname.size()));
+            reader.readInt16uArray((uint16_t *)buffile.data(), int32_t(buffile.size()));
 
             String sName (bufname.data());
             String sFile (buffile.data());
 
             SamplesArray.push_back(std::make_unique<SampleEntry>(sName,sFile));
-            SamplesArray.back()->SetIndex(SamplesArray.size());
+            SamplesArray.back()->SetIndex(uint32_t(SamplesArray.size()));
             SamplesArray.back()->Loop = savedLoop > 0;
             SamplesArray.back()->Reverse = savedReverse > 0;
             SamplesArray.back()->Sync = savedSync > 0;
@@ -979,7 +979,7 @@ tresult PLUGIN_API AVinyl::getState(IBStream* state)
         DWORD toSaveEffector = effectorSet;
         DWORD toSavePadCount = ENumberOfPads;
         DWORD toSaveSceneCount = EMaximumScenes;
-        DWORD toSaveEntryCount = SamplesArray.size();
+        DWORD toSaveEntryCount = DWORD(SamplesArray.size());
         float toSavelockSpeed = lockSpeed;
         float toSavelockVolume = lockVolume;
 
@@ -1114,7 +1114,7 @@ tresult PLUGIN_API AVinyl::notify (IMessage* message)
             if (message->getAttributes()->getString("Sample", stringBuff, sizeof (stringBuff) / sizeof (TChar)) == kResultOk) {
                 String newName(stringBuff);
                 SamplesArray.push_back(std::make_unique<SampleEntry>(newName,newFile));
-                SamplesArray.back()->SetIndex(SamplesArray.size());
+                SamplesArray.back()->SetIndex(uint32_t(SamplesArray.size()));
                 if (iCurrentEntry == (SamplesArray.back()->GetIndex() - 1)) {
                     PadSet(iCurrentEntry);
                 }
