@@ -62,7 +62,9 @@ public:
 
     void setQueue(IParamValueQueue* paramQueue) override final {
         queue = paramQueue;
-        paramQueue->getPoint (index++, offset, value);
+        if (queue->getPoint(index++, offset, value) != kResultTrue) {
+            queue = nullptr;
+        }
     }
 
     void checkOffset(int32 sampleOffset) override final {
@@ -74,6 +76,7 @@ public:
         } else if (queue && offset > sampleOffset){
             approximator(sampleOffset, offset, value);
         }
+        lastCheckdOffset = sampleOffset;
     }
 
     // void set(Sample64 initial) override final {
@@ -88,11 +91,14 @@ public:
         queue = nullptr;
         index = 0;
         offset = 0;
+        lastCheckdOffset = -1;
     }
 
     void flush() override final {
         while (queue){
-            setter(value);
+            if (lastCheckdOffset < offset) {
+                setter(value);
+            }
             if (queue->getPoint(index++, offset, value) != kResultTrue) {
                 queue = nullptr;
             }
@@ -108,6 +114,7 @@ private:
     IParamValueQueue* queue = 0;
     int32 index = 0;
     int32 offset = 0;
+    int32 lastCheckdOffset = 0;
 
 };
 

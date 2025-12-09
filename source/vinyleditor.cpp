@@ -248,7 +248,7 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
         auto background = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("volume_slider.png"));
         size(0, 0, 38, 145);
         size.offset(9, 75);
-        volumeSlider = make_shared<VSTGUI::CVerticalSlider>(size, this, 'Fadr', offset, size.getHeight (), handle, background, offset);
+        volumeSlider = make_shared<VSTGUI::CVerticalSlider>(size, this, 'Fadr', offset, size.getHeight(), handle, background, offset);
         frame->addView(volumeSlider);
     }
 
