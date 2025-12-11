@@ -197,7 +197,6 @@ DWORD GetChannelData(BYTE * Buffer, unsigned channel, unsigned BitsPerSample) {
 
 Sample32 ConvertToSample(DWORD CannelData, BYTE Type, unsigned BitsPerSample) {
     /////////Supported bitrates 8/16/24/32(IEEE Float)
-    Sample32 FSample = 0.;
     if (Type == 1) {
         if (BitsPerSample == 8) {
             return (int(CannelData)) / 127.0;
@@ -228,7 +227,7 @@ bool SampleEntry::AnalyseContainers(BYTE * Buffer, unsigned BufferSize, const ch
     unsigned iBitsPerSample = 0;
     unsigned iCursor = iFormLength + 12;
     bool foundDataContainer = false;
-    size_t SoundBufferLength = 0;
+    unsigned SoundBufferLength = 0;
     if (!AnalysePCMCodec(Buffer, nCannels, iSamplesPerSec, iBitsPerSample)) {
         fprintf(stderr,
                 "[SampeEntry] Error: Wrong format (not PCM wave in %s)",
@@ -247,8 +246,8 @@ bool SampleEntry::AnalyseContainers(BYTE * Buffer, unsigned BufferSize, const ch
             SoundBufferRight.resize(SoundBufferLength + 1);
 
             BYTE * Data = Buffer + iCursor + 8;
-            size_t step = nCannels * iBitsPerSample / 8;
-            for (size_t i = 0; i < iFormLength; i = i + step) {
+            unsigned step = nCannels * iBitsPerSample / 8;
+            for (unsigned i = 0; i < iFormLength; i = i + step) {
 
                 for (unsigned j = 0; j < nCannels; j++) {
                     DWORD CannelData = GetChannelData(Data + i, j, iBitsPerSample);
@@ -346,20 +345,18 @@ bool SampleEntry::LoadFromFile(const char * FileName) {
     FILE * iFileHandle = fopen(FileName, "rb");
     if (iFileHandle) {
         //////////Reading 8Byte Header
-        unsigned iBytesRead = fread(Header, 1, 8, iFileHandle);
+        size_t iBytesRead = fread(Header, 1, 8, iFileHandle);
         if (iBytesRead == 8) {
-            unsigned iRiffSize = AnalyseWavHeader(Header);
+            size_t iRiffSize = AnalyseWavHeader(Header);
             if (iRiffSize > 0) {
                 ////////Loading content To Buffer
                 Buffer = new BYTE[iRiffSize + 1];
-                unsigned iBytesRead =
-                    fread(Buffer, 1, iRiffSize, iFileHandle);
+                size_t iBytesRead = fread(Buffer, 1, iRiffSize, iFileHandle);
                 fclose(iFileHandle);
                 ////////Encodding Content
                 if (iBytesRead == iRiffSize) {
 
-                    result = AnalyseContainers(Buffer, iRiffSize,
-                                               FileName);
+                    result = AnalyseContainers(Buffer, iRiffSize, FileName);
                     if (result) {
                         SampleFile = FileName;
                     }
@@ -412,8 +409,8 @@ void SampleEntry::ClearBuffer() {
     // FloatCursor = 0;
     SoundBufferLeft.clear();
     SoundBufferRight.clear();
-    RealCursor.Clear();
-    OverlapCursorFirst.Clear();
+    RealCursor.clear();
+    OverlapCursorFirst.clear();
     Loop = false;
     Sync = false;
     Reverse = false;
@@ -425,8 +422,8 @@ void SampleEntry::ClearBuffer() {
 void SampleEntry::ResetCursor() {
     // IntegerCursor = 0;
     // FloatCursor = 0;
-    RealCursor.Clear();
-    OverlapCursorFirst.Clear();
+    RealCursor.clear();
+    OverlapCursorFirst.clear();
     BeginLockStrobe();
 }
 
@@ -450,14 +447,12 @@ const char * SampleEntry::GetFileName() {
     return SampleFile;
 }
 
-bool SampleEntry:: operator == (const SampleEntry & Other) const {
-    if (Other == *this)
-        return true;
-    return false;
+bool SampleEntry:: operator == (const SampleEntry & other) const {
+    return (other.SoundBufferLeft == SoundBufferLeft) && (other.SoundBufferRight == SoundBufferRight);
 }
 
-bool SampleEntry:: operator != (const SampleEntry & Other) const {
-    return !(*this == Other); ;
+bool SampleEntry:: operator != (const SampleEntry & other) const {
+    return (other.SoundBufferLeft != SoundBufferLeft) || (other.SoundBufferRight != SoundBufferRight);
 }
 
 Sample32* SampleEntry::GetBuffer(channel channelname) {
@@ -498,10 +493,10 @@ Sample32 SampleEntry::GetAvgSample(unsigned position) {
 Sample32 SampleEntry::GetPeakSample(unsigned from_position,
                                     unsigned to_position) {
     Sample32 peak = 0;
-    if ((size_t)from_position > SoundBufferLeft.size()) {
+    if (from_position > SoundBufferLeft.size()) {
         return 0;
     }
-    if ((size_t)to_position > SoundBufferLeft.size()) {
+    if (to_position > SoundBufferLeft.size()) {
         to_position = SoundBufferLeft.size();
     }
     if (from_position > to_position) {
@@ -589,7 +584,7 @@ void SampleEntry::PlayStereoSample(Sample32 * Left, Sample32 * Right,
 void SampleEntry::PlayStereoSampleTempo(Sample32 * Left, Sample32 * Right,
                                         Sample64 _Speed, Sample64 _Tempo, Sample64 _SampleRate,
                                         bool _changeCursors) {
-    bool syncroStrob;
+    //bool syncroStrob;
     Sample64 newSpeed = CalcRealSpeed(_Speed, _SampleRate);
     Sample64 newTempoSpeed = CalcTempoSpeed(_Speed, _Tempo, _SampleRate);
     //bool plus = false;
@@ -693,9 +688,9 @@ void SampleEntry::BeginLockStrobe() {
 
 void SampleEntry::OverlapStrobe(double speed, double tune) {
     if (speed < 0) {
-        OverlapCursorSecond.SetCue(beatLength * NormalizeStretchBeat(long(RealCursor.IntegerPart / beatLength)) - beatOverlap * tune / speed, 0);
+        OverlapCursorSecond.set(beatLength * NormalizeStretchBeat(long(RealCursor.integerPart() / beatLength)) - beatOverlap * tune / speed, 0);
     } else {
-        OverlapCursorSecond.SetCue((long)beatLength * (long)NormalizeStretchBeat(long(RealCursor.IntegerPart / beatLength) + 1) - beatOverlap * tune / speed, 0);
+        OverlapCursorSecond.set((long)beatLength * (long)NormalizeStretchBeat(long(RealCursor.integerPart() / beatLength) + 1) - beatOverlap * tune / speed, 0);
     }
 
     RealCursor = NormalizeCue(OverlapCursorFirst);
@@ -711,17 +706,17 @@ void SampleEntry::StratchStrobe(const CuePoint &cue) {
 
 bool SampleEntry::CheckStratchEvent(CuePoint &cue, Sample64 speed,Sample64 speedtempo){
     if ((speedtempo > 0) && (cue > OverlapCursorSecond)) {
-        if (fabs(OverlapCursorSecond.IntegerPart+ SoundBufferLeft.size() - cue.IntegerPart) > fabs((double)beatLength/2.0)) {
+        if (fabs(OverlapCursorSecond.integerPart() + SoundBufferLeft.size() - cue.integerPart()) > fabs((double)beatLength/2.0)) {
             return true;
         }
     } else if ((speedtempo < 0) && (cue < OverlapCursorSecond)) {
 
-        if (fabs(OverlapCursorSecond.IntegerPart - cue.IntegerPart + SoundBufferLeft.size()) > fabs((double)beatLength/2.0)) {
+        if (fabs(OverlapCursorSecond.integerPart() - cue.integerPart() + SoundBufferLeft.size()) > fabs((double)beatLength/2.0)) {
             return true;
         }
 
     } else {
-        if (fabs(OverlapCursorSecond.IntegerPart - cue.IntegerPart) > fabs(double(beatLength) / 2.0)) {
+        if (fabs(OverlapCursorSecond.integerPart() - cue.integerPart()) > fabs(double(beatLength) / 2.0)) {
             return true;
         }
     }
@@ -743,11 +738,11 @@ bool SampleEntry::CheckStratchEvent(CuePoint &cue, Sample64 speed,Sample64 speed
 		}*/
 
 bool SampleEntry::CheckRestratchEvent(const CuePoint &cue, Sample64 offset){
-    bool result = false;
+
     CuePoint cueNew = NormalizeCue(cue + offset);
     // cueNew += offset;
     // NormalizeCue(cueNew);
-    if ((long(cueNew.IntegerPart / beatLength)) != (long(cue.IntegerPart / beatLength))) {
+    if ((long(cueNew.integerPart() / beatLength)) != (long(cue.integerPart() / beatLength))) {
         return true;
     }
     if (((offset > 0) && (cue > cueNew)) || ((offset < 0) && (cue < cueNew))) {
@@ -756,35 +751,33 @@ bool SampleEntry::CheckRestratchEvent(const CuePoint &cue, Sample64 offset){
     return false;
 }
 
-bool SampleEntry::CheckOverlapEvent(CuePoint &_cue, Sample64 _offset){
+bool SampleEntry::CheckOverlapEvent(CuePoint &cue, Sample64 offset){
 
-    if (((_offset > 0) && (_cue < RealCursor))||((_offset < 0) && (_cue > RealCursor))) {
+    if (((offset > 0) && (cue < RealCursor))||((offset < 0) && (cue > RealCursor))) {
         return false;
     }
-    if ((long((RealCursor.IntegerPart  + beatOverlap) / beatLength)) != (long((_cue.IntegerPart + beatOverlap) / beatLength))) {
+    if ((long((RealCursor.integerPart()  + beatOverlap) / beatLength)) != (long((cue.integerPart() + beatOverlap) / beatLength))) {
         return true;
     }
     return false;
 }
 
-bool SampleEntry::CheckSyncroEvent(CuePoint &_cue,Sample64 _offset){
+bool SampleEntry::CheckSyncroEvent(CuePoint &cue,Sample64 offset){
 
-    if ((long(RealCursor.IntegerPart / beatLength)) != (long(_cue.IntegerPart / beatLength))) {
+    if ((long(RealCursor.integerPart() / beatLength)) != (long(cue.integerPart() / beatLength))) {
         return true;
     }
-    if (((_offset > 0) && (_cue < RealCursor)) || ((_offset < 0) && (_cue > RealCursor))) {
+    if (((offset > 0) && (cue < RealCursor)) || ((offset < 0) && (cue > RealCursor))) {
         return true;
     }
     return false;
 }
 
-void SampleEntry::MoveCursorEnv(Sample64 _offset, Sample64 _Tempo,
-                                Sample64 _SampleRate) {
-    Sample64 new_offset = RecalcSpeed(_offset, _Tempo, _SampleRate);
-    MoveCursor(new_offset);
+void SampleEntry::MoveCursorEnv(Sample64 offset, Sample64 tempo, Sample64 sampleRate) {
+    MoveCursor(RecalcSpeed(offset, tempo, sampleRate));
 }
 
-CuePoint SampleEntry::CalcNewCursor(Sample64 _offset)
+SampleEntry::CuePoint SampleEntry::CalcNewCursor(Sample64 _offset)
 {
 
     CuePoint _newCursor(RealCursor);
@@ -796,10 +789,10 @@ CuePoint SampleEntry::CalcNewCursor(Sample64 _offset)
     CurrentSpeed = _offset;
 
     if (!Loop) {
-        if ((_newCursor.IntegerPart == SoundBufferLeft.size() - 1) && (CurrentSpeed > 0)) {
+        if ((_newCursor.integerPart() == SoundBufferLeft.size() - 1) && (CurrentSpeed > 0)) {
             return _newCursor;
         }
-        if ((_newCursor.IntegerPart == 0) && (CurrentSpeed < 0)) {
+        if ((_newCursor.integerPart() == 0) && (CurrentSpeed < 0)) {
             return _newCursor;
         }
     }
@@ -808,43 +801,39 @@ CuePoint SampleEntry::CalcNewCursor(Sample64 _offset)
     return NormalizeCue(_newCursor);
 }
 
-CuePoint& SampleEntry::NormalizeCue(CuePoint& cue){
-    if ((Loop) || ((cue.IntegerPart >= 0) && (cue.IntegerPart < long(SoundBufferLeft.size())))) {
+SampleEntry::CuePoint& SampleEntry::NormalizeCue(CuePoint& cue){
+    if ((Loop) || ((cue.integerPart() >= 0) && (cue.integerPart() < long(SoundBufferLeft.size())))) {
 
-        if ((cue.IntegerPart >= SoundBufferLeft.size())) {
-            cue.IntegerPart = cue.IntegerPart % SoundBufferLeft.size();
+        if ((cue.integerPart() >= SoundBufferLeft.size())) {
+            cue.set(cue.integerPart() % SoundBufferLeft.size(), cue.floatPart());
         }
-        if (cue.IntegerPart < 0) {
-            cue.IntegerPart = SoundBufferLeft.size() + cue.IntegerPart % SoundBufferLeft.size();
+        if (cue.integerPart() < 0) {
+            cue.set(SoundBufferLeft.size() + cue.integerPart() % SoundBufferLeft.size(), cue.floatPart());
         }
 
-    } else if (cue.IntegerPart >= SoundBufferLeft.size()) {
-        cue.IntegerPart = SoundBufferLeft.size() - 1;
-        cue.FloatPart = 0;
-    } else if (cue.IntegerPart < 0) {
-        cue.IntegerPart = 0;
-        cue.FloatPart = 0;
+    } else if (cue.integerPart() >= SoundBufferLeft.size()) {
+        cue.set(SoundBufferLeft.size() - 1, 0.);
+    } else if (cue.integerPart() < 0) {
+        cue.clear();
     }
     return cue;
 }
 
-CuePoint SampleEntry::NormalizeCue(const CuePoint& cue) {
+SampleEntry::CuePoint SampleEntry::NormalizeCue(const CuePoint& cue) {
     CuePoint ret(cue);
-    if ((Loop) || ((ret.IntegerPart >= 0) && (ret.IntegerPart < long(SoundBufferLeft.size())))) {
+    if ((Loop) || ((ret.integerPart() >= 0) && (ret.integerPart() < long(SoundBufferLeft.size())))) {
 
-        if ((ret.IntegerPart >= SoundBufferLeft.size())) {
-            ret.IntegerPart = ret.IntegerPart % SoundBufferLeft.size();
+        if (ret.integerPart() >= int64_t(SoundBufferLeft.size())) {
+            ret.set(ret.integerPart() % SoundBufferLeft.size(), cue.floatPart());
         }
-        if (ret.IntegerPart < 0) {
-            ret.IntegerPart = SoundBufferLeft.size() + ret.IntegerPart % SoundBufferLeft.size();
+        if (ret.integerPart() < 0) {
+            ret.set(SoundBufferLeft.size() + ret.integerPart() % SoundBufferLeft.size(), cue.floatPart());
         }
 
-    } else if (ret.IntegerPart >= SoundBufferLeft.size()) {
-        ret.IntegerPart = SoundBufferLeft.size() - 1;
-        ret.FloatPart = 0;
-    } else if (ret.IntegerPart < 0) {
-        ret.IntegerPart = 0;
-        ret.FloatPart = 0;
+    } else if (ret.integerPart() >= int64_t(SoundBufferLeft.size())) {
+        ret.set(SoundBufferLeft.size() - 1, 0.);
+    } else if (ret.integerPart() < 0) {
+        ret.clear();
     }
     return ret;
 }
@@ -868,35 +857,35 @@ void SampleEntry::PlayStereoSample(Sample32 * Left, Sample32 * Right,
 
         ////////////////////////Play loop//////////////////////////
         Sample32 Point0 = 0;
-        Sample32 Point1 = SoundBufferLeft[NewCursor.IntegerPart];
+        Sample32 Point1 = SoundBufferLeft[NewCursor.integerPart()];
         Sample32 Point2 = 0;
         Sample32 Point3 = 0;
-        if (NewCursor.IntegerPart > 0) {
-            Point0 = SoundBufferLeft[NewCursor.IntegerPart - 1];
+        if (NewCursor.integerPart() > 0) {
+            Point0 = SoundBufferLeft[NewCursor.integerPart() - 1];
         }
-        if (NewCursor.IntegerPart < long(SoundBufferLeft.size()) - 2) {
-            Point2 = SoundBufferLeft[NewCursor.IntegerPart + 1];
+        if (NewCursor.integerPart() < long(SoundBufferLeft.size()) - 2) {
+            Point2 = SoundBufferLeft[NewCursor.integerPart() + 1];
         }
-        if (NewCursor.IntegerPart < long(SoundBufferLeft.size()) - 3) {
-            Point3 = SoundBufferLeft[NewCursor.IntegerPart + 2];
+        if (NewCursor.integerPart() < long(SoundBufferLeft.size()) - 3) {
+            Point3 = SoundBufferLeft[NewCursor.integerPart() + 2];
         }
-        *Left = Level * hermite(NewCursor.FloatPart, Point0, Point1,
+        *Left = Level * hermite(NewCursor.floatPart(), Point0, Point1,
                                 Point2, Point3);
 
         Point0 = 0;
-        Point1 = SoundBufferRight[NewCursor.IntegerPart];
+        Point1 = SoundBufferRight[NewCursor.integerPart()];
         Point2 = 0;
         Point3 = 0;
-        if (NewCursor.IntegerPart > 0) {
-            Point0 = SoundBufferRight[NewCursor.IntegerPart - 1];
+        if (NewCursor.integerPart() > 0) {
+            Point0 = SoundBufferRight[NewCursor.integerPart() - 1];
         }
-        if (NewCursor.IntegerPart < SoundBufferRight.size() - 2) {
-            Point2 = SoundBufferRight[NewCursor.IntegerPart + 1];
+        if (NewCursor.integerPart() < int64_t(SoundBufferRight.size()) - 2) {
+            Point2 = SoundBufferRight[NewCursor.integerPart() + 1];
         }
-        if (NewCursor.IntegerPart < SoundBufferRight.size() - 3) {
-            Point3 = SoundBufferRight[NewCursor.IntegerPart + 2];
+        if (NewCursor.integerPart() < int64_t(SoundBufferRight.size()) - 3) {
+            Point3 = SoundBufferRight[NewCursor.integerPart() + 2];
         }
-        *Right = Level * hermite(NewCursor.FloatPart, Point0, Point1,
+        *Right = Level * hermite(NewCursor.floatPart(), Point0, Point1,
                                  Point2, Point3);
         ///////////////////////////////////////////////////////////
 
@@ -925,35 +914,35 @@ void SampleEntry::PlayStereoSample(Sample32 * Left, Sample32 * Right,
 			holdSize = -1;
 		}*/
 
-void SampleEntry::setCursorOnBeat(unsigned _BeatNumber){
-    RealCursor.FloatPart = 0;
+void SampleEntry::setCursorOnBeat(unsigned beatNumber){
+    //RealCursor.set(RealCursor.integerPart(), 0.);
     if (ACIDbeats == 0) {
-        RealCursor.IntegerPart = 0;
+        RealCursor.clear();
         currentBeat = 0;
     } else {
-        if (_BeatNumber > ACIDbeats) {
-            _BeatNumber = ACIDbeats - 1;
+        if (beatNumber > ACIDbeats) {
+            beatNumber = ACIDbeats - 1;
         }
-        RealCursor.IntegerPart = (SoundBufferLeft.size() / ACIDbeats) * _BeatNumber;
-        currentBeat = _BeatNumber;
+        RealCursor.set((SoundBufferLeft.size() / ACIDbeats) * beatNumber, 0.);
+        currentBeat = beatNumber;
     }
 }
 
-unsigned SampleEntry::setNextBeat(short _direction){
+unsigned SampleEntry::setNextBeat(short direction){
     int new_beat = 0;
     if (ACIDbeats > 0) {
 
-        if (_direction>0) {
-            new_beat = (int)currentBeat + 1;
+        if (direction > 0) {
+            new_beat = int(currentBeat) + 1;
         }
-        if (_direction<0) {
-            new_beat = (int)currentBeat - 1;
+        if (direction < 0) {
+            new_beat = int(currentBeat) - 1;
         }
-        if (new_beat<0) {
-            new_beat = (int)Loop?ACIDbeats - 1:0;
+        if (new_beat < 0) {
+            new_beat = Loop ? (int(ACIDbeats) - 1) : 0;
         }
-        if (new_beat>=(int)ACIDbeats) {
-            new_beat = Loop?0:ACIDbeats - 1;
+        if (new_beat >= (int)ACIDbeats) {
+            new_beat = Loop ? 0 : (int(ACIDbeats) - 1);
         }
 
     }
@@ -966,10 +955,11 @@ void SampleEntry::setFirstBeat(void){
 }
 
 void SampleEntry::setLastBeat(void){
-    if (ACIDbeats>0) {
-        setCursorOnBeat(ACIDbeats-1);
-    }else setCursorOnBeat(0);
-
+    if (ACIDbeats > 0) {
+        setCursorOnBeat(ACIDbeats - 1);
+    } else {
+        setCursorOnBeat(0);
+    }
 }
 
 unsigned SampleEntry::NormalizeBeat(long _Beat){
@@ -992,16 +982,16 @@ unsigned SampleEntry::NormalizeBeat(long _Beat){
 unsigned SampleEntry::NormalizeStretchBeat(long beat){
     if (ACIDbeats > 0) {
         if (Loop) {
-            return (beat >= (ACIDbeats * beatOverlapMultiple)) ? (beat % (ACIDbeats * beatOverlapMultiple)) : ((beat < 0) ? ((ACIDbeats * beatOverlapMultiple) + (beat % (ACIDbeats * beatOverlapMultiple))) : unsigned(beat));
+            return (beat >= int64_t(ACIDbeats * beatOverlapMultiple)) ? (beat % (ACIDbeats * beatOverlapMultiple)) : ((beat < 0) ? ((ACIDbeats * beatOverlapMultiple) + (beat % (ACIDbeats * beatOverlapMultiple))) : unsigned(beat));
         } else {
-            return (beat >= (ACIDbeats * beatOverlapMultiple)) ? ACIDbeats * beatOverlapMultiple - 1 : 0;
+            return (beat >= int64_t(ACIDbeats * beatOverlapMultiple)) ? ACIDbeats * beatOverlapMultiple - 1 : 0;
         }
     }
     if (defaultBeats > 0) {
         if (Loop) {
-            return (beat >= (defaultBeats * beatOverlapMultiple)) ? (beat % int(defaultBeats * beatOverlapMultiple)) : ((beat < 0) ? (defaultBeats * beatOverlapMultiple + (beat % int(defaultBeats * beatOverlapMultiple))) : unsigned(beat));
+            return (beat >= int64_t(defaultBeats * beatOverlapMultiple)) ? (beat % int(defaultBeats * beatOverlapMultiple)) : ((beat < 0) ? (defaultBeats * beatOverlapMultiple + (beat % int(defaultBeats * beatOverlapMultiple))) : unsigned(beat));
         } else {
-            return (beat >= (defaultBeats * beatOverlapMultiple)) ? defaultBeats * beatOverlapMultiple - 1 : 0;
+            return (beat >= int64_t(defaultBeats * beatOverlapMultiple)) ? defaultBeats * beatOverlapMultiple - 1 : 0;
         }
     }
     return 0;

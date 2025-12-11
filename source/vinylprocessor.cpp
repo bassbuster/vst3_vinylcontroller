@@ -517,7 +517,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                         FreezeCounter++;
                         bool pushSync = SamplesArray.at(iCurrentEntry)->Sync;
                         SamplesArray.at(iCurrentEntry)->Sync = false;
-                        CuePoint PushCue = SamplesArray.at(iCurrentEntry)->GetCue();
+                        auto PushCue = SamplesArray.at(iCurrentEntry)->GetCue();
                         SamplesArray.at(iCurrentEntry)->SetCue(FreezeCueCur);
                         SamplesArray.at(iCurrentEntry)->PlayStereoSample(ptrOutLeft,
                                                                          ptrOutRight,
@@ -557,7 +557,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                         if ((softHold>0.00001)&&(softHold<0.99)) {
                             Sample32 fLeft = 0;
                             Sample32 fRight = 0;
-                            CuePoint PushCue = SamplesArray.at(iCurrentEntry)->GetCue();
+                            auto PushCue = SamplesArray.at(iCurrentEntry)->GetCue();
                             SamplesArray.at(iCurrentEntry)->SetCue(AfterHoldCue);
                             SamplesArray.at(iCurrentEntry)->PlayStereoSample(&fLeft,
                                                                              &fRight,
@@ -633,7 +633,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                     *ptrOutLeft = *ptrOutLeft * softVolume;
                     *ptrOutRight = *ptrOutRight * softVolume;
 
-                    fPosition = (float)SamplesArray.at(iCurrentEntry)->GetCue().IntegerPart / SamplesArray.at(iCurrentEntry)->GetBufferLength();
+                    fPosition = (float)SamplesArray.at(iCurrentEntry)->GetCue().integerPart() / SamplesArray.at(iCurrentEntry)->GetBufferLength();
                     if (*ptrOutLeft > fVuLeft) {
                         fVuLeft = *ptrOutLeft;
                     }
@@ -827,7 +827,7 @@ void AVinyl::CalcAbsSpeed() {
             break;
     }
 
-    if (fabs(tmp - absAVGSpeed) > 0.7f) {
+    if (fabs(tmp - absAVGSpeed) > 0.7) {
         absAVGSpeed = tmp;
     } else {
         absAVGSpeed += tmp;

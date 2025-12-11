@@ -2,6 +2,7 @@
 
 #include "base/source/fstring.h"
 #include "pluginterfaces/vst/vsttypes.h"
+#include "cuepoint.h"
 
 #include <math.h>
 #include <vector>
@@ -11,10 +12,10 @@ namespace Vst {
 
 typedef char BYTE;
 typedef unsigned int DWORD;
-const Sample32 Pi = 3.14159265358979323846264338327950288;
-const Sample32 defaultBeats = 8.;
-const Sample32 beatOverlapKoef = 1./2.;
-const unsigned beatOverlapMultiple = 8;
+constexpr Sample32 Pi = 3.14159265358979323846264338327950288;
+constexpr Sample32 defaultBeats = 8.;
+constexpr Sample32 beatOverlapKoef = 1./2.;
+constexpr unsigned beatOverlapMultiple = 8;
 
 class PadEntry {
 public:
@@ -31,81 +32,66 @@ public:
     TypePad padType;
 };
 
-class CuePoint {
-public:
-    explicit CuePoint(long integerPart = 0, double floatPart = 0.):
-        IntegerPart{integerPart},
-        FloatPart{floatPart}
-    {}
+// class CuePoint {
+// public:
+//     explicit CuePoint(long integerPart = 0, double floatPart = 0.):
+//         IntegerPart{integerPart},
+//         FloatPart{floatPart}
+//     {}
 
-    CuePoint(const CuePoint &other) = default;
-    CuePoint(CuePoint &&other) = default;
-    CuePoint& operator=(const CuePoint &other) = default;
-    CuePoint& operator=(CuePoint &&other) = default;
+//     CuePoint(const CuePoint &other) = default;
+//     CuePoint(CuePoint &&other) = default;
+//     CuePoint& operator=(const CuePoint &other) = default;
+//     CuePoint& operator=(CuePoint &&other) = default;
 
-    void SetCue(long _integer, double _float) {IntegerPart = _integer;FloatPart=_float;}
-    void SetCue(CuePoint _cue) {IntegerPart = _cue.IntegerPart;FloatPart=_cue.FloatPart;}
+//     void SetCue(long _integer, double _float) {IntegerPart = _integer;FloatPart=_float;}
+//     void SetCue(CuePoint _cue) {IntegerPart = _cue.IntegerPart;FloatPart=_cue.FloatPart;}
 
-    CuePoint& operator = (double _offset) { IntegerPart = (long) _offset; FloatPart=_offset - (double)IntegerPart; return *this;}
-    CuePoint& operator = (long _offset) { IntegerPart = _offset;FloatPart=0; return *this;}
-    bool operator > (const CuePoint& _cue) const { if ((IntegerPart > _cue.IntegerPart)||((IntegerPart == _cue.IntegerPart)&&(FloatPart > _cue.FloatPart))) return true; return false;}
-    bool operator < (const CuePoint& _cue) const { if ((IntegerPart < _cue.IntegerPart)||((IntegerPart == _cue.IntegerPart)&&(FloatPart < _cue.FloatPart))) return true; return false;}
-    bool operator == (const CuePoint& _cue) const { if ((IntegerPart == _cue.IntegerPart)&&(FloatPart == _cue.FloatPart)) return true; return false;}
-    bool operator >= (const CuePoint& _cue) const { if ((*this > _cue)||(*this == _cue)) return true; return false; }
-    bool operator <= (const CuePoint& _cue) const { if ((*this < _cue)||(*this == _cue)) return true; return false; }
-    CuePoint& operator += (double _offset) { FloatPart += _offset; Normalize(); return *this; }
-    CuePoint& operator -= (double _offset) { FloatPart -= _offset; Normalize(); return *this; }
+//     CuePoint& operator = (double _offset) { IntegerPart = (long) _offset; FloatPart=_offset - (double)IntegerPart; return *this;}
+//     CuePoint& operator = (long _offset) { IntegerPart = _offset;FloatPart=0; return *this;}
+//     bool operator > (const CuePoint& _cue) const { if ((IntegerPart > _cue.IntegerPart)||((IntegerPart == _cue.IntegerPart)&&(FloatPart > _cue.FloatPart))) return true; return false;}
+//     bool operator < (const CuePoint& _cue) const { if ((IntegerPart < _cue.IntegerPart)||((IntegerPart == _cue.IntegerPart)&&(FloatPart < _cue.FloatPart))) return true; return false;}
+//     bool operator == (const CuePoint& _cue) const { if ((IntegerPart == _cue.IntegerPart)&&(FloatPart == _cue.FloatPart)) return true; return false;}
+//     bool operator >= (const CuePoint& _cue) const { if ((*this > _cue)||(*this == _cue)) return true; return false; }
+//     bool operator <= (const CuePoint& _cue) const { if ((*this < _cue)||(*this == _cue)) return true; return false; }
+//     CuePoint& operator += (double _offset) { FloatPart += _offset; Normalize(); return *this; }
+//     CuePoint& operator -= (double _offset) { FloatPart -= _offset; Normalize(); return *this; }
 
-    friend CuePoint operator + (const CuePoint& cue, double offset) {CuePoint ret(cue);  ret += offset; return ret;}
-    friend CuePoint operator - (const CuePoint& cue, double offset) {CuePoint ret(cue);  ret -= offset; return ret;}
+//     friend CuePoint operator + (const CuePoint& cue, double offset) {CuePoint ret(cue);  ret += offset; return ret;}
+//     friend CuePoint operator - (const CuePoint& cue, double offset) {CuePoint ret(cue);  ret -= offset; return ret;}
 
-    inline void Normalize() {
-        if (FloatPart > 1.0) {
-            IntegerPart += (long)FloatPart;
-            FloatPart = FloatPart - (long)FloatPart;
-        }
-        if (FloatPart < 0) {
-            IntegerPart += ((long)FloatPart - 1);
-            FloatPart = 1 + (FloatPart - (long)FloatPart);
-        }
-    }
+//     inline void Normalize() {
+//         if (FloatPart > 1.0) {
+//             IntegerPart += (long)FloatPart;
+//             FloatPart = FloatPart - (long)FloatPart;
+//         }
+//         if (FloatPart < 0) {
+//             IntegerPart += ((long)FloatPart - 1);
+//             FloatPart = 1 + (FloatPart - (long)FloatPart);
+//         }
+//     }
 
-    Sample64 GetPointDouble() {
-        return Sample64(IntegerPart) + FloatPart;
-    }
+//     Sample64 GetPointDouble() {
+//         return Sample64(IntegerPart) + FloatPart;
+//     }
 
-    void Clear() {
-        IntegerPart = 0;
-        FloatPart=0;
-    }
+//     void Clear() {
+//         IntegerPart = 0;
+//         FloatPart=0;
+//     }
 
-    long IntegerPart;
-    Sample64 FloatPart;
-};
+//     long IntegerPart;
+//     Sample64 FloatPart;
+// };
 
 class SampleEntry {
-
-    bool AnalyseContainers(BYTE * Buffer,unsigned size,const char * ResourceName);
-
-    bool CheckSyncroEvent(CuePoint &cue,Sample64 offset);
-    bool CheckOverlapEvent(CuePoint &cue,Sample64 offset);
-    bool CheckStratchEvent(CuePoint &cue,Sample64 speed, Sample64 speedtempo);
-    bool CheckRestratchEvent(const CuePoint &cue, Sample64 offset);
-    void OverlapStrobe(double speed, double tune);
-    void StratchStrobe(const CuePoint &cue);
-    void SyncStrobe();
-    unsigned NormalizeStretchBeat(long _Beat);
-
-    CuePoint& NormalizeCue(CuePoint &cue);
-    CuePoint NormalizeCue(const CuePoint &cue);
-
 public:
+    using CuePoint = Helper::CuePoint<int64_t, double>;
 
     enum channel{
         kBufferLeftChannel = 0,
         kBufferRightChannel
     };
-
 
     explicit SampleEntry(const char *name = nullptr, const char *fileName = nullptr);
 
@@ -177,6 +163,20 @@ public:
     Sample64 Level;
 
 private:
+
+    bool AnalyseContainers(BYTE * Buffer,unsigned size,const char * ResourceName);
+
+    bool CheckSyncroEvent(CuePoint &cue,Sample64 offset);
+    bool CheckOverlapEvent(CuePoint &cue,Sample64 offset);
+    bool CheckStratchEvent(CuePoint &cue,Sample64 speed, Sample64 speedtempo);
+    bool CheckRestratchEvent(const CuePoint &cue, Sample64 offset);
+    void OverlapStrobe(double speed, double tune);
+    void StratchStrobe(const CuePoint &cue);
+    void SyncStrobe();
+    unsigned NormalizeStretchBeat(long _Beat);
+
+    CuePoint& NormalizeCue(CuePoint &cue);
+    CuePoint NormalizeCue(const CuePoint &cue);
 
     std::vector<Sample32> SoundBufferLeft;
     std::vector<Sample32> SoundBufferRight;

@@ -198,12 +198,12 @@ private:
 	int TimecodeLearnCounter;
 	int HoldCounter;
 	int FreezeCounter;
-	CuePoint HoldCue;
-	CuePoint AfterHoldCue;
-	CuePoint FreezeCue;
-	CuePoint AfterFreezeCue;
-	CuePoint FreezeCueCur;
-	CuePoint Cue;
+    SampleEntry::CuePoint HoldCue;
+    SampleEntry::CuePoint AfterHoldCue;
+    SampleEntry::CuePoint FreezeCue;
+    SampleEntry::CuePoint AfterFreezeCue;
+    SampleEntry::CuePoint FreezeCueCur;
+    SampleEntry::CuePoint Cue;
 
     void processEvent(const Event &event);
     void reset(bool state);

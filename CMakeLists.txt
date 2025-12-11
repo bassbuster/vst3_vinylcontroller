@@ -36,7 +36,9 @@ smtg_add_vst3plugin(${target}
     source/helpers/sampleplayer.h
     source/helpers/parameterreader.h
     source/helpers/parameterwriter.h
+    source/helpers/cuepoint.h
 )
+
 
 set_target_properties(${target} 
     PROPERTIES
