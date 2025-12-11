@@ -3,23 +3,29 @@
 #include "sampleentry.h"
 //---------------------------------------------------------------------------
 namespace Steinberg {
-	namespace Vst {
-		class SamplePlayer {
-		private:
-			//double NoteLength;
-		public:
-			double SampleRate;
-			double Tempo;
+namespace Vst {
 
-			SamplePlayer(double _tempo,double _samplerate);
-			~SamplePlayer();
+// class SamplePlayer {
+// private:
 
-			void ChangeDefaultTempo(double _tempo) {Tempo = _tempo;}
-			void ChangeDefaultSampleRate(double _samplerate) {SampleRate = _samplerate;}
+// public:
+//     double sampleRate_;
+//     double tempo_;
 
-			void VSTPlayStereoSample(SampleEntry * _sample, float * _left, float *_right, double _speed);
+//     SamplePlayer(double tempo, double samplerate);
+//     ~SamplePlayer();
 
-		};
+//     void ChangeDefaultTempo(double tempo) {
+//         tempo_ = tempo;
+//     }
 
-	}
+//     void ChangeDefaultSampleRate(double samplerate) {
+//         sampleRate_ = samplerate;
+//     }
+
+//     void VSTPlayStereoSample(SampleEntry * _sample, float * _left, float *_right, double _speed);
+
+// };
+
+}
 }
