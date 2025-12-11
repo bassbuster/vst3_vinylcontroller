@@ -380,17 +380,17 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
                 OldSignalL = SignalL[SCursor];
                 OldSignalR = SignalR[SCursor];
-                FCursor++;
-                if (FCursor >= EFilterFrame) {
+
+                if (++FCursor >= EFilterFrame) {
                     FCursor = 0;
                 }
-                SCursor++;
-                if (SCursor >= EFilterFrame) {
+
+                if (++SCursor >= EFilterFrame) {
                     SCursor = 0;
                 }
 
 
-                Sample64 SmoothCoef = 0.5 - 0.5 * cos((2.0 * Pi * Sample64(FFTCursor + EFFTFrame - ESpeedFrame) / EFFTFrame));
+                Sample64 SmoothCoef = 0.5 - 0.5 * cos((2. * Pi * Sample64(FFTCursor + EFFTFrame - ESpeedFrame) / EFFTFrame));
                 FFTPre[FFTCursor + EFFTFrame - ESpeedFrame] = (OldSignalL - OldSignalR);
                 FFT[FFTCursor + EFFTFrame - ESpeedFrame] = (SmoothCoef * FFTPre[FFTCursor + EFFTFrame - ESpeedFrame]);
 
@@ -805,26 +805,30 @@ void AVinyl::CalcAbsSpeed() {
             maxX = i;
         }
     }
-    double tmp = (double)maxX;
-    for (int i = maxX+1; i < maxX+3; i++) {
-        if (i<EFFTFrame) {
-            double koef = 100.f;
-            if (FFT[i]!=0) koef = (maxY/FFT[i])*(maxY/FFT[i]);
-            tmp = (koef*tmp + (double)i)/(koef+1);
 
+    double tmp = double(maxX);
+    for (int i = maxX + 1; i < maxX + 3; i++) {
+        if (i < EFFTFrame) {
+            double koef = 100.;
+            if (FFT[i] != 0) {
+                koef = (maxY / FFT[i]) * (maxY / FFT[i]);
+            }
+            tmp = (koef * tmp + double(i)) / (koef + 1.);
+            continue;
         }
-        else
-            break;
+        break;
     }
-    for (int i = maxX-1; i > maxX-3; i--) {
-        if (i>=0) {
-            double koef = 100.f;
-            if (FFT[i]!=0) koef = (maxY/FFT[i])*(maxY/FFT[i]);
-            tmp = (koef*tmp + (double)i)/(koef+1);
 
+    for (int i = maxX - 1; i > maxX - 3; i--) {
+        if (i >= 0) {
+            double koef = 100.;
+            if (FFT[i] != 0) {
+                koef = (maxY / FFT[i]) * (maxY / FFT[i]);
+            }
+            tmp = (koef * tmp + double(i)) / (koef + 1.);
+            continue;
         }
-        else
-            break;
+        break;
     }
 
     if (fabs(tmp - absAVGSpeed) > 0.7) {

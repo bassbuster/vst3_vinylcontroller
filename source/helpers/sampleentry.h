@@ -10,12 +10,12 @@
 namespace Steinberg {
 namespace Vst {
 
-typedef char BYTE;
-typedef unsigned int DWORD;
-constexpr Sample32 Pi = 3.14159265358979323846264338327950288;
+typedef uint8_t  BYTE;
+typedef uint32_t DWORD;
+constexpr double Pi = 3.14159265358979323846264338327950288;
 constexpr Sample32 defaultBeats = 8.;
 constexpr Sample32 beatOverlapKoef = 1./2.;
-constexpr unsigned beatOverlapMultiple = 8;
+constexpr uint32_t beatOverlapMultiple = 8;
 
 class PadEntry {
 public:

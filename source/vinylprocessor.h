@@ -98,9 +98,11 @@ private:
     Filtred<Sample32, EFilterFrame> FSignalR;
 	Sample32 FFTPre[EFFTFrame];
 	Sample32 FFT[EFFTFrame];
-	DWORD SCursor;
-	DWORD FCursor;
-	DWORD FFTCursor;
+
+    size_t SCursor;
+    size_t FCursor;
+    size_t FFTCursor;
+
     Filtred<Sample32, 10> absAVGSpeed;
 	short Direction;
     Filtred<Sample32> DeltaL;
