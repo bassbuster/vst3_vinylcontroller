@@ -228,9 +228,6 @@ inline double sqr(double x) {
 
 void fastsinetransform(Sample32* a, int tnn);
 
-Sample64 hermite(Sample64 x, Sample64 y0, Sample64 y1, Sample64 y2,
-                 Sample64 y3);
-
 int bitNumber(int _bitSet);
 
 inline int Sign(double _val){

@@ -2,8 +2,18 @@
 
 #include "sampleentry.h"
 
+
 namespace Steinberg {
 namespace Vst {
+
+    template<typename SampleType>
+    SampleType hermite(SampleType x, SampleType y0, SampleType y1, SampleType y2, SampleType y3) {
+        SampleType c0 = y1;
+        SampleType c1 = 0.5 * (y2 - y0);
+        SampleType c2 = y0 - 2.5 * y1 + 2. * y2 - 0.5 * y3;
+        SampleType c3 = 1.5 * (y1 - y2) + 0.5 * (y3 - y0);
+        return ((c3 * x + c2) * x + c1) * x + c0;
+    }
 
 // SampleEntry::SampleEntry() {
 // 	SoundBufferLeft = NULL;
@@ -802,16 +812,18 @@ SampleEntry::CuePoint SampleEntry::CalcNewCursor(Sample64 _offset)
 }
 
 SampleEntry::CuePoint& SampleEntry::NormalizeCue(CuePoint& cue){
-    if ((Loop) || ((cue.integerPart() >= 0) && (cue.integerPart() < long(SoundBufferLeft.size())))) {
 
-        if ((cue.integerPart() >= SoundBufferLeft.size())) {
+    if (Loop 
+        || ((cue.integerPart() >= 0) && (cue.integerPart() < int64_t(SoundBufferLeft.size())))) {
+
+        if (cue.integerPart() >= int64_t(SoundBufferLeft.size())) {
             cue.set(cue.integerPart() % SoundBufferLeft.size(), cue.floatPart());
         }
         if (cue.integerPart() < 0) {
-            cue.set(SoundBufferLeft.size() + cue.integerPart() % SoundBufferLeft.size(), cue.floatPart());
+            cue.set(SoundBufferLeft.size() - (cue.integerPart() % SoundBufferLeft.size()), cue.floatPart());
         }
 
-    } else if (cue.integerPart() >= SoundBufferLeft.size()) {
+    } else if (cue.integerPart() >= int64_t(SoundBufferLeft.size())) {
         cue.set(SoundBufferLeft.size() - 1, 0.);
     } else if (cue.integerPart() < 0) {
         cue.clear();
@@ -821,13 +833,14 @@ SampleEntry::CuePoint& SampleEntry::NormalizeCue(CuePoint& cue){
 
 SampleEntry::CuePoint SampleEntry::NormalizeCue(const CuePoint& cue) {
     CuePoint ret(cue);
-    if ((Loop) || ((ret.integerPart() >= 0) && (ret.integerPart() < long(SoundBufferLeft.size())))) {
+    if (Loop 
+        || ((ret.integerPart() >= 0) && (ret.integerPart() < int64_t(SoundBufferLeft.size())))) {
 
         if (ret.integerPart() >= int64_t(SoundBufferLeft.size())) {
             ret.set(ret.integerPart() % SoundBufferLeft.size(), cue.floatPart());
         }
         if (ret.integerPart() < 0) {
-            ret.set(SoundBufferLeft.size() + ret.integerPart() % SoundBufferLeft.size(), cue.floatPart());
+            ret.set(SoundBufferLeft.size() - (ret.integerPart() % SoundBufferLeft.size()), cue.floatPart());
         }
 
     } else if (ret.integerPart() >= int64_t(SoundBufferLeft.size())) {
@@ -856,21 +869,20 @@ void SampleEntry::PlayStereoSample(Sample32 * Left, Sample32 * Right,
         CuePoint NewCursor = CalcNewCursor(_offset);
 
         ////////////////////////Play loop//////////////////////////
-        Sample32 Point0 = 0;
-        Sample32 Point1 = SoundBufferLeft[NewCursor.integerPart()];
-        Sample32 Point2 = 0;
-        Sample32 Point3 = 0;
+        Sample64 Point0 = 0;
+        Sample64 Point1 = SoundBufferLeft[NewCursor.integerPart()];
+        Sample64 Point2 = 0;
+        Sample64 Point3 = 0;
         if (NewCursor.integerPart() > 0) {
             Point0 = SoundBufferLeft[NewCursor.integerPart() - 1];
         }
-        if (NewCursor.integerPart() < long(SoundBufferLeft.size()) - 2) {
+        if (NewCursor.integerPart() < int64_t(SoundBufferLeft.size()) - 2) {
             Point2 = SoundBufferLeft[NewCursor.integerPart() + 1];
         }
-        if (NewCursor.integerPart() < long(SoundBufferLeft.size()) - 3) {
+        if (NewCursor.integerPart() < int64_t(SoundBufferLeft.size()) - 3) {
             Point3 = SoundBufferLeft[NewCursor.integerPart() + 2];
         }
-        *Left = Level * hermite(NewCursor.floatPart(), Point0, Point1,
-                                Point2, Point3);
+        *Left = Level * hermite(NewCursor.floatPart(), Point0, Point1, Point2, Point3);
 
         Point0 = 0;
         Point1 = SoundBufferRight[NewCursor.integerPart()];
@@ -1147,19 +1159,6 @@ void fastsinetransform(Sample32 *a, int tnn) {
         a[j] = sum;
     }
 
-}
-
-Sample64 hermite(Sample64 x, Sample64 y0, Sample64 y1, Sample64 y2, Sample64 y3) {
-    Sample64 c0;
-    Sample64 c1;
-    Sample64 c2;
-    Sample64 c3;
-
-    c0 = y1;
-    c1 = 0.5 * (y2 - y0);
-    c2 = y0 - 2.5 * y1 + 2. * y2 - 0.5 * y3;
-    c3 = 1.5 * (y1 - y2) + 0.5 * (y3 - y0);
-    return ((c3 * x + c2) * x + c1) * x + c0;
 }
 
 int bitNumber(int _bitSet)
