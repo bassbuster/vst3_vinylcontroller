@@ -50,12 +50,12 @@ public:
 
     //---Custom Function------------------
     void update (ParamID tag, ParamValue value);
-    void initEntry(SampleEntry * newEntry);
+    void initEntry(SampleEntry<Sample32> * newEntry);
     void delEntry(size_t delEntryIndex);
     void setPadState(int _pad, bool _state);
     void setPadType(int _pad, int _type);
     void setPadTag(int _pad, int _tag);
-    SharedPointer<VSTGUI::CBitmap> generateWaveform(SampleEntry * newEntry);
+    SharedPointer<VSTGUI::CBitmap> generateWaveform(SampleEntry<Sample32> * newEntry);
 
     void setSpeedMonitor(double _speed);
     void setPositionMonitor(double _position);

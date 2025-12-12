@@ -30,15 +30,14 @@ smtg_add_vst3plugin(${target}
     source/controls/cvinylpopupmenu.h
     source/controls/cwaveview.cpp
     source/controls/cwaveview.h
-    source/helpers/sampleentry.cpp
     source/helpers/sampleentry.h
-    source/helpers/sampleplayer.cpp
-    source/helpers/sampleplayer.h
     source/helpers/parameterreader.h
     source/helpers/parameterwriter.h
     source/helpers/cuepoint.h
+    source/helpers/padentry.h
+    source/helpers/fft.h
+    source/helpers/fft.cpp
 )
-
 
 set_target_properties(${target} 
     PROPERTIES

@@ -2,13 +2,18 @@
 #include "vinyleditor.h"
 #include "vinylcontroller.h"
 #include "vinylparamids.h"
+#include "helpers/padentry.h"
 
 #include "base/source/fstring.h"
 
-#include <math.h>
+#include <cmath>
 #include <filesystem>
 
 namespace {
+
+inline double sqr(double x) {
+    return x * x;
+}
 
 template <typename T, typename ... Args>
 auto make_shared(Args&&... arg) {
@@ -169,6 +174,20 @@ tresult PLUGIN_API AVinylEditorView::queryInterface (const char* iid, void** obj
     return VSTGUIEditor::queryInterface (iid, obj);
 }
 
+int bitNumber(int _bitSet)
+{
+    int testBit = 1;
+    if (_bitSet == 0) {
+        return -1;
+    }
+    for (int i = 0; i < 32; i++) {
+        if (_bitSet & testBit) {
+            return i;
+        }
+        testBit = testBit<<1;
+    }
+    return -1;
+}
 
 //------------------------------------------------------------------------
 bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType& platformType)
@@ -1016,20 +1035,20 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
         int menuIndex;
         VSTGUI::COptionMenu * SelectedMenu = popupPad->getLastItemMenu(menuIndex);
         if (SelectedMenu == padBase) {
-            setPadMessage(padForSetting + 1, PadEntry::kSamplePad, menuIndex);
+            setPadMessage(padForSetting + 1, PadEntry::SamplePad, menuIndex);
         }
         if (SelectedMenu == effectBase1) {
-            setPadMessage(padForSetting + 1, PadEntry::kSwitchPad, switchedFx[menuIndex]);
+            setPadMessage(padForSetting + 1, PadEntry::SwitchPad, switchedFx[menuIndex]);
         }
         if (SelectedMenu == effectBase2) {
-            setPadMessage(padForSetting + 1, PadEntry::kKickPad, punchFx[menuIndex]);
+            setPadMessage(padForSetting + 1, PadEntry::KickPad, punchFx[menuIndex]);
         }
         if (SelectedMenu == popupPad) {
             if (menuIndex==0){
-                setPadMessage(padForSetting + 1, PadEntry::kAssigMIDI);
+                setPadMessage(padForSetting + 1, PadEntry::AssigMIDI);
             }
             if (menuIndex==6){
-                setPadMessage(padForSetting + 1, PadEntry::kEmptyPad, -1);
+                setPadMessage(padForSetting + 1, PadEntry::EmptyPad, -1);
             }
         }
 
@@ -1479,9 +1498,9 @@ void AVinylEditorView::setPositionMonitor(double _position)
     }
 }
 
-AVinylEditorView::SharedPointer<VSTGUI::CBitmap> AVinylEditorView::generateWaveform(SampleEntry * newEntry)
+AVinylEditorView::SharedPointer<VSTGUI::CBitmap> AVinylEditorView::generateWaveform(SampleEntry<Sample32> * newEntry)
 {
-    int bitmapWidth = (double(newEntry->GetBufferLength())) * 0.0015;
+    int bitmapWidth = (double(newEntry->bufferLength())) * 0.0015;
     if (bitmapWidth<400) {
         bitmapWidth = 400;
     }else if (bitmapWidth % 2) {
@@ -1491,19 +1510,19 @@ AVinylEditorView::SharedPointer<VSTGUI::CBitmap> AVinylEditorView::generateWavef
     if (bitmapWidth <2) {
         return nullptr;
     }
-    bool drawBeats =  newEntry->GetACIDbeats() > 0;
+    bool drawBeats =  newEntry->getACIDbeats() > 0;
 
-    double beatPeriodic = drawBeats ? double(bitmapWidth) / (2.0 * newEntry->GetACIDbeats()) : 0;
+    double beatPeriodic = drawBeats ? double(bitmapWidth) / (2. * newEntry->getACIDbeats()) : 0;
     auto Digits = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("digits.png"));
     auto waveForm = make_shared<VSTGUI::CBitmap>(bitmapWidth, 83);
-    if (waveForm && newEntry->GetBufferLength() > 0) {
+    if (waveForm && newEntry->bufferLength() > 0) {
         auto PixelMap = VSTGUI::SharedPointer(VSTGUI::CBitmapPixelAccess::create(waveForm), false);
         auto PixelDigits = VSTGUI::SharedPointer(VSTGUI::CBitmapPixelAccess::create(Digits), false);
         PixelMap->setPosition(0,61);
         PixelMap->setColor(VSTGUI::CColor(0,255,0,220));
         for (int i = 1; i <= bitmapWidth / 2; i++) {
-            Sample32 height = newEntry->GetPeakSample((i - 1) * ((newEntry->GetBufferLength() - 1) / (bitmapWidth / 2)),
-                                                      i * ((newEntry->GetBufferLength() - 1) / (bitmapWidth / 2)));
+            Sample32 height = newEntry->peakSample((i - 1) * ((newEntry->bufferLength() - 1) / (bitmapWidth / 2)),
+                                                      i * ((newEntry->bufferLength() - 1) / (bitmapWidth / 2)));
             PixelMap->setPosition((i-1)*2,61);
             PixelMap->setColor(VSTGUI::CColor(0,255,0,120));
             for (int j = 1; j < 40*height; j++) {
@@ -1585,7 +1604,7 @@ void AVinylEditorView::delEntry(size_t delEntryIndex)
     }
 }
 
-void AVinylEditorView::initEntry(SampleEntry * newEntry)
+void AVinylEditorView::initEntry(SampleEntry<Sample32> * newEntry)
 {
     if (newEntry) {
         auto waveForm = generateWaveform(newEntry);
@@ -1594,15 +1613,15 @@ void AVinylEditorView::initEntry(SampleEntry * newEntry)
             return;
         }
 
-        size_t index = newEntry->GetIndex() - 1;
+        size_t index = newEntry->index() - 1;
         if (index < sampleBitmaps.size()) {
             sampleBitmaps[index] = std::move(waveForm);
 
             if (sampleBase) {
-                sampleBase->getEntry(int32_t(index))->setTitle(newEntry->GetName());
+                sampleBase->getEntry(int32_t(index))->setTitle(VSTGUI::UTF8String(newEntry->name()));
             }
             if (padBase) {
-                padBase->getEntry(int32_t(index))->setTitle(newEntry->GetName());
+                padBase->getEntry(int32_t(index))->setTitle(VSTGUI::UTF8String(newEntry->name()));
             }
         } else {
 
@@ -1610,7 +1629,7 @@ void AVinylEditorView::initEntry(SampleEntry * newEntry)
             sampleBitmaps.push_back(std::move(waveForm));
 
             if (sampleBase) {
-                if (strcmp(sampleBase->getEntry(0)->getTitle(),EEmptyBaseTitle)==0) {
+                if (strcmp(sampleBase->getEntry(0)->getTitle(), EEmptyBaseTitle)==0) {
                     sampleBase->removeAllEntry();
                     if (padBase) padBase->removeAllEntry();
                     if (samplePopup) {
@@ -1621,8 +1640,10 @@ void AVinylEditorView::initEntry(SampleEntry * newEntry)
                         }
                     }
                 }
-                sampleBase->addEntry(newEntry->GetName(),sampleBase->getNbEntries(), VSTGUI::CMenuItem::kChecked);
-                if (padBase) padBase->addEntry(newEntry->GetName(), sampleBase->getNbEntries(),0);
+                sampleBase->addEntry(VSTGUI::UTF8String(newEntry->name()),sampleBase->getNbEntries(), VSTGUI::CMenuItem::kChecked);
+                if (padBase) {
+                    padBase->addEntry(VSTGUI::UTF8String(newEntry->name()), sampleBase->getNbEntries(), 0);
+                }
             }
         }
 
@@ -1635,11 +1656,11 @@ void AVinylEditorView::initEntry(SampleEntry * newEntry)
                 wavView->setLoop(newEntry->Loop);
             }
             if (nameEdit) {
-                nameEdit->setText(newEntry->GetName());
+                nameEdit->setText(VSTGUI::UTF8String(newEntry->name()));
             }
             if (sampleNumber) {
                 String tmp;
-                sampleNumber->setText(VSTGUI::UTF8String(tmp.printf("#%03d",newEntry->GetIndex())));
+                sampleNumber->setText(VSTGUI::UTF8String(tmp.printf("#%03d",newEntry->index())));
             }
         }
     }
@@ -1668,7 +1689,7 @@ bool AVinylEditorView::callBeforePopup(VSTGUI::IControlListener *listener, VSTGU
     view->padForSetting = pControl->getTag() - 'Pd00';
 
     switch (view->padType[view->padForSetting]->getPosition()) {
-    case PadEntry::kSamplePad:
+    case PadEntry::SamplePad:
         if (view->padBase) {
             view->padBase->setCurrent(view->PadTag[view->padForSetting],false);
         }
@@ -1679,7 +1700,7 @@ bool AVinylEditorView::callBeforePopup(VSTGUI::IControlListener *listener, VSTGU
             view->effectBase2->setCurrent(-1,false);
         }
         break;
-    case PadEntry::kSwitchPad:
+    case PadEntry::SwitchPad:
         if (view->padBase) {
             view->padBase->setCurrent(-1,false);
         }
@@ -1690,7 +1711,7 @@ bool AVinylEditorView::callBeforePopup(VSTGUI::IControlListener *listener, VSTGU
             view->effectBase2->setCurrent(-1,false);
         }
         break;
-    case PadEntry::kKickPad:
+    case PadEntry::KickPad:
         if (view->padBase) {
             view->padBase->setCurrent(-1,false);
         }

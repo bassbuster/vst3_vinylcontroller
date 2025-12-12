@@ -9,7 +9,7 @@
 #include "base/source/fstring.h"
 
 #include <stdio.h>
-#include <math.h>
+#include <cmath>
 
 namespace {
 
@@ -209,12 +209,12 @@ tresult PLUGIN_API AVinylController::setComponentState (IBStream* state)
                 return kResultFalse;
             }
 
-            DWORD savedEntry = 0;
+            uint32_t savedEntry = 0;
             if (state->read(&savedEntry, sizeof(float)) != kResultOk) {
                 return kResultFalse;
             }
 
-            DWORD savedScene = 0;
+            uint32_t savedScene = 0;
             if (state->read(&savedScene, sizeof(float)) != kResultOk) {
                 return kResultFalse;
             }
@@ -282,32 +282,32 @@ tresult PLUGIN_API AVinylController::setState (IBStream* state)
 	if (state->read (&byteOrder, sizeof (int8)) == kResultTrue)
     {
 
-        DWORD savedMidiGain = 0;
+        uint32_t savedMidiGain = 0;
         if (state->read(&savedMidiGain, sizeof(float)) != kResultOk) {
             return kResultFalse;
         }
 
-        DWORD savedMidiScene = 0;
+        uint32_t savedMidiScene = 0;
         if (state->read(&savedMidiScene, sizeof(float)) != kResultOk) {
             return kResultFalse;
         }
 
-        DWORD savedMidiMix = 0;
+        uint32_t savedMidiMix = 0;
         if (state->read(&savedMidiMix, sizeof(float)) != kResultOk) {
             return kResultFalse;
         }
 
-        DWORD savedMidiPitch = 0;
+        uint32_t savedMidiPitch = 0;
         if (state->read(&savedMidiPitch, sizeof(float)) != kResultOk) {
             return kResultFalse;
         }
 
-        DWORD savedMidiVolume = 0;
+        uint32_t savedMidiVolume = 0;
         if (state->read(&savedMidiVolume, sizeof(float)) != kResultOk) {
             return kResultFalse;
         }
 
-        DWORD savedMidiTune = 0;
+        uint32_t savedMidiTune = 0;
         if (state->read(&savedMidiTune, sizeof(float)) != kResultOk) {
             return kResultFalse;
         }
@@ -341,18 +341,18 @@ tresult PLUGIN_API AVinylController::getState (IBStream* state)
 	int8 byteOrder = BYTEORDER;
 
     if (state->write (&byteOrder, sizeof (int8)) == kResultTrue) {
-		DWORD toSaveGain = midiGain;
-		DWORD toSaveScene = midiScene;
-		DWORD toSaveMix = midiMix;
-		DWORD toSavePitch = midiPitch;
-		DWORD toSaveVolume = midiVolume;
-		DWORD toSaveTune = midiTune;
-        state->write(&toSaveGain, sizeof (DWORD));
-        state->write(&toSaveScene, sizeof (DWORD));
-        state->write(&toSaveMix, sizeof (DWORD));
-        state->write(&toSavePitch, sizeof (DWORD));
-        state->write(&toSaveVolume, sizeof (DWORD));
-        state->write(&toSaveTune, sizeof (DWORD));
+        uint32_t toSaveGain = midiGain;
+        uint32_t toSaveScene = midiScene;
+        uint32_t toSaveMix = midiMix;
+        uint32_t toSavePitch = midiPitch;
+        uint32_t toSaveVolume = midiVolume;
+        uint32_t toSaveTune = midiTune;
+        state->write(&toSaveGain, sizeof(uint32_t));
+        state->write(&toSaveScene, sizeof(uint32_t));
+        state->write(&toSaveMix, sizeof(uint32_t));
+        state->write(&toSavePitch, sizeof(uint32_t));
+        state->write(&toSaveVolume, sizeof(uint32_t));
+        state->write(&toSaveTune, sizeof(uint32_t));
 		return kResultOk;
 	}
 	return kResultFalse;
@@ -477,9 +477,9 @@ tresult PLUGIN_API AVinylController::notify (IMessage* message)
 	}
     if (strcmp (message->getMessageID(), "addEntry") == 0) {
 		int64 newEntryInt;
-		SampleEntry * newEntry;
+        SampleEntry<Sample32> * newEntry;
 		message->getAttributes()->getInt ("Entry", newEntryInt);
-		newEntry = (SampleEntry *)newEntryInt;
+        newEntry = (SampleEntry<Sample32> *)newEntryInt;
         for(auto& view: viewsArray) {
             static_cast<AVinylEditorView*>(view.get())->initEntry(newEntry);
         }
@@ -532,7 +532,7 @@ tresult PLUGIN_API AVinylController::notify (IMessage* message)
                 }
             }
 		}
-		return kResultTrue;
+        return kResultTrue;
 	}
 	return EditControllerEx1::notify (message);
 }

@@ -5,6 +5,7 @@
 
 #include "helpers/sampleentry.h"
 #include "helpers/parameterreader.h"
+#include "helpers/padentry.h"
 
 #include "vinylconfigconst.h"
 
@@ -112,7 +113,7 @@ private:
     Filtred<Sample32> filtredL;
     Filtred<Sample32> filtredR;
 	Sample32 TimeCodeAmplytude;
-	DWORD SpeedCounter;
+    size_t SpeedCounter;
 	bool StatusR;
 	bool StatusL;
 	bool OldStatusR;
@@ -152,17 +153,17 @@ private:
 	Sample32 fGain;          //0..+1
 	Sample32 fVolume;        //0..+1
 	Sample32 fPitch;         //0..+1
-    DWORD iCurrentEntry;     //0..MaximumSamples - 1
-    DWORD iCurrentScene;     //0..MaximumScenes - 1
+    uint32_t iCurrentEntry;  //0..MaximumSamples - 1
+    uint32_t iCurrentScene;  //0..MaximumScenes - 1
 	Sample32 fSwitch;        //0..+1
 	Sample32 fCurve;         //0..+1
     bool bBypass;
 	bool bTCLearn;
 
-    std::vector<std::unique_ptr<SampleEntry>> SamplesArray;
-    std::unique_ptr<SampleEntry> VintageSample;
+    std::vector<std::unique_ptr<SampleEntry<Sample32>>> SamplesArray;
+    std::unique_ptr<SampleEntry<Sample32>> VintageSample;
 
-	PadEntry padStates[EMaximumScenes][ENumberOfPads];
+    PadEntry padStates[EMaximumScenes][ENumberOfPads];
 
 	int32 currentProcessMode;
 	bool currentProcessStatus;
@@ -179,8 +180,8 @@ private:
     float GetNormalizeTag(int _tag);
 
     // SampleBase manipulation
-    void addSampleMessage(SampleEntry* newSample);
-    void delSampleMessage(SampleEntry* delSample);
+    void addSampleMessage(SampleEntry<Sample32>* newSample);
+    void delSampleMessage(SampleEntry<Sample32>* delSample);
     void initSamplesMessage(void);
     void updateSpeedMessage(Sample64 speed);
     void updatePositionMessage(Sample64 speed);
@@ -200,12 +201,12 @@ private:
 	int TimecodeLearnCounter;
 	int HoldCounter;
 	int FreezeCounter;
-    SampleEntry::CuePoint HoldCue;
-    SampleEntry::CuePoint AfterHoldCue;
-    SampleEntry::CuePoint FreezeCue;
-    SampleEntry::CuePoint AfterFreezeCue;
-    SampleEntry::CuePoint FreezeCueCur;
-    SampleEntry::CuePoint Cue;
+    SampleEntry<Sample32>::CuePoint HoldCue;
+    SampleEntry<Sample32>::CuePoint AfterHoldCue;
+    SampleEntry<Sample32>::CuePoint FreezeCue;
+    SampleEntry<Sample32>::CuePoint AfterFreezeCue;
+    SampleEntry<Sample32>::CuePoint FreezeCueCur;
+    SampleEntry<Sample32>::CuePoint Cue;
 
     void processEvent(const Event &event);
     void reset(bool state);
