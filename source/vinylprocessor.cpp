@@ -417,6 +417,10 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                     if (TimeCodeAmplytude >= ETimeCodeMinAmplytude) {
 
                         fastsinetransform(FFT, EFFTFrame);
+                        {
+                            auto debugFft = new SampleEntry<Sample32>("dbg", FFT, FFT, EFFTFrame);
+                            debugFftMessage(debugFft);
+                        }
 
                         CalcAbsSpeed();
                         if (TimecodeLearnCounter > 0) {
@@ -1196,7 +1200,7 @@ tresult PLUGIN_API AVinyl::notify (IMessage* message)
 void AVinyl::addSampleMessage(SampleEntry<Sample32>* newSample)
 {
     if (newSample) {
-        int64 sampleInt = (int64)newSample;
+        int64_t sampleInt = int64_t(newSample);
         IMessage* msg = allocateMessage ();
         if (msg) {
             msg->setMessageID("addEntry");
@@ -1216,6 +1220,20 @@ void AVinyl::delSampleMessage(SampleEntry<Sample32> *delSample)
             msg->getAttributes()->setInt("EntryIndex", delSample->index() - 1);
             sendMessage(msg);
             msg->release ();
+        }
+    }
+}
+
+void AVinyl::debugFftMessage(SampleEntry<Sample32>* fft)
+{
+    if (fft) {
+        int64_t fftInt = int64_t(fft);
+        IMessage* msg = allocateMessage ();
+        if (msg) {
+            msg->setMessageID("debugFft");
+            msg->getAttributes()->setInt("Entry", fftInt);
+            sendMessage(msg);
+            msg->release();
         }
     }
 }

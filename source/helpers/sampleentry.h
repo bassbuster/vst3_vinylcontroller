@@ -13,10 +13,11 @@ namespace Vst {
 template<typename SampleType, typename ParameterType = double>
 class SampleEntry {
 public:
+    using Type = SampleType;
     using CuePoint = Helper::CuePoint<int64_t, ParameterType>;
 
     explicit SampleEntry(const char *name = nullptr, const char *fileName = nullptr):
-        currentBeat(0),
+        currentBeat_(0),
         Loop(false),
         Sync(false),
         Reverse(false),
@@ -25,13 +26,31 @@ public:
         sampleName_(name),
         index_(0),
         acidBeats_(0),
-        beatLength(0),
-        beatOverlap(0),
-        SmoothOverlap(-1)
+        beatLength_(0),
+        beatOverlap_(0),
+        smoothOverlap_(-1)
     {
         if (fileName) {
             loadFromFile(fileName);
         }
+    }
+
+    SampleEntry(const char *name, SampleType *left, SampleType *right, size_t size):
+        soundBufferRight_(right, right + size),
+        soundBufferLeft_(left, left + size),
+        currentBeat_(0),
+        Loop(false),
+        Sync(false),
+        Reverse(false),
+        Tune(1.),
+        Level(1.),
+        sampleName_(name),
+        index_(0),
+        acidBeats_(0),
+        beatLength_(0),
+        beatOverlap_(0),
+        smoothOverlap_(-1)
+    {
     }
 
     ~SampleEntry() {
@@ -106,37 +125,37 @@ public:
     }
 
     void resetCursor() {
-        RealCursor.clear();
-        OverlapCursorFirst.clear();
+        realCursor_.clear();
+        overlapCursorFirst_.clear();
         beginLockStrobe();
     }
 
     bool moveCursor(ParameterType offset) {
         if (soundBufferLeft_.size() >= 4) {
-            RealCursor = calcNewCursor(offset);
+            realCursor_ = calcNewCursor(offset);
             return true;
         }
         return false;
     }
 
     void cue(CuePoint newCue) {
-        RealCursor = normalizeCue(newCue);
-        OverlapCursorFirst = RealCursor;
+        realCursor_ = normalizeCue(newCue);
+        overlapCursorFirst_ = realCursor_;
     }
 
     const CuePoint& cue() const {
-        return RealCursor;
+        return realCursor_;
     }
 
     //unsigned NormalizeBeat(long _Beat);
     void beginLockStrobe() {
-        OverlapCursorFirst = RealCursor;
-        SmoothOverlap = -1;
+        overlapCursorFirst_ = realCursor_;
+        smoothOverlap_ = -1;
     }
 
     void playStereoSample(SampleType *left, SampleType *right, ParameterType speed, ParameterType tempo, ParameterType sampleRate, bool changeCursors) {
         if (Sync && (acidBeats_>0)) {
-            playStereoSampleTempo(left, right, speed * (ParameterType(SampleRate) / ParameterType(sampleRate)), fabs(tempo * speed), sampleRate, changeCursors);
+            playStereoSampleTempo(left, right, speed * (ParameterType(sampleRate_) / ParameterType(sampleRate)), fabs(tempo * speed), sampleRate, changeCursors);
         } else {
             playStereoSample(left, right, calcRealSpeed(speed, sampleRate), changeCursors);
         }
@@ -149,49 +168,49 @@ public:
         auto newTempoSpeed = calcTempoSpeed(speed, tempo, sampleRate);
 
         CuePoint PushCue = calcNewCursor(newTempoSpeed);
-        CuePoint PushCue2 = RealCursor;
+        CuePoint PushCue2 = realCursor_;
         if ((newSpeed / newTempoSpeed) <= 1.3) {
-            if (checkOverlapEvent(PushCue, newTempoSpeed) && (SmoothOverlap <= 0.00005)) {
+            if (checkOverlapEvent(PushCue, newTempoSpeed) && (smoothOverlap_ <= 0.00005)) {
                 overlapStrobe(newTempoSpeed, fabs(newSpeed));
             } else {
-                RealCursor = OverlapCursorFirst;
+                realCursor_ = overlapCursorFirst_;
             }
         } else if ((newSpeed / newTempoSpeed) > 1.3) {
-            if (checkStratchEvent(PushCue, newSpeed, newTempoSpeed) && (SmoothOverlap <= 0.00005)) {
+            if (checkStratchEvent(PushCue, newSpeed, newTempoSpeed) && (smoothOverlap_ <= 0.00005)) {
                 stratchStrobe(PushCue);
             }
-            RealCursor = OverlapCursorFirst;
+            realCursor_ = overlapCursorFirst_;
         }
 
         playStereoSample(left, right, newSpeed, true);
-        OverlapCursorFirst = RealCursor;
+        overlapCursorFirst_ = realCursor_;
 
-        if (SmoothOverlap > 0.0) {
-            RealCursor = OverlapCursorSecond;
+        if (smoothOverlap_ > 0.0) {
+            realCursor_ = overlapCursorSecond_;
             SampleType OverlapLeft;
             SampleType OverlapRight;
             playStereoSample(&OverlapLeft, &OverlapRight, newSpeed, true);
-            OverlapCursorSecond = RealCursor;
-            ParameterType CorrectorCoef = (1. - cos(SmoothOverlap * 2. * Pi)) / 10.;
+            overlapCursorSecond_ = realCursor_;
+            ParameterType CorrectorCoef = (1. - cos(smoothOverlap_ * 2. * Pi)) / 10.;
 
-            *left = *left * (SmoothOverlap + CorrectorCoef) + OverlapLeft * (1. - SmoothOverlap + CorrectorCoef);
-            *right = *right * (SmoothOverlap + CorrectorCoef) + OverlapRight * (1. - SmoothOverlap + CorrectorCoef);
-            OverlapCursorSecond = RealCursor;
+            *left = *left * (smoothOverlap_ + CorrectorCoef) + OverlapLeft * (1. - smoothOverlap_ + CorrectorCoef);
+            *right = *right * (smoothOverlap_ + CorrectorCoef) + OverlapRight * (1. - smoothOverlap_ + CorrectorCoef);
+            overlapCursorSecond_ = realCursor_;
 
             if ((newSpeed / newTempoSpeed) <= 1.3) {
-                SmoothOverlap -= (fabs(newTempoSpeed / (ParameterType(beatOverlap) * newSpeed)));
-                if (SmoothOverlap < 0.00001) {
-                    OverlapCursorFirst = OverlapCursorSecond;
-                    SmoothOverlap = -1;
+                smoothOverlap_ -= (fabs(newTempoSpeed / (ParameterType(beatOverlap_) * newSpeed)));
+                if (smoothOverlap_ < 0.00001) {
+                    overlapCursorFirst_ = overlapCursorSecond_;
+                    smoothOverlap_ = -1;
                 }
             } else {
-                SmoothOverlap -= (2.3 / ParameterType(beatOverlap));
-                if (SmoothOverlap < 0.00001) {
-                    SmoothOverlap = 0.00001;
+                smoothOverlap_ -= (2.3 / ParameterType(beatOverlap_));
+                if (smoothOverlap_ < 0.00001) {
+                    smoothOverlap_ = 0.00001;
                 }
             }
         }
-        RealCursor = changeCursors ? PushCue : PushCue2;
+        realCursor_ = changeCursors ? PushCue : PushCue2;
     }
 
     void playStereoSample(SampleType *Left, SampleType *Right, ParameterType offset, bool changeCursors) {
@@ -232,7 +251,7 @@ public:
                                      Point2, Point3);
 
             if (changeCursors) {
-                RealCursor = NewCursor;
+                realCursor_ = NewCursor;
             }
 
         } else {
@@ -245,7 +264,7 @@ public:
         if (Sync && (acidBeats_ > 0)) {
             return ParameterType(soundBufferLeft_.size()) / acidBeats_ * note;
         } else if (tempo > 0) {
-            return ParameterType(SampleRate) / tempo * 60. * note;
+            return ParameterType(sampleRate_) / tempo * 60. * note;
         }
         return 0;
     }
@@ -274,8 +293,8 @@ public:
 
     ParameterType tempo() const {
         return acidBeats_ > 0
-                   ? 60. / (ParameterType(bufferLength()) / ParameterType(SampleRate)) * acidBeats_
-                   : 60. / (ParameterType(bufferLength()) / ParameterType(SampleRate)) * defaultBeats;
+                   ? 60. / (ParameterType(bufferLength()) / ParameterType(sampleRate_)) * acidBeats_
+                   : 60. / (ParameterType(bufferLength()) / ParameterType(sampleRate_)) * defaultBeats;
     }
 
     size_t bufferLength() const {
@@ -297,8 +316,8 @@ public:
     void clear() {
         soundBufferLeft_.clear();
         soundBufferRight_.clear();
-        RealCursor.clear();
-        OverlapCursorFirst.clear();
+        realCursor_.clear();
+        overlapCursorFirst_.clear();
         Loop = false;
         Sync = false;
         Reverse = false;
@@ -337,7 +356,7 @@ private:
     }
 
     CuePoint calcNewCursor(ParameterType offset) {
-        CuePoint newCursor(RealCursor);
+        CuePoint newCursor(realCursor_);
 
         ParameterType CurrentSpeed;
         CurrentSpeed = offset;
@@ -411,9 +430,9 @@ private:
 
                     }
                 }
-                SampleRate = iSamplesPerSec;
-                beatLength = SoundBufferLength / defaultBeats / beatOverlapMultiple;
-                beatOverlap = beatLength * beatOverlapKoef;
+                sampleRate_ = iSamplesPerSec;
+                beatLength_ = SoundBufferLength / defaultBeats / beatOverlapMultiple;
+                beatOverlap_ = beatLength_ * beatOverlapKoef;
 
             }
 
@@ -421,14 +440,14 @@ private:
             if (isAcidContainer(buffer + iCursor) && foundDataContainer) {
                 if (isLoop(buffer + iCursor)) {
                     acidBeats_ = getAcidBeats(buffer + iCursor);
-                    beatLength = SoundBufferLength / acidBeats_ / beatOverlapMultiple;
-                    beatOverlap = beatLength * beatOverlapKoef;
+                    beatLength_ = SoundBufferLength / acidBeats_ / beatOverlapMultiple;
+                    beatOverlap_ = beatLength_ * beatOverlapKoef;
                     Loop = true;
                     Sync = true;
                 } else if (isOneShoot(buffer + iCursor)) {
                     acidBeats_ = getAcidBeats(buffer + iCursor);
-                    beatLength = SoundBufferLength / acidBeats_ / beatOverlapMultiple;
-                    beatOverlap = beatLength * beatOverlapKoef;
+                    beatLength_ = SoundBufferLength / acidBeats_ / beatOverlapMultiple;
+                    beatOverlap_ = beatLength_ * beatOverlapKoef;
                     Loop = false;
                     Sync = true;
                 }
@@ -447,42 +466,42 @@ private:
 
     bool checkOverlapEvent(CuePoint &cue, ParameterType offset) {
 
-        if (((offset > 0) && (cue < RealCursor))
-            || ((offset < 0) && (cue > RealCursor))) {
+        if (((offset > 0) && (cue < realCursor_))
+            || ((offset < 0) && (cue > realCursor_))) {
             return false;
         }
-        if (((RealCursor.integerPart()  + beatOverlap) / beatLength) != ((cue.integerPart() + beatOverlap) / beatLength)) {
+        if (((realCursor_.integerPart()  + beatOverlap_) / beatLength_) != ((cue.integerPart() + beatOverlap_) / beatLength_)) {
             return true;
         }
         return false;
     }
 
     bool checkStratchEvent(CuePoint &cue, ParameterType speed, ParameterType speedtempo) {
-        if ((speedtempo > 0) && (cue > OverlapCursorSecond)) {
-            return (std::abs(OverlapCursorSecond.integerPart() + int64_t(soundBufferLeft_.size()) - cue.integerPart()) > int64_t(beatLength / 2));
-        } else if ((speedtempo < 0) && (cue < OverlapCursorSecond)) {
-            return (std::abs(OverlapCursorSecond.integerPart() - cue.integerPart() + int64_t(soundBufferLeft_.size())) > int64_t(beatLength / 2));
+        if ((speedtempo > 0) && (cue > overlapCursorSecond_)) {
+            return (std::abs(overlapCursorSecond_.integerPart() + int64_t(soundBufferLeft_.size()) - cue.integerPart()) > int64_t(beatLength_ / 2));
+        } else if ((speedtempo < 0) && (cue < overlapCursorSecond_)) {
+            return (std::abs(overlapCursorSecond_.integerPart() - cue.integerPart() + int64_t(soundBufferLeft_.size())) > int64_t(beatLength_ / 2));
         } else {
-            return (std::abs(OverlapCursorSecond.integerPart() - cue.integerPart()) > int64_t(beatLength / 2));
+            return (std::abs(overlapCursorSecond_.integerPart() - cue.integerPart()) > int64_t(beatLength_ / 2));
         }
         return false;
     }
 
     void overlapStrobe(ParameterType speed, ParameterType tune) {
         if (speed < 0) {
-            OverlapCursorSecond.set(beatLength * normalizeStretchBeat(int64_t(RealCursor.integerPart() / beatLength)) - beatOverlap * tune / speed, 0);
+            overlapCursorSecond_.set(beatLength_ * normalizeStretchBeat(int64_t(realCursor_.integerPart() / beatLength_)) - beatOverlap_ * tune / speed, 0);
         } else {
-            OverlapCursorSecond.set(beatLength * normalizeStretchBeat(int64_t(RealCursor.integerPart() / beatLength) + 1) - beatOverlap * tune / speed, 0);
+            overlapCursorSecond_.set(beatLength_ * normalizeStretchBeat(int64_t(realCursor_.integerPart() / beatLength_) + 1) - beatOverlap_ * tune / speed, 0);
         }
-        OverlapCursorSecond = normalizeCue(OverlapCursorSecond);
-        RealCursor = OverlapCursorFirst;
-        SmoothOverlap = 1;
+        overlapCursorSecond_ = normalizeCue(overlapCursorSecond_);
+        realCursor_ = overlapCursorFirst_;
+        smoothOverlap_ = 1;
     }
 
     void stratchStrobe(const CuePoint &cue) {
-        OverlapCursorFirst = OverlapCursorSecond;
-        OverlapCursorSecond = cue;
-        SmoothOverlap = 1;
+        overlapCursorFirst_ = overlapCursorSecond_;
+        overlapCursorSecond_ = cue;
+        smoothOverlap_ = 1;
     }
 
     int64_t normalizeStretchBeat(int64_t beat){
@@ -531,16 +550,16 @@ private:
 
     size_t index_;
     size_t acidBeats_;
-    size_t beatLength;
-    size_t beatOverlap;
-    size_t SampleRate;
-    size_t currentBeat;
+    size_t beatLength_;
+    size_t beatOverlap_;
+    size_t sampleRate_;
+    size_t currentBeat_;
 
-    CuePoint RealCursor;
-    CuePoint OverlapCursorFirst;
-    CuePoint OverlapCursorSecond;
+    CuePoint realCursor_;
+    CuePoint overlapCursorFirst_;
+    CuePoint overlapCursorSecond_;
 
-    ParameterType SmoothOverlap;
+    ParameterType smoothOverlap_;
 
 
     size_t analyseWavHeader(uint8_t *header) {
@@ -656,7 +675,7 @@ private:
 
     ParameterType calcRealSpeed(ParameterType speed, ParameterType sampleRate) {
         ParameterType dir = Reverse ? -1 : 1;
-        return (sampleRate > 0) ? speed * Tune * (ParameterType(SampleRate) / ParameterType(sampleRate)) * dir : 0;
+        return (sampleRate > 0) ? speed * Tune * (ParameterType(sampleRate_) / ParameterType(sampleRate)) * dir : 0;
     }
 
     SampleType avgSample(size_t position) {
@@ -666,7 +685,6 @@ private:
         }
         return 0;
     }
-
 };
 
 }

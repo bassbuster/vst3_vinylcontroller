@@ -465,43 +465,51 @@ tresult PLUGIN_API AVinylController::getMidiControllerAssignment(int32 busIndex,
 tresult PLUGIN_API AVinylController::notify (IMessage* message)
 {
 
-    if (strcmp (message->getMessageID(), "delEntry") == 0) {
+    if (strcmp(message->getMessageID(), "delEntry") == 0) {
 		int64 delEntryInd;
-		message->getAttributes()->getInt ("EntryIndex", delEntryInd);
-
+        message->getAttributes()->getInt("EntryIndex", delEntryInd);
         for(auto& view: viewsArray) {
             static_cast<AVinylEditorView*>(view.get())->delEntry(delEntryInd);
 		}
-
 		return kResultTrue;
 	}
-    if (strcmp (message->getMessageID(), "addEntry") == 0) {
+    if (strcmp(message->getMessageID(), "addEntry") == 0) {
 		int64 newEntryInt;
         SampleEntry<Sample32> * newEntry;
-		message->getAttributes()->getInt ("Entry", newEntryInt);
-        newEntry = (SampleEntry<Sample32> *)newEntryInt;
+        message->getAttributes()->getInt("Entry", newEntryInt);
+        newEntry = reinterpret_cast<SampleEntry<Sample32> *>(newEntryInt);
         for(auto& view: viewsArray) {
             static_cast<AVinylEditorView*>(view.get())->initEntry(newEntry);
         }
-
 		return kResultTrue;
 	}
-    if (strcmp (message->getMessageID(), "updateSpeed") == 0) {
+    if (strcmp(message->getMessageID(), "debugFft") == 0) {
+        int64 newEntryInt;
+        SampleEntry<Sample32> * newEntry;
+        message->getAttributes()->getInt("Entry", newEntryInt);
+        newEntry = reinterpret_cast<SampleEntry<Sample32> *>(newEntryInt);
+        for(auto& view: viewsArray) {
+            static_cast<AVinylEditorView*>(view.get())->debugFft(newEntry);
+        }
+        if (newEntry) {
+            delete newEntry;
+        }
+        return kResultTrue;
+    }
+    if (strcmp(message->getMessageID(), "updateSpeed") == 0) {
 		double newSpeed;
-		message->getAttributes()->getFloat ("Speed", newSpeed);       
+        message->getAttributes()->getFloat("Speed", newSpeed);
         for(auto& view: viewsArray) {
             static_cast<AVinylEditorView*>(view.get())->setSpeedMonitor(newSpeed);
         }
-
 		return kResultTrue;
 	}
     if (strcmp (message->getMessageID(), "updatePosition") == 0) {
 		double newPosition;
-		message->getAttributes()->getFloat ("Position", newPosition);
+        message->getAttributes()->getFloat("Position", newPosition);
         for(auto& view: viewsArray) {
             static_cast<AVinylEditorView*>(view.get())->setPositionMonitor(newPosition);
         }
-
 		return kResultTrue;
 	}
     if (strcmp (message->getMessageID(), "updatePads") == 0) {
@@ -523,7 +531,6 @@ tresult PLUGIN_API AVinylController::notify (IMessage* message)
                 for(auto& view: viewsArray) {
                     static_cast<AVinylEditorView*>(view.get())->setPadType(i, newState);
                 }
-
             }
 			tmp = tmp.printf("PadTag%02d",i);
             if (message->getAttributes()->getInt (tmp.text8(), newState) == kResultTrue) {

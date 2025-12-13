@@ -5,6 +5,7 @@
 #include "helpers/sampleentry.h"
 #include "controls/cvinylbuttons.h"
 #include "controls/cwaveview.h"
+#include "controls/cdebugfftview.h"
 #include "vinylconfigconst.h"
 
 
@@ -55,10 +56,14 @@ public:
     void setPadState(int _pad, bool _state);
     void setPadType(int _pad, int _type);
     void setPadTag(int _pad, int _tag);
-    SharedPointer<VSTGUI::CBitmap> generateWaveform(SampleEntry<Sample32> * newEntry);
+    SharedPointer<VSTGUI::CBitmap> generateWaveform(SampleEntry<Sample32> * newEntry, bool normolize = false);
 
     void setSpeedMonitor(double _speed);
     void setPositionMonitor(double _position);
+
+
+    void debugFft(SampleEntry<Sample32> * newEntry);
+
 //------------------------------------------------------------------------
 private:
 
@@ -91,6 +96,7 @@ private:
     SharedPointer<VSTGUI::C3PositionSwitchBox> pitchSwitch;
 
     SharedPointer<VSTGUI::CWaveView> wavView;
+    SharedPointer<VSTGUI::CDebugFftView> debugFftView;
 
     SharedPointer<VSTGUI::CTextLabel> pitchValue;
     SharedPointer<VSTGUI::CTextLabel> sceneValue;
