@@ -187,6 +187,8 @@ private:
     void updatePositionMessage(Sample64 speed);
     void updatePadsMessage(void);
 
+    void debugFftMessage(SampleEntry<Sample32>* fft);
+
     bool dirtyParams;
 
 	double dSampleRate;

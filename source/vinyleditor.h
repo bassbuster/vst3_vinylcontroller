@@ -59,6 +59,10 @@ public:
 
     void setSpeedMonitor(double _speed);
     void setPositionMonitor(double _position);
+
+
+    void debugFft(SampleEntry<Sample32> * newEntry);
+
 //------------------------------------------------------------------------
 private:
 
@@ -91,6 +95,7 @@ private:
     SharedPointer<VSTGUI::C3PositionSwitchBox> pitchSwitch;
 
     SharedPointer<VSTGUI::CWaveView> wavView;
+    SharedPointer<VSTGUI::CWaveView> debugFftView;
 
     SharedPointer<VSTGUI::CTextLabel> pitchValue;
     SharedPointer<VSTGUI::CTextLabel> sceneValue;

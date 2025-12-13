@@ -30,6 +30,8 @@ smtg_add_vst3plugin(${target}
     source/controls/cvinylpopupmenu.h
     source/controls/cwaveview.cpp
     source/controls/cwaveview.h
+    source/controls/cdebugfftview.cpp
+    source/controls/cdebugfftview.h
     source/helpers/sampleentry.h
     source/helpers/parameterreader.h
     source/helpers/parameterwriter.h

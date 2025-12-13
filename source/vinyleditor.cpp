@@ -460,10 +460,18 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
     ////Wave View Window
     {
         auto glass = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("glass.png"));
-        size(0,0,343,83);
-        size.offset(270,54);
-        wavView = make_shared<VSTGUI::CWaveView>(size, this, 'Wave', glass, nullptr);
+        size(0, 0, 343, 83);
+        size.offset(270, 54);
+        wavView = make_shared<VSTGUI::CWaveView>(size, this, 'Wave', glass);
         frame->addView(wavView);
+    }
+
+    {
+        size(0, 0, 512, 83);
+        size.offset(0, kEditorHeight);
+
+        debugFftView = make_shared<VSTGUI::CWaveView>(size, this, '_FFT');
+        frame->addView(debugFftView);
     }
 
 
@@ -664,54 +672,50 @@ void PLUGIN_API AVinylEditorView::close ()
     // }
     sampleBitmaps.clear();
 
-    gainKnob = 0;
-    scenKnob = 0;
-    ampSlide = 0;
-    tuneSlide = 0;
-    nameEdit = 0;
+    gainKnob = nullptr;
+    scenKnob = nullptr;
+    ampSlide = nullptr;
+    tuneSlide = nullptr;
+    nameEdit = nullptr;
 
-    pitchSlider = 0;
-    volumeSlider = 0;
-    for (int i=0; i < ENumberOfPads; i++) {
-        padKick[i] = 0;
+    pitchSlider = nullptr;
+    volumeSlider = nullptr;
+    for (int i = 0; i < ENumberOfPads; i++) {
+        padKick[i] = nullptr;
     }
-    for (int i=0; i < ENumberOfPads; i++) {
-        padType[i] = 0;
+    for (int i = 0; i < ENumberOfPads; i++) {
+        padType[i] = nullptr;
     }
-    loopBox = 0;
-    syncBox = 0;
-    rvrsBox = 0;
-    tcLearnBox = 0;
-    pitchValue = 0;
-    sceneValue = 0;
-    speedValue = 0;
-    sampleNumber = 0;
-    vuLeftMeter = 0;
-    vuRightMeter = 0;
+    loopBox = nullptr;
+    syncBox = nullptr;
+    rvrsBox = nullptr;
+    tcLearnBox = nullptr;
+    pitchValue = nullptr;
+    sceneValue = nullptr;
+    speedValue = nullptr;
+    sampleNumber = nullptr;
+    vuLeftMeter = nullptr;
+    vuRightMeter = nullptr;
 
-    dispDistorsion = 0;
-    dispPreRoll = 0;
-    dispPostRoll = 0;
-    dispHold = 0;
-    dispFreeze = 0;
-    dispVintage = 0;
-    dispLockTone = 0;
+    dispDistorsion = nullptr;
+    dispPreRoll = nullptr;
+    dispPostRoll = nullptr;
+    dispHold = nullptr;
+    dispFreeze = nullptr;
+    dispVintage = nullptr;
+    dispLockTone = nullptr;
 
-    curvSwitch = 0;
-    pitchSwitch = 0;
-    samplePopup = 0;
-    //popupPad->forget();
-    popupPad = 0;
-    //sampleBase->forget();
-    sampleBase = 0;
-    //padBase->forget();
-    padBase = 0;
-    //effectBase1->forget();
-    effectBase1 = 0;
-    //effectBase2->forget();
-    effectBase2 = 0;
+    curvSwitch = nullptr;
+    pitchSwitch = nullptr;
+    samplePopup = nullptr;
+    popupPad = nullptr;
+    sampleBase = nullptr;
+    padBase = nullptr;
+    effectBase1 = nullptr;
+    effectBase2 = nullptr;
 
-    wavView = 0;
+    wavView = nullptr;
+    debugFftView = nullptr;
 
     getFrame()->removeAll(true);
     int32_t refCount = getFrame()->getNbReference();
@@ -1207,7 +1211,7 @@ void AVinylEditorView::controlEndEdit (VSTGUI::CControl* pControl)
 }
 
 //------------------------------------------------------------------------
-void AVinylEditorView::update (ParamID tag, ParamValue value)
+void AVinylEditorView::update(ParamID tag, ParamValue value)
 {
     switch (tag)
     {
@@ -1261,46 +1265,43 @@ void AVinylEditorView::update (ParamID tag, ParamValue value)
 
     case kLoopId:
         if (loopBox) {
-            loopBox->setValueNormalized ((float)value);
-            if(wavView){
+            loopBox->setValueNormalized((float)value);
+            if(wavView) {
                 wavView->setLoop(loopBox->getChecked());
             }
         }
         break;
 
     case kPitchId:
-        if (pitchSlider)
-        {
-            pitchSlider->setValueNormalized ((float)value);
+        if (pitchSlider) {
+            pitchSlider->setValueNormalized((float)value);
         }
-        if((pitchValue)&&(pitchSwitch)&&(pitchSlider)){
+        if(pitchValue && pitchSwitch && pitchSlider) {
             String textval;
             if (pitchSwitch->getPosition() == 0) {
                 textval = "0.00%";
-            } else
-                if (pitchSwitch->getPosition() == 2) {
-                    textval.printf(STR("%0.2f%"),pitchSlider->getValue()*100.0 - 50.0);
-                } else
-                    textval.printf(STR("%0.2f%"),pitchSlider->getValue()*20.0 - 10.0);
+            } else if (pitchSwitch->getPosition() == 2) {
+                textval.printf(STR("%0.2f%"), pitchSlider->getValue() * 100. - 50.);
+            } else {
+                textval.printf(STR("%0.2f%"), pitchSlider->getValue() * 20. - 10.);
+            }
             pitchValue->setText(VSTGUI::UTF8String(textval));
         }
         break;
 
     case kPitchSwitchId:
-        if (pitchSwitch)
-        {
-            pitchSwitch->setValueNormalized ((float)value);
+        if (pitchSwitch) {
+            pitchSwitch->setValueNormalized((float)value);
         }
-        if((pitchValue)&&(pitchSwitch)&&(pitchSlider)){
+        if(pitchValue && pitchSwitch && pitchSlider) {
             String textval;
             if (pitchSwitch->getPosition() == 0) {
                 textval = "0.00%";
-            } else
-                if (pitchSwitch->getPosition() == 2) {
-                    textval.printf(STR("%0.2f%"), pitchSlider->getValue() * 100.0 - 50.0);
-                } else {
-                    textval.printf(STR("%0.2f%"), pitchSlider->getValue() * 20.0 - 10.0);
-                }
+            } else if (pitchSwitch->getPosition() == 2) {
+                textval.printf(STR("%0.2f%"), pitchSlider->getValue() * 100. - 50.);
+            } else {
+                textval.printf(STR("%0.2f%"), pitchSlider->getValue() * 20. - 10.);
+            }
             pitchValue->setText(VSTGUI::UTF8String(textval));
         }
         break;
@@ -1580,7 +1581,7 @@ void AVinylEditorView::delEntry(size_t delEntryIndex)
                 }
                 currentEntry = 0;
                 if (wavView) {
-                    wavView->setWave(0);
+                    wavView->setWave(nullptr);
                 }
                 if (nameEdit) {
                     nameEdit->setText(0);
@@ -1662,6 +1663,21 @@ void AVinylEditorView::initEntry(SampleEntry<Sample32> * newEntry)
                 String tmp;
                 sampleNumber->setText(VSTGUI::UTF8String(tmp.printf("#%03d",newEntry->index())));
             }
+        }
+    }
+}
+
+void AVinylEditorView::debugFft(SampleEntry<Sample32> *newEntry)
+{
+    if (newEntry) {
+        auto waveForm = generateWaveform(newEntry);
+        if (!waveForm) {
+            // not readable format
+            return;
+        }
+
+        if (debugFftView) {
+            debugFftView->setWave(waveForm);
         }
     }
 }

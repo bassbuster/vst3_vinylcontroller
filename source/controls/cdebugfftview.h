@@ -8,39 +8,29 @@
 namespace VSTGUI {
 
 //-----------------------------------------------------------------------------
-// CWaveView Declaration
+// CDebugFftView Declaration
 //-----------------------------------------------------------------------------
-class CWaveView : public CControl
+class CDebugFftView : public CControl
 {
 public:
-    CWaveView(const CRect &size, IControlListener *listener = nullptr, int32_t tag = 0, CBitmap *pBackground = nullptr);
-    CWaveView(const CWaveView &v);
-    ~CWaveView();
+    CDebugFftView(const CRect &size, IControlListener *listener = nullptr, int32_t tag = 0, CBitmap *background = nullptr);
+    CDebugFftView(const CDebugFftView &v);
+    ~CDebugFftView();
 
     void setWave(const SharedPointer<CBitmap> &newWave);
 
-    void setPosition(float position);
-
-    void setLoop(bool loop);
-
-    bool getLoop (void) const {
-        return loop_;
-    }
-
-    void draw(CDrawContext* pContext) override;
+    void draw (CDrawContext* pContext) override;
 
     CMouseEventResult onMouseDown(CPoint& where, const CButtonState& buttons) override;
     CMouseEventResult onMouseUp(CPoint& where, const CButtonState& buttons) override;
     CMouseEventResult onMouseMoved(CPoint& where, const CButtonState& buttons) override;
 
-	CLASS_METHODS(CWaveView, CControl)
+    CLASS_METHODS(CDebugFftView, CControl)
 
 private:
     SharedPointer<CBitmap> wave_;
-    int pixelPreroll_;
-    bool loop_;
-
 };
 
 } // namespace
+
 
