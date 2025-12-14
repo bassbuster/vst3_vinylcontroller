@@ -496,6 +496,19 @@ tresult PLUGIN_API AVinylController::notify (IMessage* message)
         }
         return kResultTrue;
     }
+    if (strcmp(message->getMessageID(), "debugInput") == 0) {
+        int64 newEntryInt;
+        SampleEntry<Sample32> * newEntry;
+        message->getAttributes()->getInt("Entry", newEntryInt);
+        newEntry = reinterpret_cast<SampleEntry<Sample32> *>(newEntryInt);
+        for(auto& view: viewsArray) {
+            static_cast<AVinylEditorView*>(view.get())->debugInput(newEntry);
+        }
+        if (newEntry) {
+            delete newEntry;
+        }
+        return kResultTrue;
+    }
     if (strcmp(message->getMessageID(), "updateSpeed") == 0) {
 		double newSpeed;
         message->getAttributes()->getFloat("Speed", newSpeed);

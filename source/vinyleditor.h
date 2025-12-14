@@ -63,6 +63,7 @@ public:
 
 
     void debugFft(SampleEntry<Sample32> * newEntry);
+    void debugInput(SampleEntry<Sample32> * newEntry);
 
 //------------------------------------------------------------------------
 private:
@@ -97,6 +98,7 @@ private:
 
     SharedPointer<VSTGUI::CWaveView> wavView;
     SharedPointer<VSTGUI::CDebugFftView> debugFftView;
+    SharedPointer<VSTGUI::CDebugFftView> debugInputView;
 
     SharedPointer<VSTGUI::CTextLabel> pitchValue;
     SharedPointer<VSTGUI::CTextLabel> sceneValue;

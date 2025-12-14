@@ -188,6 +188,7 @@ private:
     void updatePadsMessage(void);
 
     void debugFftMessage(SampleEntry<Sample32>* fft);
+    void debugInputMessage(SampleEntry<Sample32>* input);
 
     bool dirtyParams;
 

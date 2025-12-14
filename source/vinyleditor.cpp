@@ -467,11 +467,16 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
     }
 
     {
-        size(0, 0, 512, 83);
+        size(0, 0, 512, 100);
         size.offset(0, kEditorHeight);
 
         debugFftView = make_shared<VSTGUI::CDebugFftView>(size, this, '_FFT');
         frame->addView(debugFftView);
+
+        size.offset(0, 100);
+
+        debugInputView = make_shared<VSTGUI::CDebugFftView>(size, this, '_INP');
+        frame->addView(debugInputView);
     }
 
 
@@ -716,6 +721,7 @@ void PLUGIN_API AVinylEditorView::close ()
 
     wavView = nullptr;
     debugFftView = nullptr;
+    debugInputView = nullptr;
 
     getFrame()->removeAll(true);
     int32_t refCount = getFrame()->getNbReference();
@@ -1681,6 +1687,21 @@ void AVinylEditorView::debugFft(SampleEntry<Sample32> *newEntry)
 
         if (debugFftView) {
             debugFftView->setWave(waveForm);
+        }
+    }
+}
+
+void AVinylEditorView::debugInput(SampleEntry<Sample32> *newEntry)
+{
+    if (newEntry) {
+        auto waveForm = generateWaveform(newEntry, true);
+        if (!waveForm) {
+            // not readable format
+            return;
+        }
+
+        if (debugInputView) {
+            debugInputView->setWave(waveForm);
         }
     }
 }
