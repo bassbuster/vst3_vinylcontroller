@@ -37,7 +37,7 @@ void CDebugFftView::draw (CDrawContext* pContext)
     //                                getVisibleViewSize().top + 61),
     //                         CColor(0, 255, 0, 120));
     // }
-    pContext->setFillColor(CColor(0, 0, 0, 70));
+    pContext->setFillColor(CColor(0, 10, 0, 100));
     pContext->setDrawMode(kAliasing);
     pContext->drawRect(getVisibleViewSize(), VSTGUI::kDrawFilled);
     if (wave_) {

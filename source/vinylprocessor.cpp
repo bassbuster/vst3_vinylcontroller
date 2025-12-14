@@ -406,7 +406,8 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                 }
 
 
-                Sample64 SmoothCoef = 0.5 - 0.5 * cos((2. * Pi * Sample64(FFTCursor + EFFTFrame - ESpeedFrame) / Sample64(EFFTFrame)));
+//                Sample64 SmoothCoef = 0.5 - 0.5 * cos((2. * Pi * Sample64(FFTCursor + EFFTFrame - ESpeedFrame) / Sample64(EFFTFrame)));
+                Sample64 SmoothCoef = sin(Pi * Sample64(FFTCursor + EFFTFrame - ESpeedFrame) / Sample64(EFFTFrame));
                 FFTPre[FFTCursor + EFFTFrame - ESpeedFrame] = (OldSignalL - OldSignalR);
                 FFT[FFTCursor + EFFTFrame - ESpeedFrame] = (SmoothCoef * FFTPre[FFTCursor + EFFTFrame - ESpeedFrame]);
 

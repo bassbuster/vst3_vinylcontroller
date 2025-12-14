@@ -1507,16 +1507,21 @@ void AVinylEditorView::setPositionMonitor(double _position)
 
 AVinylEditorView::SharedPointer<VSTGUI::CBitmap> AVinylEditorView::generateWaveform(SampleEntry<Sample32> * newEntry, bool normolize)
 {
-    int bitmapWidth = (double(newEntry->bufferLength())) * 0.0015;
-    if (bitmapWidth<400) {
+    //int bitmapWidth = double(newEntry->bufferLength()) * 0.0015;
+    size_t bitmapWidth = newEntry->bufferLength();
+    if (bitmapWidth < 400) {
         bitmapWidth = 400;
-    }else if (bitmapWidth % 2) {
+    }
+    else if (bitmapWidth > 800) {
+        bitmapWidth = 800;
+    }
+    else if (bitmapWidth % 2) {
         bitmapWidth++;
     }
 
-    if (bitmapWidth <2) {
-        return nullptr;
-    }
+    //if (bitmapWidth <  2) {
+    //    return nullptr;
+    //}
 
     SampleEntry<Sample32>::Type norm = normolize ? 1. / newEntry->peakSample(0, newEntry->bufferLength()) : 1.;
 
@@ -1530,25 +1535,25 @@ AVinylEditorView::SharedPointer<VSTGUI::CBitmap> AVinylEditorView::generateWavef
         auto PixelDigits = VSTGUI::SharedPointer(VSTGUI::CBitmapPixelAccess::create(Digits), false);
         PixelMap->setPosition(0, 61);
         PixelMap->setColor(VSTGUI::CColor(0, 255, 0, 220));
-        for (int i = 1; i <= bitmapWidth / 2; i++) {
-            SampleEntry<Sample32>::Type height = norm * newEntry->peakSample((i - 1) * ((newEntry->bufferLength() - 1) / (bitmapWidth / 2)),
-                                                      i * ((newEntry->bufferLength() - 1) / (bitmapWidth / 2)));
+        double stretch = double(newEntry->bufferLength()) / (bitmapWidth / 2.);
+        for (uint32_t i = 1; i < bitmapWidth / 2; i++) {
+            SampleEntry<Sample32>::Type height = norm * newEntry->peakSample((i - 1) * stretch, i * stretch);
             PixelMap->setPosition((i - 1) * 2, 61);
             PixelMap->setColor(VSTGUI::CColor(0, 255, 0, 120));
-            for (int j = 1; j < 40 * height; j++) {
+            for (uint32_t j = 1; j < 40 * height; j++) {
                 PixelMap->setPosition((i - 1) * 2, 61 - j * 2);
-                PixelMap->setColor(VSTGUI::CColor(100  *(1. - j / (60. * height)), 255, 0, 40 + 180 * sqr(1. - j / (60. * height))));
-                if ((61+j*2)<=81) {
+                PixelMap->setColor(VSTGUI::CColor(100. * (1. - j / (60. * height)), 255, 0, 40 + 180 * sqr(1. - j / (60. * height))));
+                if ((61 + j * 2) <= 81) {
                     PixelMap->setPosition((i - 1) * 2, 61 + j * 2);
-                    PixelMap->setColor(VSTGUI::CColor(100 * (1. - j / (60. * height)), 255, 0, 80. * sqr(1. - j / (60. * height))));
+                    PixelMap->setColor(VSTGUI::CColor(100. * (1. - j / (60. * height)), 255, 0, 80. * sqr(1. - j / (60. * height))));
                 }
             }
         }
-        for (int i = 1; i <= bitmapWidth / 2; i++) {
+        for (uint32_t i = 1; i <= bitmapWidth / 2; i++) {
             //if ((drawBeats)&&((((double)i-1.0) / beatPeriodic) >= (double)((int)(((double)i-1.0) / beatPeriodic)))&&((((double)i-1.0) / beatPeriodic) < (double)((int)(((double)i) / beatPeriodic)+1.0))) {
-            if (drawBeats && ((i == 1) || ((int((i - 2.0) / beatPeriodic)) != (int((i - 1.0) / beatPeriodic))))) {
-                for (int j = 0; j <= 5; j++) {
-                    for(int k=0; k <= 5; k++) {
+            if (drawBeats && ((i == 1) || ((int((i - 2.) / beatPeriodic)) != (int((i - 1.) / beatPeriodic))))) {
+                for (uint32_t j = 0; j <= 5; j++) {
+                    for(uint32_t k = 0; k <= 5; k++) {
                         PixelMap->setPosition((i - 1) * 2 + j + 2, 76 + k);
                         PixelDigits->setPosition((((i - 1) / (int)beatPeriodic) % 10) * 5 + j, k);
                         VSTGUI::CColor DigPixel;
@@ -1556,7 +1561,7 @@ AVinylEditorView::SharedPointer<VSTGUI::CBitmap> AVinylEditorView::generateWavef
                         PixelMap->setColor(DigPixel);
                     }
                 }
-                for (int j = 61; j < 85; j += 2) {
+                for (uint32_t j = 61; j < 85; j += 2) {
                     PixelMap->setPosition((i - 1) * 2, j);
                     PixelMap->setColor(VSTGUI::CColor(255, 255, 255, (j - 58) * 6 + 10));
                 }
