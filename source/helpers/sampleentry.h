@@ -339,6 +339,14 @@ public:
     ParameterType Tune;
     ParameterType Level;
 
+    SampleType getLeft(size_t index) const {
+        return soundBufferLeft_[index];
+    }
+
+    SampleType getRight(size_t index) const {
+        return soundBufferRight_[index];
+    }
+
 private:
 
     static constexpr ParameterType defaultBeats = 8.;

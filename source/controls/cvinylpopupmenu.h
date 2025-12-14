@@ -15,10 +15,10 @@ class CVinylPopupMenu : public COptionMenu
 private:
 	CRect sizeClick;
 public:
-    CVinylPopupMenu (IControlListener* listener, int32_t tag, CBitmap* bgWhenClick = 0, CRect clickedOffsets = {});
-	//~CVinylPopupMenu();
+    CVinylPopupMenu (IControlListener * listener, int32_t tag, CBitmap * bgWhenClick = nullptr, CRect clickedOffsets = {});
+
 	bool popup(CControl * popupControl);
-    void draw (CDrawContext* pContext) override;
+    void draw (CDrawContext * pContext) override;
 };
 
 } // namespace

@@ -13,6 +13,8 @@
 #include "helpers/parameterwriter.h"
 #include "helpers/fft.h"
 
+#include <fstream>
+
 namespace {
 
 inline double sqr(double x) {
@@ -99,12 +101,31 @@ AVinyl::AVinyl() :
     // register its editor class (the same than used in againentry.cpp)
     setControllerClass(AVinylControllerUID);
 
+
     VintageSample = std::make_unique<SampleEntry<Sample32>>("vintage", "c:\\Work\\vst3sdk\\build\\VST3\\Debug\\vinylcontroller.vst3\\Contents\\Resources\\vintage.wav");
     if (VintageSample) {
         VintageSample->Loop = true;
         VintageSample->Sync = false;
         VintageSample->Reverse = false;
     }
+
+/*
+    std::ofstream vintage("c:\\Work\\vst3sdk\\build\\VST3\\Debug\\vinylcontroller.vst3\\Contents\\Resources\\vintage.h");
+    vintage << "#pragma once" << std::endl;
+    vintage << "" << std::endl;
+
+    vintage << "float vintageLeft[] = {";
+    for(size_t i = 0; i < VintageSample->bufferLength(); i++) {
+        vintage << VintageSample->getLeft(i) << (i == 0 ? "" : ",");
+    }
+    vintage << "};" << std::endl;
+
+    vintage << "float vintageRight[] = {";
+    for(size_t i = 0; i < VintageSample->bufferLength(); i++) {
+        vintage << VintageSample->getRight(i) << (i == 0 ? "" : ",");
+    }
+    vintage << "};" << std::endl;
+*/
 
     params.addReader(kBypassId, [this] () { return bBypass ? 1. : 0.; },
                      [this](Sample64 value) {
