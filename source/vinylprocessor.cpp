@@ -15,12 +15,6 @@
 
 namespace {
 
-inline double sqr(double x) {
-    return x * x;
-}
-
-constexpr double Pi = 3.14159265358979323846264338327950288;
-
 template<typename T>
 inline T aproxParamValue(int32_t currentSampleIndex, T currentValue, int32_t nextSampleIndex, T nextValue)
 {
@@ -74,9 +68,6 @@ namespace Steinberg {
 namespace Vst {
 
 AVinyl::AVinyl() :
-    speedFrameIndex_(0),
-    oldSignalLeft_(0),
-    oldSignalRight_(0),
     gain_(0.8),
     realVolume_(0.8),
     vuLeft_(0.),
@@ -90,25 +81,11 @@ AVinyl::AVinyl() :
     curve_(0),
     currentProcessMode_(-1), // -1 means not initialized
     bypass_(false),
-    avgTimeCodeCoeff_(ETimeCodeCoeff),
-    timeCodeLearn_(false),
     sampleRate_(EDefaultSampleRate),
     tempo_(EDefaultTempo),
-    timecodeLearnCounter_(0),
     holdCounter_(0),
     freezeCounter_(0),
     noteLength_(0),
-    speedCounter_(0),
-    statusR_(false),
-    statusL_(false),
-    oldStatusR_(false),
-    oldStatusL_(false),
-    pStatusR_(false),
-    pStatusL_(false),
-    pOldStatusR_(false),
-    pOldStatusL_(false),
-    directionBits_(0),
-    direction_(1.),
     effectorSet_(eNoEffects),
     lockSpeed_(0),
     lockVolume_(0),
@@ -217,11 +194,10 @@ AVinyl::AVinyl() :
                          }
                      });
 
-    params_.addReader(kTimecodeLearnId, [this] () { return timeCodeLearn_ ? 1. : 0.; },
+    params_.addReader(kTimecodeLearnId, [this] () { return speedProcessor_.isLearning() ? 1. : 0.; },
                      [this](Sample64 value) {
                          if (value>0.5) {
-                             timecodeLearnCounter_ = ETimecodeLearnCount;
-                             timeCodeLearn_ = true;
+                             speedProcessor_.startLearn();
                          }
                      });
 }
@@ -352,12 +328,11 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
         uint8_t** in = reinterpret_cast<uint8_t**>(data.inputs[0].channelBuffers64);
         uint8_t** out = reinterpret_cast<uint8_t**>(data.outputs[0].channelBuffers64);
 
-        //{
         Sample64 fVuLeft = 0.;
         Sample64 fVuRight = 0.;
         Sample64 fOldPosition = position_;
-        bool bOldTimecodeLearn = timeCodeLearn_;
-        Sample64 fOldSpeed = realSpeed_;
+        bool bOldTimecodeLearn = speedProcessor_.isLearning();
+        Sample64 fOldSpeed = speedProcessor_.realSpeed();
 
         if (numChannels >= 2) {
 
@@ -374,7 +349,6 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
 
                 params_.checkOffset(sampleOffset);
 
-                ////////////Get Offsetted Events ////////////////////////////////////
                 if (eventList) {
                     if (eventP == nullptr) {
                         if (eventList->getEvent(eventIndex++, event) != kResultOk) {
@@ -390,7 +364,6 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                         eventP = nullptr;
                     }
                 }
-                /////////////////////////////////////////////////////////////////////
 
                 Sample64 inL{0.};
                 Sample64 inR{0.};
@@ -411,82 +384,17 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                         ptrInRight += sizeof(Sample32);
                     }
 
-                    filterBufferLeft_.writeHead(filtredHiLeft_.append(inL));
-                    filterBufferRight_.writeHead(filtredHiRight_.append(inR));
-
-                    Sample64 newSignalLeft = filterBufferLeft_.readTail() - filtredLoLeft_.append(inL);
-                    Sample64 newSignalRight = filterBufferRight_.readTail() - filtredLoRight_.append(inR);
-
-                    deltaLeft_.append(newSignalLeft - oldSignalLeft_);
-                    deltaRight_.append(newSignalRight - oldSignalRight_);
-
-
-                    calcDirectionTimeCodeAmplitude();
-
-                    oldSignalLeft_ = newSignalLeft;
-                    oldSignalRight_ = newSignalRight;
-
-                    Sample64 smoothWindow = sin(Pi * Sample64(speedFrameIndex_ + EFFTFrame - ESpeedFrame) / Sample64(EFFTFrame));
-                    originalBuffer_[speedFrameIndex_ + EFFTFrame - ESpeedFrame] = oldSignalLeft_ - oldSignalRight_;
-                    fftBuffer_[speedFrameIndex_ + EFFTFrame - ESpeedFrame] = (smoothWindow * originalBuffer_[speedFrameIndex_ + EFFTFrame - ESpeedFrame]);
-
-                    speedFrameIndex_++;
-                    if (speedFrameIndex_ >= ESpeedFrame) {
-                        speedFrameIndex_ = 0;
-
-                        if (timeCodeAmplytude_ >= ETimeCodeMinAmplytude) {
+                    speedProcessor_.process(inL, inR
 #ifdef DEVELOPMENT
-                            debugInputMessage(fftBuffer_, EFFTFrame);
+                                            ,[this](auto fftBuffer, size_t len) { debugInputMessage(fftBuffer, len); }
+                                            ,[this](auto fftBuffer, size_t len) { debugFftMessage(fftBuffer, len); }
 #endif // DEBUG
-                            fastsine(fftBuffer_, EFFTFrame);
+                                            );
 
-                            /// Filter out low noise
-                            for (size_t i = 0; i < 10; i++) {
-                                Sample64 SmoothCoef =  i * .1 + .01;
-                                fftBuffer_[i] = SmoothCoef * fftBuffer_[i];
-                            }
-#ifdef DEVELOPMENT
-                            debugFftMessage(fftBuffer_, EFFTFrame);
-#endif // DEBUG
+                    if ((speedProcessor_.volume() >= 0.00001) && (samplesArray_.size() > currentEntry_)) {
 
-                            calcAbsSpeed();
-                            if (timecodeLearnCounter_ > 0) {
-                                timecodeLearnCounter_--;
-                                avgTimeCodeCoeff_.append(direction_ * absAvgSpeed_);
-                                realSpeed_ = 1.;
-                            } else {
-                                realSpeed_ = absAvgSpeed_ / avgTimeCodeCoeff_;
-                                timeCodeLearn_ = false;
-                            }
-                            volCoeff_.append(sqrt(fabs(realSpeed_)));
-                            realSpeed_ = direction_ * realSpeed_;
-                        }
-
-                        for (size_t i = 0; i < EFFTFrame - ESpeedFrame; i++) {
-                            Sample64 smoothWindow = sin(Pi * Sample64(i) / Sample64(EFFTFrame));
-                            originalBuffer_[i] = originalBuffer_[ESpeedFrame + i];
-                            fftBuffer_[i] = (smoothWindow * originalBuffer_[ESpeedFrame + i]);
-                        }
-                    }
-
-                    if (timeCodeAmplytude_ < ETimeCodeMinAmplytude) {
-                        if (volCoeff_ >= 0.00001) {
-                            absAvgSpeed_ = absAvgSpeed_ / 1.07;
-                            realSpeed_ = absAvgSpeed_ / avgTimeCodeCoeff_;
-                            volCoeff_.append(sqrt(fabs(realSpeed_)));
-                            realSpeed_ = direction_ * realSpeed_;
-                        } else {
-                            absAvgSpeed_ = 0.;
-                            realSpeed_ = 0.;
-                            volCoeff_ = 0.;
-                        }
-                    }
-
-                    if ((volCoeff_ >= 0.00001) && (samplesArray_.size() > currentEntry_)) {
-
-                        softVolume_.append((effectorSet_ & ePunchIn)
-                                               ? (gain_ * volCoeff_) : ((effectorSet_ & ePunchOut)
-                                               ? 0. : (realVolume_ * volCoeff_)));
+                        softVolume_.append((effectorSet_ & ePunchIn)  ? (gain_ * speedProcessor_.volume()) :
+                                          ((effectorSet_ & ePunchOut) ? 0.: (realVolume_ * speedProcessor_.volume())));
                         softPreRoll_.append(effectorSet_ & ePreRoll ? 1. : 0.);
                         softPostRoll_.append(effectorSet_ & ePostRoll ? 1. : 0.);
                         softDistorsion_.append(effectorSet_ & eDistorsion ? 1. : 0.);
@@ -517,8 +425,8 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
 
                         if (effectorSet_ & eLockTone) {
                             if (!std::exchange(keyLockTone_, true)) {
-                                lockSpeed_ = fabs(realSpeed_ * realPitch_);
-                                lockVolume_ = volCoeff_;
+                                lockSpeed_ = fabs(speedProcessor_.realSpeed() * realPitch_);
+                                lockVolume_ = speedProcessor_.volume();
                                 lockTune_ = samplesArray_.at(currentEntry_)->Tune;
                                 samplesArray_.at(currentEntry_)->beginLockStrobe();
                             }
@@ -530,11 +438,11 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                         Sample64 tempo = 0.;
 
                         if (keyLockTone_) {
-                            volCoeff_ = lockVolume_;
-                            speed = direction_ * lockSpeed_;
+                            speedProcessor_.volume(lockVolume_);
+                            speed = speedProcessor_.direction() * lockSpeed_;
                             tempo = samplesArray_.at(currentEntry_)->Sync
-                                ? fabs(tempo_ * realSpeed_ * realPitch_)
-                                : samplesArray_.at(currentEntry_)->tempo() * fabs(realSpeed_ * realPitch_) * lockTune_;
+                                ? fabs(tempo_ * speedProcessor_.realSpeed() * realPitch_)
+                                : samplesArray_.at(currentEntry_)->tempo() * fabs(speedProcessor_.realSpeed() * realPitch_) * lockTune_;
                             samplesArray_.at(currentEntry_)->playStereoSampleTempo(&outL,
                                 &outR,
                                 speed,
@@ -542,7 +450,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                                 sampleRate_,
                                 true);
                         } else {
-                            speed = realSpeed_ * realPitch_;
+                            speed = speedProcessor_.realSpeed() * realPitch_;
                             tempo = tempo_;
                             samplesArray_.at(currentEntry_)->playStereoSample(&outL,
                                 &outR,
@@ -735,14 +643,14 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                 dirtyParams_ = false;
             }
 
-            if (timeCodeLearn_ != bOldTimecodeLearn) {
-                tcLearnWriter.store(data.numSamples - 1, timeCodeLearn_ ? 1. : 0.);
+            if (speedProcessor_.isLearning() != bOldTimecodeLearn) {
+                tcLearnWriter.store(data.numSamples - 1, speedProcessor_.isLearning() ? 1. : 0.);
             }
             if (fabs(fOldPosition - position_) > 0.001) {
                 updatePositionMessage(position_);
             }
-            if (fabs(fOldSpeed - realSpeed_) > 0.001) {
-                updateSpeedMessage(realSpeed_);
+            if (fabs(fOldSpeed - speedProcessor_.realSpeed()) > 0.001) {
+                updateSpeedMessage(speedProcessor_.realSpeed());
             }
         }
         vuLeft_ = fVuLeft;
@@ -776,106 +684,6 @@ uint32 PLUGIN_API AVinyl::getLatencySamples()
 uint32 PLUGIN_API AVinyl::getTailSamples()
 {
     return ETimecodeLearnCount;
-}
-
-void AVinyl::calcDirectionTimeCodeAmplitude()
-{
-    if ((statusR_) && (deltaRight_ < 0.0)) {
-        oldStatusR_ = statusR_;
-        statusR_ = false;
-        timeCodeAmplytude_.append(fabs(oldSignalRight_));
-    } else if ((!statusR_) && (deltaRight_ > 0.0)) {
-        oldStatusR_ = statusR_;
-        statusR_ = true;
-        timeCodeAmplytude_.append(fabs(oldSignalRight_));
-    }
-
-    if ((statusL_) && (deltaLeft_ < 0.0)) {
-        oldStatusL_ = statusL_;
-        statusL_ = false;
-        timeCodeAmplytude_.append(fabs(oldSignalLeft_));
-    } else if ((!statusL_) && (deltaLeft_ > 0.0)) {
-        oldStatusL_ = statusL_;
-        statusL_ = true;
-        timeCodeAmplytude_.append(fabs(oldSignalLeft_));
-    }
-
-    if (timeCodeAmplytude_ >= ETimeCodeMinAmplytude) {
-        if ((statusL_ != pStatusL_) || (statusR_ != pStatusR_) ||
-            (oldStatusL_ != pOldStatusL_) || (oldStatusR_ != pOldStatusR_)) {
-
-            if ((statusL_ == pStatusR_) && (statusR_ == pOldStatusL_) && (oldStatusL_ == pOldStatusR_) && (oldStatusR_ == pStatusL_)
-                && (speedCounter_ >= 3)) {
-                directionBits_ <<= 8;
-                directionBits_ |= 0xff;
-                speedCounter_ = 0;
-            } else if ((statusL_ == pOldStatusR_) && (statusR_ == pStatusL_) && (oldStatusL_ == pStatusR_) && (oldStatusR_ == pOldStatusL_)
-                && (speedCounter_ >= 3)) {
-                directionBits_ <<= 8;
-                directionBits_ &= 0xffffff00;
-                speedCounter_ = 0;
-            }
-            pStatusL_ = statusL_;
-            pStatusR_ = statusR_;
-            pOldStatusL_ = oldStatusL_;
-            pOldStatusR_ = oldStatusR_;
-        }
-
-        if (directionBits_ == 0) {
-            direction_ = -1.;
-        } else if (directionBits_ == 0xffffffff) {
-            direction_ = 1.;
-        }
-
-        if (speedCounter_ < 441000) {
-            speedCounter_++;
-        }
-    }
-}
-
-void AVinyl::calcAbsSpeed()
-{
-
-    size_t maxX = 0;
-    Sample64 maxY = 0.f;
-
-    for (int i = 0; i < EFFTFrame; i++) {
-        if (maxY < fabs(fftBuffer_[i])) {
-            maxY = fabs(fftBuffer_[i]);
-            maxX = i;
-        }
-    }
-
-    Sample64 tmp = maxX;
-    for (size_t i = maxX + 1; i < maxX + 3; i++) {
-        if (i < EFFTFrame) {
-            Sample64 koef = 100.;
-            if (fftBuffer_[i] != 0) {
-                koef = (maxY / fftBuffer_[i]) * (maxY / fftBuffer_[i]);
-            }
-            tmp = (koef * tmp + Sample64(i)) / (koef + 1.);
-            continue;
-        }
-        break;
-    }
-
-    for (size_t i = (maxX > 1 ? maxX - 1 : 0); i > maxX - 3; i--) {
-        if (i >= 0) {
-            Sample64 koef = 100.;
-            if (fftBuffer_[i] != 0) {
-                koef = (maxY / fftBuffer_[i]) * (maxY / fftBuffer_[i]);
-            }
-            tmp = (koef * tmp + Sample64(i)) / (koef + 1.);
-            continue;
-        }
-        break;
-    }
-
-    if (fabs(tmp - absAvgSpeed_) > 0.7) {
-        absAvgSpeed_ = tmp;
-    } else {
-        absAvgSpeed_.append(tmp);
-    }
 }
 
 tresult AVinyl::receiveText(const char* text)
@@ -921,7 +729,7 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
         reader.readInt32u(savedSceneCount);
         reader.readInt32u(savedEntryCount);
 
-        avgTimeCodeCoeff_ = savedTimeCodeCoeff;
+        speedProcessor_.timecode(savedTimeCodeCoeff);
 
         bypass_ = savedBypass > 0;
 
@@ -1018,7 +826,7 @@ tresult PLUGIN_API AVinyl::getState(IBStream* state)
         uint32_t toSaveScene = currentScene_;
         float toSaveSwitch = switch_;
         float toSaveCurve = curve_;
-        float toSaveTimecodeCoeff = avgTimeCodeCoeff_;
+        float toSaveTimecodeCoeff = speedProcessor_.timecode();
         uint32_t toSaveBypass = bypass_ ? 1 : 0;
         uint32_t toSaveEffector = effectorSet_;
         uint32_t toSavePadCount = ENumberOfPads;
@@ -1221,7 +1029,6 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
 void AVinyl::addSampleMessage(SampleEntry<Sample64>* newSample)
 {
     if (newSample) {
-        //int64_t sampleInt = int64_t(newSample);
         IMessage* msg = allocateMessage ();
         if (msg) {
             msg->setMessageID("addEntry");
@@ -1331,17 +1138,10 @@ void AVinyl::updatePadsMessage(void)
     IMessage* msg = allocateMessage ();
     if (msg) {
         msg->setMessageID("updatePads");
-        String tmp;
-        String ttmp1[ENumberOfPads];
-        String ttmp2[ENumberOfPads];
-        String ttmp3[ENumberOfPads];
         for (int i = 0; i < ENumberOfPads; i++) {
-            ttmp1[i] = tmp.printf("PadState%02d", i);
-            msg->getAttributes()->setInt(ttmp1[i].text8(), padStates_[currentScene_][i].padState ? 1 : 0);
-            ttmp2[i] = tmp.printf("PadType%02d", i);
-            msg->getAttributes()->setInt(ttmp2[i].text8(), padStates_[currentScene_][i].padType);
-            ttmp3[i] = tmp.printf("PadTag%02d", i);
-            msg->getAttributes()->setInt(ttmp3[i].text8(), padStates_[currentScene_][i].padTag);
+            msg->getAttributes()->setInt(String().printf("PadState%02d", i).text8(), padStates_[currentScene_][i].padState ? 1 : 0);
+            msg->getAttributes()->setInt(String().printf("PadType%02d", i).text8(), padStates_[currentScene_][i].padType);
+            msg->getAttributes()->setInt(String().printf("PadTag%02d", i).text8(), padStates_[currentScene_][i].padTag);
         }
         sendMessage(msg);
         msg->release();
@@ -1378,25 +1178,11 @@ void AVinyl::reset(bool state)
 {
     if (state) {
         // ---Reset filters------
-        speedFrameIndex_ = 0;
-        filtredLoLeft_ = 0;
-        filtredLoRight_ = 0;
-        filterBufferLeft_.reset();
-        filterBufferRight_.reset();
-        absAvgSpeed_ = 0;
-        directionBits_ = 0;
-        deltaLeft_ = 0.;
-        deltaRight_ = 0.;
-        oldSignalLeft_ = 0;
-        oldSignalRight_ = 0;
-        filtredHiLeft_ = 0.;
-        filtredHiRight_ = 0.;
-        timeCodeAmplytude_ = 0;
         holdCounter_ = 0;
         freezeCounter_ = 0;
 
-    }
-    else {
+        speedProcessor_ = SpeedProcessor<Sample64, ESpeedFrame, EFFTFrame, EFilterFrame>();
+    } else {
         // reset the VuMeter value
         vuLeft_ = 0.;
         vuRight_ = 0.;

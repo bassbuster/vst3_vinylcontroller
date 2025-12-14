@@ -8,6 +8,7 @@
 #include "helpers/padentry.h"
 #include "helpers/ringbuffer.h"
 #include "helpers/filtred.h"
+#include "helpers/speedprocessor.h"
 
 #include "vinylconfigconst.h"
 
@@ -68,8 +69,6 @@ public:
 
 private:
 
-    void calcDirectionTimeCodeAmplitude();
-    void calcAbsSpeed();
     void currentEntry(int64_t newentry);
 
     bool padWork(int padId, double paramValue);
@@ -90,38 +89,7 @@ private:
     void processEvent(const Event &event);
     void reset(bool state);
 
-    RingBuffer<Sample64, EFilterFrame> filterBufferLeft_;
-    RingBuffer<Sample64, EFilterFrame> filterBufferRight_;
-
-    Filtred<Sample64, EFilterFrame> filtredLoLeft_;
-    Filtred<Sample64, EFilterFrame> filtredLoRight_;
-
-    Sample64 originalBuffer_[EFFTFrame];
-    Sample64 fftBuffer_[EFFTFrame];
-
-    size_t speedFrameIndex_;
-
-    Filtred<Sample64, 10> absAvgSpeed_;
-    Filtred<Sample64> deltaLeft_;
-    Filtred<Sample64> deltaRight_;
-    Sample64 oldSignalLeft_;
-    Sample64 oldSignalRight_;
-    Filtred<Sample64> filtredHiLeft_;
-    Filtred<Sample64> filtredHiRight_;
-    Filtred<Sample64, 64> timeCodeAmplytude_;
-    size_t speedCounter_;
-    bool statusR_;
-    bool statusL_;
-    bool oldStatusR_;
-    bool oldStatusL_;
-    bool pStatusR_;
-    bool pStatusL_;
-    bool pOldStatusR_;
-    bool pOldStatusL_;
-
-    uint32_t directionBits_;
-    Sample64 direction_;
-
+    SpeedProcessor<Sample64, ESpeedFrame, EFFTFrame, EFilterFrame> speedProcessor_;
     int32 effectorSet_;
 
     // SoftCurves
@@ -153,7 +121,6 @@ private:
     Sample32 switch_;        //0..+1
     Sample32 curve_;         //0..+1
     bool bypass_;
-    bool timeCodeLearn_;
 
     std::vector<std::unique_ptr<SampleEntry<Sample64>>> samplesArray_;
     std::unique_ptr<SampleEntry<Sample64>> vintageSample_;
@@ -170,11 +137,8 @@ private:
     size_t noteLength_;
 
     Sample64 realPitch_;
-    Sample64 realSpeed_;
     Sample64 realVolume_;
-    Filtred<Sample64, 16> volCoeff_;
-    Filtred<Sample64, 256> avgTimeCodeCoeff_;
-    size_t timecodeLearnCounter_;
+
     size_t holdCounter_;
     size_t freezeCounter_;
     SampleEntry<Sample64>::CuePoint holdCue_;
