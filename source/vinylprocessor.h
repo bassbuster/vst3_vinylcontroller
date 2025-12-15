@@ -6,6 +6,7 @@
 #include "helpers/sampleentry.h"
 #include "helpers/parameterreader.h"
 #include "helpers/padentry.h"
+#include "helpers/fft.h"
 
 #include "vinylconfigconst.h"
 
@@ -97,8 +98,11 @@ private:
 	Sample32 SignalR[EFilterFrame];
     Filtred<Sample32, EFilterFrame> FSignalL;
     Filtred<Sample32, EFilterFrame> FSignalR;
-	Sample32 FFTPre[EFFTFrame];
-	Sample32 FFT[EFFTFrame];
+    // Sample32 FFTPre[EFFTFrame];
+ //    Sample32 FFT[EFFTFrame];
+
+    Sample64 filtred_[EFFTFrame];
+    Complex fft_[EFFTFrame];
 
     size_t SCursor;
     size_t FCursor;
@@ -161,7 +165,7 @@ private:
 	bool bTCLearn;
 
     std::vector<std::unique_ptr<SampleEntry<Sample32>>> SamplesArray;
-    std::unique_ptr<SampleEntry<Sample32>> VintageSample;
+    std::unique_ptr<SampleEntry<Sample64>> VintageSample;
 
     PadEntry padStates[EMaximumScenes][ENumberOfPads];
 

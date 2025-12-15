@@ -1550,7 +1550,7 @@ AVinylEditorView::SharedPointer<VSTGUI::CBitmap> AVinylEditorView::generateWavef
         }
     }
 
-    for (uint32_t i = 1; i < drawBeats ? halfWidth : 0; i++) {
+    for (uint32_t i = 1; i < (drawBeats ? halfWidth : 0U); i++) {
         if (((i == 1) || ((uint32_t((i - 2) / beatPeriodic)) != (uint32_t((i - 1) / beatPeriodic))))) {
             for (uint32_t j = 0; j <= 5; j++) {
                 for(uint32_t k = 0; k <= 5; k++) {
