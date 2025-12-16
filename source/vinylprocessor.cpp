@@ -407,6 +407,36 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
             if (!bBypass) {
 
+/*
+                inL = *ptrInLeft++;
+                inR = *ptrInRight++;
+                tmpL = (3.0f * tmpL + inL)/4.0f;
+                tmpR = (3.0f * tmpR + inR)/4.0f;
+
+                SignalL[FCursor] = tmpL;
+                SignalR[FCursor] = tmpR;
+                FSignalL = ((Sample64)(EFilterFrame - 1) * FSignalL + inL)
+                    / (Sample64)EFilterFrame;
+                FSignalR = ((Sample64)(EFilterFrame - 1) * FSignalR + inR)
+                    / (Sample64)EFilterFrame;
+                SignalL[SCursor] = SignalL[SCursor] - FSignalL;
+                SignalR[SCursor] = SignalR[SCursor] - FSignalR;
+                DeltaL = (3.0f * DeltaL + (SignalL[SCursor] - OldSignalL)) / 4.0f;
+                DeltaR = (3.0f * DeltaR + (SignalR[SCursor] - OldSignalR)) / 4.0f;
+
+                CalcDirectionTimeCodeAmplitude();
+
+                OldSignalL = SignalL[SCursor];
+                OldSignalR = SignalR[SCursor];
+                FCursor++;
+                if (FCursor >= EFilterFrame) {
+                    FCursor = 0;
+                }
+                SCursor++;
+                if (SCursor >= EFilterFrame) {
+                    SCursor = 0;
+                }
+*/
 
                 Sample32 inL = *ptrInLeft++;
                 Sample32 inR = *ptrInRight++;
@@ -447,13 +477,13 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
                     if (TimeCodeAmplytude >= ETimeCodeMinAmplytude) {
                         {
-                            auto debugInput = new SampleEntry<Sample32>("dbg", FFT, FFT, EFFTFrame);
-                            debugInputMessage(debugInput);
+                            //auto debugInput = new SampleEntry<Sample32>("dbg", FFT, FFT, EFFTFrame);
+                            debugInputMessage(FFT, EFFTFrame);
                         }
                         fastsine(FFT, EFFTFrame);
                         {
-                            auto debugFft = new SampleEntry<Sample32>("dbg", FFT, FFT, EFFTFrame);
-                            debugFftMessage(debugFft);
+                            //auto debugFft = new SampleEntry<Sample32>("dbg", FFT, FFT, EFFTFrame);
+                            debugFftMessage(FFT, EFFTFrame);
                         }
                         //fft2_simd(fft_, EFFTFrame);
 
@@ -1269,28 +1299,26 @@ void AVinyl::delSampleMessage(SampleEntry<Sample32> *delSample)
     }
 }
 
-void AVinyl::debugFftMessage(SampleEntry<Sample32>* fft)
+void AVinyl::debugFftMessage(Sample32* fft, size_t len)
 {
     if (fft) {
-        int64_t fftInt = int64_t(fft);
         IMessage* msg = allocateMessage();
         if (msg) {
             msg->setMessageID("debugFft");
-            msg->getAttributes()->setInt("Entry", fftInt);
+            msg->getAttributes()->setBinary("Entry", fft, uint32_t(len * sizeof(Sample32)));
             sendMessage(msg);
             msg->release();
         }
     }
 }
 
-void AVinyl::debugInputMessage(SampleEntry<Sample32>* input)
+void AVinyl::debugInputMessage(Sample32* input, size_t len)
 {
     if (input) {
-        int64_t inputInt = int64_t(input);
         IMessage* msg = allocateMessage();
         if (msg) {
             msg->setMessageID("debugInput");
-            msg->getAttributes()->setInt("Entry", inputInt);
+            msg->getAttributes()->setBinary("Entry", input, uint32_t(len * sizeof(Sample32)));
             sendMessage(msg);
             msg->release();
         }

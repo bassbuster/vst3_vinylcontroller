@@ -17,12 +17,12 @@ public:
     using CuePoint = Helper::CuePoint<int64_t, ParameterType>;
 
     explicit SampleEntry(const char *name = nullptr, const char *fileName = nullptr):
-        currentBeat_(0),
         Loop(false),
         Sync(false),
         Reverse(false),
         Tune(1.),
         Level(1.),
+        currentBeat_(0),
         sampleName_(name),
         index_(0),
         acidBeats_(0),
@@ -35,15 +35,15 @@ public:
         }
     }
 
-    SampleEntry(const char *name, SampleType *left, SampleType *right, size_t size):
-        soundBufferRight_(right, right + size),
-        soundBufferLeft_(left, left + size),
-        currentBeat_(0),
+    SampleEntry(const char *name, const SampleType *left, const SampleType *right, size_t size):
         Loop(false),
         Sync(false),
         Reverse(false),
         Tune(1.),
         Level(1.),
+        soundBufferRight_(right, right + size),
+        soundBufferLeft_(left, left + size),
+        currentBeat_(0),
         sampleName_(name),
         index_(0),
         acidBeats_(0),
@@ -333,12 +333,6 @@ public:
         return (other.soundBufferLeft_ != soundBufferLeft_) || (other.soundBufferRight_ != soundBufferRight_);
     }
 
-    bool Loop;
-    bool Sync;
-    bool Reverse;
-    ParameterType Tune;
-    ParameterType Level;
-
     SampleType getLeft(size_t index) const {
         return soundBufferLeft_[index];
     }
@@ -346,6 +340,12 @@ public:
     SampleType getRight(size_t index) const {
         return soundBufferRight_[index];
     }
+
+    bool Loop;
+    bool Sync;
+    bool Reverse;
+    ParameterType Tune;
+    ParameterType Level;
 
 private:
 

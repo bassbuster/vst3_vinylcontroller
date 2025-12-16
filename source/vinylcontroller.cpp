@@ -474,7 +474,7 @@ tresult PLUGIN_API AVinylController::notify (IMessage* message)
 		return kResultTrue;
 	}
     if (strcmp(message->getMessageID(), "addEntry") == 0) {
-		int64 newEntryInt;
+        int64 newEntryInt;
         SampleEntry<Sample32> * newEntry;
         message->getAttributes()->getInt("Entry", newEntryInt);
         newEntry = reinterpret_cast<SampleEntry<Sample32> *>(newEntryInt);
@@ -484,28 +484,30 @@ tresult PLUGIN_API AVinylController::notify (IMessage* message)
 		return kResultTrue;
 	}
     if (strcmp(message->getMessageID(), "debugFft") == 0) {
-        int64 newEntryInt;
-        SampleEntry<Sample32> * newEntry;
-        message->getAttributes()->getInt("Entry", newEntryInt);
-        newEntry = reinterpret_cast<SampleEntry<Sample32> *>(newEntryInt);
+        const void* buffer;
+        uint32_t bufferLen;
+        message->getAttributes()->getBinary("Entry", buffer, bufferLen);
+
+        SampleEntry<Sample32> newEntry("debug",
+                                       reinterpret_cast<const Sample32*>(buffer),
+                                       reinterpret_cast<const Sample32*>(buffer),
+                                       bufferLen / sizeof(Sample32));
         for(auto& view: viewsArray) {
-            static_cast<AVinylEditorView*>(view.get())->debugFft(newEntry);
-        }
-        if (newEntry) {
-            delete newEntry;
+            static_cast<AVinylEditorView*>(view.get())->debugFft(&newEntry);
         }
         return kResultTrue;
     }
     if (strcmp(message->getMessageID(), "debugInput") == 0) {
-        int64 newEntryInt;
-        SampleEntry<Sample32> * newEntry;
-        message->getAttributes()->getInt("Entry", newEntryInt);
-        newEntry = reinterpret_cast<SampleEntry<Sample32> *>(newEntryInt);
+        const void* buffer;
+        uint32_t bufferLen;
+        message->getAttributes()->getBinary("Entry", buffer, bufferLen);
+
+        SampleEntry<Sample32> newEntry("debug",
+                                       reinterpret_cast<const Sample32*>(buffer),
+                                       reinterpret_cast<const Sample32*>(buffer),
+                                       bufferLen / sizeof(Sample32));
         for(auto& view: viewsArray) {
-            static_cast<AVinylEditorView*>(view.get())->debugInput(newEntry);
-        }
-        if (newEntry) {
-            delete newEntry;
+            static_cast<AVinylEditorView*>(view.get())->debugInput(&newEntry);
         }
         return kResultTrue;
     }
