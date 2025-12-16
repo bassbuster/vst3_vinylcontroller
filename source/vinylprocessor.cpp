@@ -435,27 +435,27 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
 
                 Sample64 SmoothCoef = sin(Pi * Sample64(FFTCursor + EFFTFrame - ESpeedFrame) / Sample64(EFFTFrame));
-                //FFTPre[FFTCursor + EFFTFrame - ESpeedFrame] = (OldSignalL - OldSignalR);
-                //FFT[FFTCursor + EFFTFrame - ESpeedFrame] = (SmoothCoef * FFTPre[FFTCursor + EFFTFrame - ESpeedFrame]);
-                filtred_[FFTCursor + EFFTFrame - ESpeedFrame] = (OldSignalL - OldSignalR);
-                fft_[FFTCursor + EFFTFrame - ESpeedFrame].real = (SmoothCoef * filtred_[FFTCursor + EFFTFrame - ESpeedFrame]);
-                fft_[FFTCursor + EFFTFrame - ESpeedFrame].imaginary = 0;
+                FFTPre[FFTCursor + EFFTFrame - ESpeedFrame] = (OldSignalL - OldSignalR);
+                FFT[FFTCursor + EFFTFrame - ESpeedFrame] = (SmoothCoef * FFTPre[FFTCursor + EFFTFrame - ESpeedFrame]);
+                //filtred_[FFTCursor + EFFTFrame - ESpeedFrame] = (OldSignalL - OldSignalR);
+                //fft_[FFTCursor + EFFTFrame - ESpeedFrame].real = (SmoothCoef * filtred_[FFTCursor + EFFTFrame - ESpeedFrame]);
+                //fft_[FFTCursor + EFFTFrame - ESpeedFrame].imaginary = 0;
 
                 FFTCursor++;
                 if (FFTCursor >= ESpeedFrame) {
                     FFTCursor = 0;
 
                     if (TimeCodeAmplytude >= ETimeCodeMinAmplytude) {
-                        // {
-                        //     auto debugInput = new SampleEntry<Sample32>("dbg", FFT, FFT, EFFTFrame);
-                        //     debugInputMessage(debugInput);
-                        // }
-                        // fastsinetransform(FFT, EFFTFrame);
-                        // {
-                        //     auto debugFft = new SampleEntry<Sample32>("dbg", FFT, FFT, EFFTFrame);
-                        //     debugFftMessage(debugFft);
-                        // }
-                        fft2_simd(fft_, EFFTFrame);
+                        {
+                            auto debugInput = new SampleEntry<Sample32>("dbg", FFT, FFT, EFFTFrame);
+                            debugInputMessage(debugInput);
+                        }
+                        fastsine(FFT, EFFTFrame);
+                        {
+                            auto debugFft = new SampleEntry<Sample32>("dbg", FFT, FFT, EFFTFrame);
+                            debugFftMessage(debugFft);
+                        }
+                        //fft2_simd(fft_, EFFTFrame);
 
                         CalcAbsSpeed();
                         if (TimecodeLearnCounter > 0) {
@@ -473,11 +473,11 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                     for (size_t i = 0; i < EFFTFrame - ESpeedFrame; i++) {
                         //Sample64 SmoothCoef = 0.5 - 0.5 * cos((2.0 * Pi * Sample64(i) / EFFTFrame));
                         Sample64 SmoothCoef = sin(Pi * Sample64(i) / Sample64(EFFTFrame));
-                        // FFTPre[i] =	FFTPre[ESpeedFrame + i];
-                        // FFT[i] = (SmoothCoef * FFTPre[ESpeedFrame + i]);
-                        filtred_[i] = filtred_[ESpeedFrame + i];
-                        fft_[i].real = (SmoothCoef * filtred_[ESpeedFrame + i]);
-                        fft_[i].imaginary = 0.;
+                        FFTPre[i] =	FFTPre[ESpeedFrame + i];
+                        FFT[i] = (SmoothCoef * FFTPre[ESpeedFrame + i]);
+                        // filtred_[i] = filtred_[ESpeedFrame + i];
+                        // fft_[i].real = (SmoothCoef * filtred_[ESpeedFrame + i]);
+                        // fft_[i].imaginary = 0.;
                     }
                 }
 
@@ -859,10 +859,10 @@ void AVinyl::CalcAbsSpeed() {
     float maxY = 0.f;
 
     for (int i = 0; i < EFFTFrame; i++) {
-        // if (maxY < fabs(FFT[i])) {
-        //     maxY = fabs(FFT[i]);
-        if (maxY < fabs(fft_[i].real)) {
-            maxY = fabs(fft_[i].real);
+        if (maxY < fabs(FFT[i])) {
+            maxY = fabs(FFT[i]);
+        // if (maxY < fabs(fft_[i].real)) {
+        //     maxY = fabs(fft_[i].real);
             maxX = i;
         }
     }
@@ -871,10 +871,10 @@ void AVinyl::CalcAbsSpeed() {
     for (int i = maxX + 1; i < maxX + 3; i++) {
         if (i < EFFTFrame) {
             double koef = 100.;
-            // if (FFT[i] != 0) {
-            //     koef = (maxY / FFT[i]) * (maxY / FFT[i]);
-            if (fft_[i].real != 0) {
-                koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
+            if (FFT[i] != 0) {
+                koef = (maxY / FFT[i]) * (maxY / FFT[i]);
+            // if (fft_[i].real != 0) {
+            //     koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
             }
             tmp = (koef * tmp + double(i)) / (koef + 1.);
             continue;
@@ -885,8 +885,10 @@ void AVinyl::CalcAbsSpeed() {
     for (int i = maxX - 1; i > maxX - 3; i--) {
         if (i >= 0) {
             double koef = 100.;
-            if (fft_[i].real != 0) {
-                koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
+            if (FFT[i] != 0) {
+                koef = (maxY / FFT[i]) * (maxY / FFT[i]);
+            // if (fft_[i].real != 0) {
+            //    koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
             }
             tmp = (koef * tmp + double(i)) / (koef + 1.);
             continue;

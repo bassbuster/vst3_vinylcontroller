@@ -98,11 +98,11 @@ private:
 	Sample32 SignalR[EFilterFrame];
     Filtred<Sample32, EFilterFrame> FSignalL;
     Filtred<Sample32, EFilterFrame> FSignalR;
-    // Sample32 FFTPre[EFFTFrame];
- //    Sample32 FFT[EFFTFrame];
+    Sample32 FFTPre[EFFTFrame];
+    Sample32 FFT[EFFTFrame];
 
-    Sample64 filtred_[EFFTFrame];
-    Complex fft_[EFFTFrame];
+    //Sample64 filtred_[EFFTFrame];
+    //Complex fft_[EFFTFrame];
 
     size_t SCursor;
     size_t FCursor;
