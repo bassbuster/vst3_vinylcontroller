@@ -81,7 +81,7 @@ private:
             return value;
         }
 
-        Filtred& operator +=(SampleType val) {
+        Filtred& append(SampleType val) {
             value = (SampleType(round - 1) * value + val) / SampleType(round);
             return *this;
         }

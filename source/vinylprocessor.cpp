@@ -438,17 +438,17 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                 }
 */
 
-                Sample32 inL = *ptrInLeft++;
-                Sample32 inR = *ptrInRight++;
+                Sample32 inL = Sample32(*ptrInLeft++);
+                Sample32 inR = Sample32(*ptrInRight++);
 
-                SignalL[FCursor] = (filtredL += inL);
-                SignalR[FCursor] = (filtredL += inR);
+                SignalL[FCursor] = (filtredL.append(inL));
+                SignalR[FCursor] = (filtredL.append(inR));
 
-                SignalL[SCursor] = SignalL[SCursor] - (FSignalL += inL);
-                SignalR[SCursor] = SignalR[SCursor] - (FSignalR += inR);
+                SignalL[SCursor] = SignalL[SCursor] - (FSignalL.append(inL));
+                SignalR[SCursor] = SignalR[SCursor] - (FSignalR.append(inR));
 
-                DeltaL += (SignalL[SCursor] - OldSignalL);
-                DeltaR += (SignalR[SCursor] - OldSignalR);
+                DeltaL.append(SignalL[SCursor] - OldSignalL);
+                DeltaR.append(SignalR[SCursor] - OldSignalR);
 
                 CalcDirectionTimeCodeAmplitude();
 
@@ -490,13 +490,13 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                         CalcAbsSpeed();
                         if (TimecodeLearnCounter > 0) {
                             TimecodeLearnCounter--;
-                            avgTimeCodeCoeff += (Direction * absAVGSpeed);
+                            avgTimeCodeCoeff.append(Direction * absAVGSpeed);
                             fRealSpeed = 1.;
                         } else {
                             fRealSpeed = absAVGSpeed / avgTimeCodeCoeff;
                             bTCLearn = false;
                         }
-                        fVolCoeff += sqrt(fabs(fRealSpeed));
+                        fVolCoeff.append(sqrt(fabs(fRealSpeed)));
                         fRealSpeed = (Sample64)Direction * fRealSpeed;
                     }
 
@@ -515,7 +515,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                     if (fVolCoeff >= 0.00001) {
                         absAVGSpeed = absAVGSpeed / 1.07;
                         fRealSpeed = absAVGSpeed / avgTimeCodeCoeff;
-                        fVolCoeff += sqrt(fabs(fRealSpeed));
+                        fVolCoeff.append(sqrt(fabs(fRealSpeed)));
                         fRealSpeed = Sample64(Direction) * fRealSpeed;
                     } else {
                         absAVGSpeed = 0.;
@@ -530,22 +530,22 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
                     ////////////////////EFFECTOR BEGIN//////////////////////////////
 
-                    softVolume += ((effectorSet & ePunchIn) ? (fGain * fVolCoeff) :
-                                       ((effectorSet & ePunchOut) ? 0. : (fRealVolume * fVolCoeff)));
-                    softPreRoll += (effectorSet & ePreRoll ? 1. : 0.);
-                    softPostRoll += (effectorSet & ePostRoll ? 1. : 0.);
-                    softDistorsion += (effectorSet & eDistorsion ? 1. : 0.);
-                    softVintage += (effectorSet & eVintage ? 1. : 0.);
+                    softVolume.append((effectorSet & ePunchIn) ? (fGain * fVolCoeff) :
+                                           ((effectorSet & ePunchOut) ? 0. : (fRealVolume * fVolCoeff)));
+                    softPreRoll.append(effectorSet & ePreRoll ? 1. : 0.);
+                    softPostRoll.append(effectorSet & ePostRoll ? 1. : 0.);
+                    softDistorsion.append(effectorSet & eDistorsion ? 1. : 0.);
+                    softVintage.append(effectorSet & eVintage ? 1. : 0.);
 
                     if (effectorSet & eHold) {
                         if (!keyHold) {
                             HoldCue = SamplesArray.at(iCurrentEntry)->cue();
                             keyHold = true;
                         }
-                        softHold += 1.;
+                        softHold.append(1.);
                     } else {
                         keyHold = false;
-                        softHold += 0.;
+                        softHold.append(0.);
                     }
 
                     if (effectorSet & eFreeze) {
@@ -554,13 +554,13 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                             FreezeCueCur = FreezeCue;
                             keyFreeze = true;
                         }
-                        softFreeze += 1.;
+                        softFreeze.append(1.);
                     } else {
                         if (keyFreeze) {
                             keyFreeze = false;
                             AfterFreezeCue = FreezeCueCur;
                         }
-                        softFreeze += 0.;
+                        softFreeze.append(0.);
                     }
 
                     if (effectorSet & eLockTone) {
@@ -929,7 +929,7 @@ void AVinyl::CalcAbsSpeed() {
     if (fabs(tmp - absAVGSpeed) > 0.7) {
         absAVGSpeed = tmp;
     } else {
-        absAVGSpeed += tmp;
+        absAVGSpeed.append(tmp);
     }
 }
 
