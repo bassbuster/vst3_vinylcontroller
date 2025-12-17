@@ -51,19 +51,19 @@ public:
 
     //---Custom Function------------------
     void update (ParamID tag, ParamValue value);
-    void initEntry(SampleEntry<Sample32> * newEntry);
+    void initEntry(SampleEntry<Sample64> * newEntry);
     void delEntry(size_t delEntryIndex);
     void setPadState(int _pad, bool _state);
     void setPadType(int _pad, int _type);
     void setPadTag(int _pad, int _tag);
-    SharedPointer<VSTGUI::CBitmap> generateWaveform(SampleEntry<Sample32> * newEntry, bool normolize = false);
+    SharedPointer<VSTGUI::CBitmap> generateWaveform(SampleEntry<Sample64> * newEntry, bool normolize = false);
 
     void setSpeedMonitor(double _speed);
     void setPositionMonitor(double _position);
 
 
-    void debugFft(SampleEntry<Sample32> * newEntry);
-    void debugInput(SampleEntry<Sample32> * newEntry);
+    void debugFft(SampleEntry<Sample64> * newEntry);
+    void debugInput(SampleEntry<Sample64> * newEntry);
 
 //------------------------------------------------------------------------
 private:

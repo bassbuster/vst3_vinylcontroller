@@ -438,8 +438,8 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                 }
 */
 
-                Sample32 inL = Sample32(*ptrInLeft++);
-                Sample32 inR = Sample32(*ptrInRight++);
+                Sample64 inL = Sample64(*ptrInLeft++);
+                Sample64 inR = Sample64(*ptrInRight++);
 
                 SignalL[FCursor] = (filtredL.append(inL));
                 SignalR[FCursor] = (filtredL.append(inR));
@@ -465,7 +465,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
 
                 Sample64 SmoothCoef = sin(Pi * Sample64(FFTCursor + EFFTFrame - ESpeedFrame) / Sample64(EFFTFrame));
-                FFTPre[FFTCursor + EFFTFrame - ESpeedFrame] = (OldSignalL - OldSignalR);
+                FFTPre[FFTCursor + EFFTFrame - ESpeedFrame] = inL;// (OldSignalL - OldSignalR);
                 FFT[FFTCursor + EFFTFrame - ESpeedFrame] = (SmoothCoef * FFTPre[FFTCursor + EFFTFrame - ESpeedFrame]);
                 //filtred_[FFTCursor + EFFTFrame - ESpeedFrame] = (OldSignalL - OldSignalR);
                 //fft_[FFTCursor + EFFTFrame - ESpeedFrame].real = (SmoothCoef * filtred_[FFTCursor + EFFTFrame - ESpeedFrame]);
@@ -476,16 +476,36 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                     FFTCursor = 0;
 
                     if (TimeCodeAmplytude >= ETimeCodeMinAmplytude) {
-                        {
-                            //auto debugInput = new SampleEntry<Sample32>("dbg", FFT, FFT, EFFTFrame);
+                        { 
+                            //Sample64 real_[EFFTFrame];
+                            //for (size_t i = 0; i < EFFTFrame; i++) {
+                            //    real_[i] = fft_[i].real;
+                            //}
                             debugInputMessage(FFT, EFFTFrame);
                         }
                         fastsine(FFT, EFFTFrame);
+                        //fft2_simd(fft_, EFFTFrame);
+                        for (size_t i = 0; i < EFFTFrame; i++) {
+                            Sample64 SmoothCoef = sin(Pi * Sample64(i) / Sample64(EFFTFrame));
+                            FFT[i] = SmoothCoef * FFT[i];
+                            //fft_[i].real = SmoothCoef * fft_[i].real;
+                            //fft_[i].imaginary = SmoothCoef * fft_[i].imaginary;
+                        }
                         {
-                            //auto debugFft = new SampleEntry<Sample32>("dbg", FFT, FFT, EFFTFrame);
+                            //Sample64 real_[EFFTFrame];
+                            //for (size_t i = 0; i < EFFTFrame; i++) {
+                            //    real_[i] = fft_[i].real;
+                            //}
                             debugFftMessage(FFT, EFFTFrame);
                         }
-                        //fft2_simd(fft_, EFFTFrame);
+                        {
+                            //Sample64 real_[EFFTFrame];
+                            //for (size_t i = 0; i < EFFTFrame; i++) {
+                            //    real_[i] = fft_[i].imaginary;
+                            //}
+                            //debugInputMessage(FFT, EFFTFrame);
+                        }
+                        
 
                         CalcAbsSpeed();
                         if (TimecodeLearnCounter > 0) {
@@ -505,9 +525,9 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                         Sample64 SmoothCoef = sin(Pi * Sample64(i) / Sample64(EFFTFrame));
                         FFTPre[i] =	FFTPre[ESpeedFrame + i];
                         FFT[i] = (SmoothCoef * FFTPre[ESpeedFrame + i]);
-                        // filtred_[i] = filtred_[ESpeedFrame + i];
-                        // fft_[i].real = (SmoothCoef * filtred_[ESpeedFrame + i]);
-                        // fft_[i].imaginary = 0.;
+                        //filtred_[i] = filtred_[ESpeedFrame + i];
+                        //fft_[i].real = (SmoothCoef * filtred_[ESpeedFrame + i]);
+                        //fft_[i].imaginary = 0.;
                     }
                 }
 
@@ -581,43 +601,55 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                     Sample64 _tempo = 0.;
 
                     if (keyLockTone) {
+                        Sample64 fLeft = 0;
+                        Sample64 fRight = 0;
                         _speed = (Sample64)Direction * lockSpeed;
                         _tempo = SamplesArray.at(iCurrentEntry)->Sync
                                      ? fabs(dTempo * fRealSpeed * fRealPitch)
                                      : SamplesArray.at(iCurrentEntry)->tempo() * fabs(fRealSpeed * fRealPitch) * lockTune;
-                        SamplesArray.at(iCurrentEntry)->playStereoSampleTempo(ptrOutLeft,
-                                                                              ptrOutRight,
+                        SamplesArray.at(iCurrentEntry)->playStereoSampleTempo(&fLeft,
+                                                                              &fRight,
                                                                               _speed,
                                                                               _tempo,
                                                                               dSampleRate,
                                                                               true);
+                        *ptrOutLeft = fLeft;
+                        *ptrOutRight = fRight;
                     } else {
+                        Sample64 fLeft = 0;
+                        Sample64 fRight = 0;
                         _speed = fRealSpeed * fRealPitch;
                         _tempo = dTempo;
-                        SamplesArray.at(iCurrentEntry)->playStereoSample(ptrOutLeft,
-                                                                         ptrOutRight,
+                        SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft,
+                                                                         &fRight,
                                                                          _speed,
                                                                          _tempo,
                                                                          dSampleRate,
                                                                          true);
+                        *ptrOutLeft = fLeft;
+                        *ptrOutRight = fRight;
                     }
 
                     if (keyFreeze) {
+                        Sample64 fLeft = 0;
+                        Sample64 fRight = 0;
                         FreezeCounter++;
                         bool pushSync = SamplesArray.at(iCurrentEntry)->Sync;
                         SamplesArray.at(iCurrentEntry)->Sync = false;
                         auto PushCue = SamplesArray.at(iCurrentEntry)->cue();
                         SamplesArray.at(iCurrentEntry)->cue(FreezeCueCur);
-                        SamplesArray.at(iCurrentEntry)->playStereoSample(ptrOutLeft,
-                                                                         ptrOutRight,
+                        SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft,
+                                                                         &fRight,
                                                                          _speed,
                                                                          _tempo,
                                                                          dSampleRate,
                                                                          true);
+                        *ptrOutLeft = fLeft;
+                        *ptrOutRight = fRight;
                         FreezeCueCur =  SamplesArray.at(iCurrentEntry)->cue();
                         if ((softFreeze>0.00001)&&(softFreeze<0.99)) {
-                            Sample32 fLeft = 0;
-                            Sample32 fRight = 0;
+                            Sample64 fLeft = 0;
+                            Sample64 fRight = 0;
                             SamplesArray.at(iCurrentEntry)->cue(AfterFreezeCue);
                             SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft,
                                                                              &fRight,
@@ -644,8 +676,8 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                     if (keyHold) {
                         HoldCounter++;
                         if ((softHold>0.00001)&&(softHold<0.99)) {
-                            Sample32 fLeft = 0;
-                            Sample32 fRight = 0;
+                            Sample64 fLeft = 0;
+                            Sample64 fRight = 0;
                             auto PushCue = SamplesArray.at(iCurrentEntry)->cue();
                             SamplesArray.at(iCurrentEntry)->cue(AfterHoldCue);
                             SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft,
@@ -674,8 +706,8 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                         Sample64 pre_offset = offset;
                         Sample64 pos_offset = -offset;
 
-                        Sample32 fLeft = 0;
-                        Sample32 fRight = 0;
+                        Sample64 fLeft = 0;
+                        Sample64 fRight = 0;
                         for (int i = 0; i < ERollCount; i++) {
                             Sample32 rollVolume = (1. -Sample32(i) / Sample32(ERollCount)) * .6;
                             if (softPreRoll > 0.0001) {
@@ -891,8 +923,8 @@ void AVinyl::CalcAbsSpeed() {
     for (int i = 0; i < EFFTFrame; i++) {
         if (maxY < fabs(FFT[i])) {
             maxY = fabs(FFT[i]);
-        // if (maxY < fabs(fft_[i].real)) {
-        //     maxY = fabs(fft_[i].real);
+        //if (maxY < fabs(fft_[i].real)) {
+        //    maxY = fabs(fft_[i].real);
             maxX = i;
         }
     }
@@ -903,8 +935,8 @@ void AVinyl::CalcAbsSpeed() {
             double koef = 100.;
             if (FFT[i] != 0) {
                 koef = (maxY / FFT[i]) * (maxY / FFT[i]);
-            // if (fft_[i].real != 0) {
-            //     koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
+            //if (fft_[i].real != 0) {
+            //    koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
             }
             tmp = (koef * tmp + double(i)) / (koef + 1.);
             continue;
@@ -917,8 +949,8 @@ void AVinyl::CalcAbsSpeed() {
             double koef = 100.;
             if (FFT[i] != 0) {
                 koef = (maxY / FFT[i]) * (maxY / FFT[i]);
-            // if (fft_[i].real != 0) {
-            //    koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
+            //if (fft_[i].real != 0) {
+            //   koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
             }
             tmp = (koef * tmp + double(i)) / (koef + 1.);
             continue;
@@ -1028,7 +1060,7 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
             String sName (bufname.data());
             String sFile (buffile.data());
 
-            SamplesArray.push_back(std::make_unique<SampleEntry<Sample32>>(sName,sFile));
+            SamplesArray.push_back(std::make_unique<SampleEntry<Sample64>>(sName,sFile));
             SamplesArray.back()->index(SamplesArray.size());
             SamplesArray.back()->Loop = savedLoop > 0;
             SamplesArray.back()->Reverse = savedReverse > 0;
@@ -1212,7 +1244,7 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
             memset(stringBuff, 0, 256 * sizeof(tchar));
             if (message->getAttributes()->getString("Sample", stringBuff, sizeof(stringBuff) / sizeof(TChar)) == kResultOk) {
                 String newName(stringBuff);
-                SamplesArray.push_back(std::make_unique<SampleEntry<Sample32>>(newName, newFile));
+                SamplesArray.push_back(std::make_unique<SampleEntry<Sample64>>(newName, newFile));
                 SamplesArray.back()->index(SamplesArray.size());
                 if (iCurrentEntry == (SamplesArray.back()->index() - 1)) {
                     PadSet(iCurrentEntry);
@@ -1231,7 +1263,7 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
             String newFile(stringBuff);
             if (message->getAttributes()->getString("Sample", stringBuff, sizeof (stringBuff) / sizeof (TChar)) == kResultOk) {
                 String newName(stringBuff);
-                SamplesArray[iCurrentEntry] = std::make_unique<SampleEntry<Sample32>>(newName, newFile);
+                SamplesArray[iCurrentEntry] = std::make_unique<SampleEntry<Sample64>>(newName, newFile);
                 SamplesArray[iCurrentEntry]->index(iCurrentEntry + 1);
             }
         }
@@ -1272,7 +1304,7 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
     return AudioEffect::notify (message);
 }
 
-void AVinyl::addSampleMessage(SampleEntry<Sample32>* newSample)
+void AVinyl::addSampleMessage(SampleEntry<Sample64>* newSample)
 {
     if (newSample) {
         int64_t sampleInt = int64_t(newSample);
@@ -1286,7 +1318,7 @@ void AVinyl::addSampleMessage(SampleEntry<Sample32>* newSample)
     }
 }
 
-void AVinyl::delSampleMessage(SampleEntry<Sample32> *delSample)
+void AVinyl::delSampleMessage(SampleEntry<Sample64> *delSample)
 {
     if (delSample) {
         IMessage* msg = allocateMessage ();
@@ -1299,26 +1331,26 @@ void AVinyl::delSampleMessage(SampleEntry<Sample32> *delSample)
     }
 }
 
-void AVinyl::debugFftMessage(Sample32* fft, size_t len)
+void AVinyl::debugFftMessage(Sample64* fft, size_t len)
 {
     if (fft) {
         IMessage* msg = allocateMessage();
         if (msg) {
             msg->setMessageID("debugFft");
-            msg->getAttributes()->setBinary("Entry", fft, uint32_t(len * sizeof(Sample32)));
+            msg->getAttributes()->setBinary("Entry", fft, uint32_t(len * sizeof(Sample64)));
             sendMessage(msg);
             msg->release();
         }
     }
 }
 
-void AVinyl::debugInputMessage(Sample32* input, size_t len)
+void AVinyl::debugInputMessage(Sample64* input, size_t len)
 {
     if (input) {
         IMessage* msg = allocateMessage();
         if (msg) {
             msg->setMessageID("debugInput");
-            msg->getAttributes()->setBinary("Entry", input, uint32_t(len * sizeof(Sample32)));
+            msg->getAttributes()->setBinary("Entry", input, uint32_t(len * sizeof(Sample64)));
             sendMessage(msg);
             msg->release();
         }

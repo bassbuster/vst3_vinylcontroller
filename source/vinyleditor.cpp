@@ -1507,7 +1507,7 @@ void AVinylEditorView::setPositionMonitor(double _position)
     }
 }
 
-AVinylEditorView::SharedPointer<VSTGUI::CBitmap> AVinylEditorView::generateWaveform(SampleEntry<Sample32> * newEntry, bool normolize)
+AVinylEditorView::SharedPointer<VSTGUI::CBitmap> AVinylEditorView::generateWaveform(SampleEntry<Sample64> * newEntry, bool normolize)
 {
     size_t bitmapWidth = newEntry->bufferLength();
     if (bitmapWidth < 400) {
@@ -1521,7 +1521,7 @@ AVinylEditorView::SharedPointer<VSTGUI::CBitmap> AVinylEditorView::generateWavef
     }
     size_t halfWidth  = bitmapWidth / 2;
 
-    SampleEntry<Sample32>::Type norm = normolize ? 1. / newEntry->peakSample(0, newEntry->bufferLength()) : 1.;
+    SampleEntry<Sample64>::Type norm = normolize ? 1. / newEntry->peakSample(0, newEntry->bufferLength()) : 1.;
 
     bool drawBeats =  newEntry->getACIDbeats() > 0;
 
@@ -1540,8 +1540,8 @@ AVinylEditorView::SharedPointer<VSTGUI::CBitmap> AVinylEditorView::generateWavef
     for (uint32_t i = 1; i < halfWidth; i++) {
         pixelMap->setPosition((i - 1) * 2, 61);
         pixelMap->setColor(VSTGUI::CColor(0, 255, 0, 120));
-        SampleEntry<Sample32>::Type height = norm * newEntry->peakSample((i - 1) * stretch, i * stretch);
-        SampleEntry<Sample32>::Type heightStretch = 60. * height;
+        SampleEntry<Sample64>::Type height = norm * newEntry->peakSample((i - 1) * stretch, i * stretch);
+        SampleEntry<Sample64>::Type heightStretch = 60. * height;
         for (uint32_t j = 1; j < 40 * height; j++) {
             pixelMap->setPosition((i - 1) * 2, 61 - j * 2);
             pixelMap->setColor(VSTGUI::CColor(100. * (1. - j / heightStretch), 255, 0, 40 + 180 * sqr(1. - j / heightStretch)));
@@ -1619,7 +1619,7 @@ void AVinylEditorView::delEntry(size_t delEntryIndex)
     }
 }
 
-void AVinylEditorView::initEntry(SampleEntry<Sample32> * newEntry)
+void AVinylEditorView::initEntry(SampleEntry<Sample64> * newEntry)
 {
     if (newEntry) {
         auto waveForm = generateWaveform(newEntry);
@@ -1681,7 +1681,7 @@ void AVinylEditorView::initEntry(SampleEntry<Sample32> * newEntry)
     }
 }
 
-void AVinylEditorView::debugFft(SampleEntry<Sample32> *newEntry)
+void AVinylEditorView::debugFft(SampleEntry<Sample64> *newEntry)
 {
     if (newEntry) {
         auto waveForm = generateWaveform(newEntry, true);
@@ -1696,7 +1696,7 @@ void AVinylEditorView::debugFft(SampleEntry<Sample32> *newEntry)
     }
 }
 
-void AVinylEditorView::debugInput(SampleEntry<Sample32> *newEntry)
+void AVinylEditorView::debugInput(SampleEntry<Sample64> *newEntry)
 {
     if (newEntry) {
         auto waveForm = generateWaveform(newEntry, true);

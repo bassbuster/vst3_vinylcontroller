@@ -475,9 +475,9 @@ tresult PLUGIN_API AVinylController::notify (IMessage* message)
 	}
     if (strcmp(message->getMessageID(), "addEntry") == 0) {
         int64 newEntryInt;
-        SampleEntry<Sample32> * newEntry;
+        SampleEntry<Sample64> * newEntry;
         message->getAttributes()->getInt("Entry", newEntryInt);
-        newEntry = reinterpret_cast<SampleEntry<Sample32> *>(newEntryInt);
+        newEntry = reinterpret_cast<SampleEntry<Sample64> *>(newEntryInt);
         for(auto& view: viewsArray) {
             static_cast<AVinylEditorView*>(view.get())->initEntry(newEntry);
         }
@@ -488,10 +488,10 @@ tresult PLUGIN_API AVinylController::notify (IMessage* message)
         uint32_t bufferLen;
         message->getAttributes()->getBinary("Entry", buffer, bufferLen);
 
-        SampleEntry<Sample32> newEntry("debug",
-                                       reinterpret_cast<const Sample32*>(buffer),
-                                       reinterpret_cast<const Sample32*>(buffer),
-                                       bufferLen / sizeof(Sample32));
+        SampleEntry<Sample64> newEntry("debug",
+                                       reinterpret_cast<const Sample64*>(buffer),
+                                       reinterpret_cast<const Sample64*>(buffer),
+                                       bufferLen / sizeof(Sample64));
         for(auto& view: viewsArray) {
             static_cast<AVinylEditorView*>(view.get())->debugFft(&newEntry);
         }
@@ -502,10 +502,10 @@ tresult PLUGIN_API AVinylController::notify (IMessage* message)
         uint32_t bufferLen;
         message->getAttributes()->getBinary("Entry", buffer, bufferLen);
 
-        SampleEntry<Sample32> newEntry("debug",
-                                       reinterpret_cast<const Sample32*>(buffer),
-                                       reinterpret_cast<const Sample32*>(buffer),
-                                       bufferLen / sizeof(Sample32));
+        SampleEntry<Sample64> newEntry("debug",
+                                       reinterpret_cast<const Sample64*>(buffer),
+                                       reinterpret_cast<const Sample64*>(buffer),
+                                       bufferLen / sizeof(Sample64));
         for(auto& view: viewsArray) {
             static_cast<AVinylEditorView*>(view.get())->debugInput(&newEntry);
         }

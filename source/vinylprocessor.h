@@ -94,12 +94,12 @@ private:
         SampleType value;
     };
 
-	Sample32 SignalL[EFilterFrame];
-	Sample32 SignalR[EFilterFrame];
-    Filtred<Sample32, EFilterFrame> FSignalL;
-    Filtred<Sample32, EFilterFrame> FSignalR;
-    Sample32 FFTPre[EFFTFrame];
-    Sample32 FFT[EFFTFrame];
+    Sample64 SignalL[EFilterFrame];
+    Sample64 SignalR[EFilterFrame];
+    Filtred<Sample64, EFilterFrame> FSignalL;
+    Filtred<Sample64, EFilterFrame> FSignalR;
+    Sample64 FFTPre[EFFTFrame];
+    Sample64 FFT[EFFTFrame];
 
     //Sample64 filtred_[EFFTFrame];
     //Complex fft_[EFFTFrame];
@@ -108,15 +108,15 @@ private:
     size_t FCursor;
     size_t FFTCursor;
 
-    Filtred<Sample32, 10> absAVGSpeed;
+    Filtred<Sample64, 10> absAVGSpeed;
 	short Direction;
-    Filtred<Sample32> DeltaL;
-    Filtred<Sample32> DeltaR;
-	Sample32 OldSignalL;
-	Sample32 OldSignalR;
-    Filtred<Sample32> filtredL;
-    Filtred<Sample32> filtredR;
-	Sample32 TimeCodeAmplytude;
+    Filtred<Sample64> DeltaL;
+    Filtred<Sample64> DeltaR;
+    Sample64 OldSignalL;
+    Sample64 OldSignalR;
+    Filtred<Sample64> filtredL;
+    Filtred<Sample64> filtredR;
+    Sample64 TimeCodeAmplytude;
     size_t SpeedCounter;
 	bool StatusR;
 	bool StatusL;
@@ -164,7 +164,7 @@ private:
     bool bBypass;
 	bool bTCLearn;
 
-    std::vector<std::unique_ptr<SampleEntry<Sample32>>> SamplesArray;
+    std::vector<std::unique_ptr<SampleEntry<Sample64>>> SamplesArray;
     std::unique_ptr<SampleEntry<Sample64>> VintageSample;
 
     PadEntry padStates[EMaximumScenes][ENumberOfPads];
@@ -184,15 +184,15 @@ private:
     float GetNormalizeTag(int _tag);
 
     // SampleBase manipulation
-    void addSampleMessage(SampleEntry<Sample32>* newSample);
-    void delSampleMessage(SampleEntry<Sample32>* delSample);
+    void addSampleMessage(SampleEntry<Sample64>* newSample);
+    void delSampleMessage(SampleEntry<Sample64>* delSample);
     void initSamplesMessage(void);
     void updateSpeedMessage(Sample64 speed);
     void updatePositionMessage(Sample64 speed);
     void updatePadsMessage(void);
 
-    void debugFftMessage(Sample32 *fft, size_t len);
-    void debugInputMessage(Sample32 *input, size_t len);
+    void debugFftMessage(Sample64 *fft, size_t len);
+    void debugInputMessage(Sample64 *input, size_t len);
 
     bool dirtyParams;
 
@@ -208,12 +208,12 @@ private:
 	int TimecodeLearnCounter;
 	int HoldCounter;
 	int FreezeCounter;
-    SampleEntry<Sample32>::CuePoint HoldCue;
-    SampleEntry<Sample32>::CuePoint AfterHoldCue;
-    SampleEntry<Sample32>::CuePoint FreezeCue;
-    SampleEntry<Sample32>::CuePoint AfterFreezeCue;
-    SampleEntry<Sample32>::CuePoint FreezeCueCur;
-    SampleEntry<Sample32>::CuePoint Cue;
+    SampleEntry<Sample64>::CuePoint HoldCue;
+    SampleEntry<Sample64>::CuePoint AfterHoldCue;
+    SampleEntry<Sample64>::CuePoint FreezeCue;
+    SampleEntry<Sample64>::CuePoint AfterFreezeCue;
+    SampleEntry<Sample64>::CuePoint FreezeCueCur;
+    SampleEntry<Sample64>::CuePoint Cue;
 
     void processEvent(const Event &event);
     void reset(bool state);
