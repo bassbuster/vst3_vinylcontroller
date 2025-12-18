@@ -56,13 +56,13 @@ public:
     tresult PLUGIN_API queryInterface (const char* iid, void** obj) override;
 
 private:
-    std::vector<SharedPointer<EditorView>> viewsArray;
-	int midiGain;
-	int midiScene;
-	int midiMix;
-	int midiPitch;
-	int midiVolume;
-	int midiTune;
+    std::vector<SharedPointer<EditorView>> viewsArray_;
+    int midiGain_;
+    int midiScene_;
+    int midiMix_;
+    int midiPitch_;
+    int midiVolume_;
+    int midiTune_;
 
 };
 

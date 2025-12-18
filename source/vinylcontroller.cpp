@@ -33,16 +33,16 @@ namespace Vst {
 class GainParameter : public Parameter
 {
 public:
-	GainParameter (const char* title, int32 flags, int32 id);
+    GainParameter(const char* title, int32 flags, int32 id);
 
-    void toString (ParamValue normValue, String128 string) const override;
-    bool fromString (const TChar* string, ParamValue& normValue) const override;
+    void toString(ParamValue normValue, String128 string) const override;
+    bool fromString(const TChar* string, ParamValue& normValue) const override;
 };
 
 //------------------------------------------------------------------------
 // GainParameter Implementation
 //------------------------------------------------------------------------
-GainParameter::GainParameter (const char* title, int32 flags, int32 id)
+GainParameter::GainParameter(const char* title, int32 flags, int32 id)
 {
     Steinberg::UString(info.title, USTRINGSIZE(info.title)).assign(USTRING(title));
     Steinberg::UString(info.units, USTRINGSIZE(info.units)).assign(USTRING("dB"));
@@ -57,7 +57,7 @@ GainParameter::GainParameter (const char* title, int32 flags, int32 id)
 }
 
 //------------------------------------------------------------------------
-void GainParameter::toString (ParamValue normValue, String128 string) const
+void GainParameter::toString(ParamValue normValue, String128 string) const
 {
 	char text[32];
     if (normValue > 0.0001) {
@@ -70,7 +70,7 @@ void GainParameter::toString (ParamValue normValue, String128 string) const
 }
 
 //------------------------------------------------------------------------
-bool GainParameter::fromString (const TChar* string, ParamValue& normValue) const
+bool GainParameter::fromString(const TChar* string, ParamValue& normValue) const
 {
     String wrapper((TChar*)string); // don't know buffer size here!
 	double tmp = 0.0;
@@ -91,12 +91,12 @@ bool GainParameter::fromString (const TChar* string, ParamValue& normValue) cons
 //------------------------------------------------------------------------
 tresult PLUGIN_API AVinylController::initialize(FUnknown* context)
 {
-	midiGain = gGain;
-	midiScene = gScene;
-	midiMix = gMix;
-	midiPitch = gPitch;
-	midiVolume = gVolume;
-	midiTune = gTune;
+    midiGain_ = gGain;
+    midiScene_ = gScene;
+    midiMix_ = gMix;
+    midiPitch_ = gPitch;
+    midiVolume_ = gVolume;
+    midiTune_ = gTune;
 
     tresult result = EditControllerEx1::initialize(context);
     if (result != kResultOk) {
@@ -141,22 +141,22 @@ tresult PLUGIN_API AVinylController::initialize(FUnknown* context)
     parameters.addParameter(STR16("Vintage"), 0, 1, 0, ParameterInfo::kIsReadOnly, kVintageId);
     parameters.addParameter(STR16("LockTone"), 0, 1, 0, ParameterInfo::kIsReadOnly, kLockToneId);
 
-    auto pitchParam = make_shared<RangeParameter>(STR16("Pitch"), kPitchId, STR16("%"), 0, 1, 0.5, 511, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
+    auto pitchParam = make_shared<RangeParameter>(STR16("Pitch"), kPitchId, STR16("%"), 0, 1, 0.5, 511, ParameterInfo::kCanAutomate | ParameterInfo::kIsWrapAround, kRootUnitId);
     parameters.addParameter(pitchParam);
 
 	//RangeParameter* padsParam = new RangeParameter (STR16 ("ActivePad"), kCurrentPadId,STR16 ("Number"),1,NumberOfPads,1,NumberOfPads-1, ParameterInfo::kCanAutomate, kRootUnitId);
 	//parameters.addParameter (padsParam);
 
-    auto sampleParam = make_shared<RangeParameter>(STR16("CurrentSample"), kCurrentEntryId,STR16 ("Number"),1,EMaximumSamples,1,EMaximumSamples-1, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
+    auto sampleParam = make_shared<RangeParameter>(STR16("CurrentSample"), kCurrentEntryId, STR16("Number"), 1, EMaximumSamples, 1, EMaximumSamples - 1, ParameterInfo::kCanAutomate | ParameterInfo::kIsWrapAround, kRootUnitId);
     parameters.addParameter(sampleParam);
 
-    auto sceneParam = make_shared<RangeParameter>(STR16 ("CurrentScene"), kCurrentSceneId,STR16 ("Number"),1,EMaximumScenes,1,EMaximumScenes-1, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
+    auto sceneParam = make_shared<RangeParameter>(STR16("CurrentScene"), kCurrentSceneId, STR16("Number"), 1, EMaximumScenes, 1, EMaximumScenes - 1, ParameterInfo::kCanAutomate | ParameterInfo::kIsWrapAround, kRootUnitId);
     parameters.addParameter(sceneParam);
 
-    auto switchParam = make_shared<RangeParameter>(STR16 ("PitchSwitch"), kPitchSwitchId,STR16 ("Switch"),0,2,0,2, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
+    auto switchParam = make_shared<RangeParameter>(STR16("PitchSwitch"), kPitchSwitchId, STR16("Switch"), 0, 2, 0, 2, ParameterInfo::kCanAutomate | ParameterInfo::kIsWrapAround, kRootUnitId);
     parameters.addParameter(switchParam);
 
-    auto curveParam = make_shared<RangeParameter>(STR16 ("VolumeCurve"), kVolCurveId,STR16 ("Curve"),0,2,0,2, ParameterInfo::kCanAutomate|ParameterInfo::kIsWrapAround, kRootUnitId);
+    auto curveParam = make_shared<RangeParameter>(STR16("VolumeCurve"), kVolCurveId, STR16("Curve"), 0, 2, 0, 2, ParameterInfo::kCanAutomate | ParameterInfo::kIsWrapAround, kRootUnitId);
     parameters.addParameter(curveParam);
 
 	//---Bypass parameter---
@@ -168,24 +168,24 @@ tresult PLUGIN_API AVinylController::initialize(FUnknown* context)
 	parameters.addParameter (STR16 ("Sync"), 0, 1, 0, 0, kSyncId);
 	parameters.addParameter (STR16 ("Reverse"), 0, 1, 0, 0, kReverseId);
 
-    auto ampParam = make_shared<RangeParameter>(STR16 ("Amp"), kAmpId,STR16 ("<>"),0,1,0.5,511, ParameterInfo::kIsWrapAround, kRootUnitId);
-	parameters.addParameter (ampParam);
-    auto tuneParam = make_shared<RangeParameter>(STR16 ("Tune"), kTuneId,STR16 ("<>"),0,1,0.5,511, ParameterInfo::kIsWrapAround, kRootUnitId);
-	parameters.addParameter (tuneParam);
+    auto ampParam = make_shared<RangeParameter>(STR16("Amp"), kAmpId, STR16("<>"),0, 1, 0.5, 511, ParameterInfo::kIsWrapAround, kRootUnitId);
+    parameters.addParameter(ampParam);
+    auto tuneParam = make_shared<RangeParameter>(STR16("Tune"), kTuneId, STR16("<>"), 0, 1, 0.5, 511, ParameterInfo::kIsWrapAround, kRootUnitId);
+    parameters.addParameter(tuneParam);
 
     return result;
 }
 
 //------------------------------------------------------------------------
-tresult PLUGIN_API AVinylController::terminate  ()
+tresult PLUGIN_API AVinylController::terminate()
 {
-    viewsArray.clear();
+    viewsArray_.clear();
 	
-	return EditControllerEx1::terminate ();
+    return EditControllerEx1::terminate();
 }
 
 //------------------------------------------------------------------------
-tresult PLUGIN_API AVinylController::setComponentState (IBStream* state)
+tresult PLUGIN_API AVinylController::setComponentState(IBStream* state)
 {
 	// we receive the current state of the component (processor part)
 	// we read only the gain and bypass value...
@@ -260,22 +260,22 @@ tresult PLUGIN_API AVinylController::setComponentState (IBStream* state)
 }
 
 //------------------------------------------------------------------------
-IPlugView* PLUGIN_API AVinylController::createView (const char* name)
+IPlugView* PLUGIN_API AVinylController::createView(const char* name)
 {
 	// someone wants my editor
     if (name && strcmp (name, "editor") == 0) {
-        return new AVinylEditorView (this);
+        return new AVinylEditorView(this);
 	}
 	return 0;
 }
 //------------------------------------------------------------------------
-tresult PLUGIN_API AVinylController::setKnobmode (KnobMode  mode)
+tresult PLUGIN_API AVinylController::setKnobmode(KnobMode  mode)
 {
 	return kResultOk;
 }
 
 //------------------------------------------------------------------------
-tresult PLUGIN_API AVinylController::setState (IBStream* state)
+tresult PLUGIN_API AVinylController::setState(IBStream* state)
 {
 
 	int8 byteOrder;
@@ -320,12 +320,12 @@ tresult PLUGIN_API AVinylController::setState (IBStream* state)
 			SWAP_32(savedMidiVolume)
 			SWAP_32(savedMidiTune)
 		}
-		midiGain = savedMidiGain;
-		midiScene = savedMidiScene;
-		midiMix = savedMidiMix;
-		midiPitch = savedMidiPitch;
-		midiVolume = savedMidiVolume;
-		midiTune = savedMidiTune;
+        midiGain_ = savedMidiGain;
+        midiScene_ = savedMidiScene;
+        midiMix_ = savedMidiMix;
+        midiPitch_ = savedMidiPitch;
+        midiVolume_ = savedMidiVolume;
+        midiTune_ = savedMidiTune;
 		return kResultOk;
 	}
 	
@@ -333,7 +333,7 @@ tresult PLUGIN_API AVinylController::setState (IBStream* state)
 }
 
 //------------------------------------------------------------------------
-tresult PLUGIN_API AVinylController::getState (IBStream* state)
+tresult PLUGIN_API AVinylController::getState(IBStream* state)
 {
 	// here we can save UI settings for example
 
@@ -341,12 +341,12 @@ tresult PLUGIN_API AVinylController::getState (IBStream* state)
 	int8 byteOrder = BYTEORDER;
 
     if (state->write (&byteOrder, sizeof (int8)) == kResultTrue) {
-        uint32_t toSaveGain = midiGain;
-        uint32_t toSaveScene = midiScene;
-        uint32_t toSaveMix = midiMix;
-        uint32_t toSavePitch = midiPitch;
-        uint32_t toSaveVolume = midiVolume;
-        uint32_t toSaveTune = midiTune;
+        uint32_t toSaveGain = midiGain_;
+        uint32_t toSaveScene = midiScene_;
+        uint32_t toSaveMix = midiMix_;
+        uint32_t toSavePitch = midiPitch_;
+        uint32_t toSaveVolume = midiVolume_;
+        uint32_t toSaveTune = midiTune_;
         state->write(&toSaveGain, sizeof(uint32_t));
         state->write(&toSaveScene, sizeof(uint32_t));
         state->write(&toSaveMix, sizeof(uint32_t));
@@ -359,11 +359,10 @@ tresult PLUGIN_API AVinylController::getState (IBStream* state)
 }
 
 //------------------------------------------------------------------------
-tresult AVinylController::receiveText (const char* text)
+tresult AVinylController::receiveText(const char* text)
 {
 	// received from Component
-	if (text)
-	{
+    if (text) {
 		fprintf (stderr, "[VinylController] received: ");
         fprintf (stderr, "%s", text);
 		fprintf (stderr, "\n");
@@ -372,12 +371,12 @@ tresult AVinylController::receiveText (const char* text)
 }
 
 //------------------------------------------------------------------------
-tresult PLUGIN_API AVinylController::setParamNormalized (ParamID tag, ParamValue value)
+tresult PLUGIN_API AVinylController::setParamNormalized(ParamID tag, ParamValue value)
 {
 	// called from host to update our parameters state
-	tresult result = EditControllerEx1::setParamNormalized (tag, value);
+    tresult result = EditControllerEx1::setParamNormalized(tag, value);
 	
-    for (auto& view: viewsArray) {
+    for (auto& view: viewsArray_) {
         if (view) {
             static_cast<AVinylEditorView*>(view.get())->update(tag, value);
 		}
@@ -387,23 +386,23 @@ tresult PLUGIN_API AVinylController::setParamNormalized (ParamID tag, ParamValue
 }
 
 //------------------------------------------------------------------------
-tresult PLUGIN_API AVinylController::getParamStringByValue (ParamID tag, ParamValue valueNormalized, String128 string)
+tresult PLUGIN_API AVinylController::getParamStringByValue(ParamID tag, ParamValue valueNormalized, String128 string)
 {
-	return EditControllerEx1::getParamStringByValue (tag, valueNormalized, string);
+    return EditControllerEx1::getParamStringByValue(tag, valueNormalized, string);
 }
 
 //------------------------------------------------------------------------
-tresult PLUGIN_API AVinylController::getParamValueByString (ParamID tag, TChar* string, ParamValue& valueNormalized)
+tresult PLUGIN_API AVinylController::getParamValueByString(ParamID tag, TChar* string, ParamValue& valueNormalized)
 {
-	return EditControllerEx1::getParamValueByString (tag, string, valueNormalized);
+    return EditControllerEx1::getParamValueByString(tag, string, valueNormalized);
 }
 
 //------------------------------------------------------------------------
-void AVinylController::editorAttached (EditorView* editor)
+void AVinylController::editorAttached(EditorView* editor)
 {
     AVinylEditorView* view = dynamic_cast<AVinylEditorView*>(editor);
     if (view) {
-        viewsArray.push_back(view);
+        viewsArray_.push_back(view);
         IMessage* msg = allocateMessage();
         if (msg) {
             msg->setMessageID("initView");
@@ -414,19 +413,19 @@ void AVinylController::editorAttached (EditorView* editor)
 }
 
 //------------------------------------------------------------------------
-void AVinylController::editorRemoved (EditorView* editor)
+void AVinylController::editorRemoved(EditorView* editor)
 {
     AVinylEditorView* view = dynamic_cast<AVinylEditorView*>(editor);
     if (view) {
-        viewsArray.erase(std::remove(viewsArray.begin(), viewsArray.end(), view), viewsArray.end());
+        viewsArray_.erase(std::remove(viewsArray_.begin(), viewsArray_.end(), view), viewsArray_.end());
 	}
 }
 
 //------------------------------------------------------------------------
-tresult PLUGIN_API AVinylController::queryInterface (const char* iid, void** obj)
+tresult PLUGIN_API AVinylController::queryInterface(const char* iid, void** obj)
 {
 	QUERY_INTERFACE (iid, obj, IMidiMapping::iid, IMidiMapping)
-	return EditControllerEx1::queryInterface (iid, obj);
+    return EditControllerEx1::queryInterface(iid, obj);
 }
 
 //------------------------------------------------------------------------
@@ -434,27 +433,27 @@ tresult PLUGIN_API AVinylController::getMidiControllerAssignment(int32 busIndex,
 																 CtrlNumber midiControllerNumber, ParamID& tag)
 {
 
-    if (midiControllerNumber == midiGain) {
+    if (midiControllerNumber == midiGain_) {
 		tag = kGainId;
 		return kResultTrue;
 	}
-    if (midiControllerNumber == midiScene) {
+    if (midiControllerNumber == midiScene_) {
 		tag = kCurrentSceneId;
 		return kResultTrue;
 	}
-    if (midiControllerNumber == midiMix) {
+    if (midiControllerNumber == midiMix_) {
 		tag = kVolumeId;
 		return kResultTrue;
 	}
-    if (midiControllerNumber == midiPitch) {
+    if (midiControllerNumber == midiPitch_) {
 		tag = kPitchId;
 		return kResultTrue;
 	}
-    if (midiControllerNumber == midiVolume) {
+    if (midiControllerNumber == midiVolume_) {
 		tag = kAmpId;
 		return kResultTrue;
 	}
-    if (midiControllerNumber == midiTune) {
+    if (midiControllerNumber == midiTune_) {
 		tag = kTuneId;
 		return kResultTrue;
 	}
@@ -462,24 +461,23 @@ tresult PLUGIN_API AVinylController::getMidiControllerAssignment(int32 busIndex,
 }
 
 //-----------------------------------------------------------------------------
-tresult PLUGIN_API AVinylController::notify (IMessage* message)
+tresult PLUGIN_API AVinylController::notify(IMessage* message)
 {
 
     if (strcmp(message->getMessageID(), "delEntry") == 0) {
 		int64 delEntryInd;
         message->getAttributes()->getInt("EntryIndex", delEntryInd);
-        for(auto& view: viewsArray) {
+        for(auto& view: viewsArray_) {
             static_cast<AVinylEditorView*>(view.get())->delEntry(delEntryInd);
 		}
 		return kResultTrue;
 	}
     if (strcmp(message->getMessageID(), "addEntry") == 0) {
         int64 newEntryInt;
-        SampleEntry<Sample64> * newEntry;
         message->getAttributes()->getInt("Entry", newEntryInt);
-        newEntry = reinterpret_cast<SampleEntry<Sample64> *>(newEntryInt);
-        for(auto& view: viewsArray) {
-            static_cast<AVinylEditorView*>(view.get())->initEntry(newEntry);
+        SampleEntry<Sample64> * newEntry = reinterpret_cast<SampleEntry<Sample64> *>(newEntryInt);
+        for(auto& view: viewsArray_) {
+            static_cast<AVinylEditorView*>(view.get())->initEntry(*newEntry);
         }
 		return kResultTrue;
 	}
@@ -492,8 +490,8 @@ tresult PLUGIN_API AVinylController::notify (IMessage* message)
                                        reinterpret_cast<const Sample64*>(buffer),
                                        reinterpret_cast<const Sample64*>(buffer),
                                        bufferLen / sizeof(Sample64));
-        for(auto& view: viewsArray) {
-            static_cast<AVinylEditorView*>(view.get())->debugFft(&newEntry);
+        for(auto& view: viewsArray_) {
+            static_cast<AVinylEditorView*>(view.get())->debugFft(newEntry);
         }
         return kResultTrue;
     }
@@ -506,57 +504,57 @@ tresult PLUGIN_API AVinylController::notify (IMessage* message)
                                        reinterpret_cast<const Sample64*>(buffer),
                                        reinterpret_cast<const Sample64*>(buffer),
                                        bufferLen / sizeof(Sample64));
-        for(auto& view: viewsArray) {
-            static_cast<AVinylEditorView*>(view.get())->debugInput(&newEntry);
+        for(auto& view: viewsArray_) {
+            static_cast<AVinylEditorView*>(view.get())->debugInput(newEntry);
         }
         return kResultTrue;
     }
     if (strcmp(message->getMessageID(), "updateSpeed") == 0) {
 		double newSpeed;
         message->getAttributes()->getFloat("Speed", newSpeed);
-        for(auto& view: viewsArray) {
+        for(auto& view: viewsArray_) {
             static_cast<AVinylEditorView*>(view.get())->setSpeedMonitor(newSpeed);
         }
 		return kResultTrue;
 	}
-    if (strcmp (message->getMessageID(), "updatePosition") == 0) {
+    if (strcmp(message->getMessageID(), "updatePosition") == 0) {
 		double newPosition;
         message->getAttributes()->getFloat("Position", newPosition);
-        for(auto& view: viewsArray) {
+        for(auto& view: viewsArray_) {
             static_cast<AVinylEditorView*>(view.get())->setPositionMonitor(newPosition);
         }
 		return kResultTrue;
 	}
-    if (strcmp (message->getMessageID(), "updatePads") == 0) {
+    if (strcmp(message->getMessageID(), "updatePads") == 0) {
 
 		for (int i = 0; i < ENumberOfPads; i++) {
 
 			int64 newState;
 			String tmp;
 			tmp = tmp.printf("PadState%02d",i);
-			if (message->getAttributes()->getInt (tmp.text8(), newState) == kResultTrue){
+            if (message->getAttributes()->getInt(tmp.text8(), newState) == kResultTrue){
 
-                for(auto& view: viewsArray) {
+                for(auto& view: viewsArray_) {
                     static_cast<AVinylEditorView*>(view.get())->setPadState(i, (newState == 1));
                 }
             }
 			tmp = tmp.printf("PadType%02d",i);
-			if (message->getAttributes()->getInt (tmp.text8(), newState) == kResultTrue){
+            if (message->getAttributes()->getInt(tmp.text8(), newState) == kResultTrue){
 
-                for(auto& view: viewsArray) {
+                for(auto& view: viewsArray_) {
                     static_cast<AVinylEditorView*>(view.get())->setPadType(i, newState);
                 }
             }
 			tmp = tmp.printf("PadTag%02d",i);
-            if (message->getAttributes()->getInt (tmp.text8(), newState) == kResultTrue) {
-                for(auto& view: viewsArray) {
+            if (message->getAttributes()->getInt(tmp.text8(), newState) == kResultTrue) {
+                for(auto& view: viewsArray_) {
                     static_cast<AVinylEditorView*>(view.get())->setPadTag(i, newState);
                 }
             }
 		}
         return kResultTrue;
 	}
-	return EditControllerEx1::notify (message);
+    return EditControllerEx1::notify(message);
 }
 
 }} // namespaces

@@ -5,15 +5,55 @@
 
 namespace Steinberg::Vst {
 
-
+template<typename T>
 struct Complex {
-    double real =0;
-    double imaginary = 0;
+    T real {0};
+    T imaginary {0};
+
+    friend Complex operator * (const Complex &A, const Complex &B) noexcept {
+        // c version of complex multiplication
+        Complex out;
+        out.real = A.real * B.real - A.imaginary * B.imaginary;
+        out.imaginary = A.real * B.imaginary + A.imaginary * B.real;
+        return out;
+    }
 };
 
-void fft2_simd(Complex* X, int N);
+void fft2_simd(Complex<double> * X, size_t N);
 
-void fastsinetransform(float* a, size_t len);
+
+template<typename T>
+void fft(Complex<T> *a, size_t n) {
+
+    constexpr T Pi = 3.1415926535897932384626433832;
+
+    for (size_t i=1, j = 0; i < n; i++) {
+        size_t bit = (n >> 1);
+        while ( j >= bit) {
+            j -= bit;
+            bit >>= 1;
+        }
+        j += bit;
+        if (i < j) {
+            std::swap(a[i], a[j]);
+        }
+    }
+
+    for (size_t len = 2; len <= n; len<<=1) {
+        Complex<T> w {cos(2. * Pi / len), sin(2. * Pi / len)};
+        for (size_t i = 0; i < n; i += len) {
+            Complex<T> cur_w = {1., 0.};
+            for (size_t j = 0; j < len / 2; j++) {
+                Complex<T> u = a[i + j];
+                Complex<T> v = a[i + j + len / 2] * cur_w;
+                a[i + j] = u + v;
+                a[i + j + len / 2] = u - v;
+                cur_w = cur_w * w;
+            }
+        }
+    }
+}
+
 
 template<typename T>
 inline T sqr(T x) {
