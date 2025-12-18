@@ -341,6 +341,14 @@ public:
         return soundBufferRight_[index];
     }
 
+    const SampleType* bufferLeft() const {
+        return soundBufferLeft_.data();
+    }
+
+    const SampleType* bufferRight() const {
+        return soundBufferRight_.data();
+    }
+
     bool Loop;
     bool Sync;
     bool Reverse;

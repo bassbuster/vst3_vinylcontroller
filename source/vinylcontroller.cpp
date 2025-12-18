@@ -473,11 +473,45 @@ tresult PLUGIN_API AVinylController::notify(IMessage* message)
 		return kResultTrue;
 	}
     if (strcmp(message->getMessageID(), "addEntry") == 0) {
-        int64 newEntryInt;
-        message->getAttributes()->getInt("Entry", newEntryInt);
-        SampleEntry<Sample64> * newEntry = reinterpret_cast<SampleEntry<Sample64> *>(newEntryInt);
+        //int64 newEntryInt;
+        //message->getAttributes()->getInt("Entry", newEntryInt);
+        //SampleEntry<Sample64> * newEntry = reinterpret_cast<SampleEntry<Sample64> *>(newEntryInt);
+
+        const void* bufferLeft;
+        const void* bufferRight;
+        uint32_t bufferLen;
+
+        message->getAttributes()->getBinary("EntryBufferLeft", bufferLeft, bufferLen);
+        message->getAttributes()->getBinary("EntryBufferLeft", bufferRight, bufferLen);
+
+        SampleEntry<Sample64> newEntry("debug",
+                                       reinterpret_cast<const Sample64*>(bufferLeft),
+                                       reinterpret_cast<const Sample64*>(bufferRight),
+                                       bufferLen / sizeof(Sample64));
+
+        //msg->getAttributes()->setInt("EntrySize", SamplesArray.at(i)->bufferLength());
+        {
+            int64_t intVal {0};
+            message->getAttributes()->getInt("EntryLoop", intVal);
+            newEntry.Loop = intVal > 0;
+        }
+        {
+            int64_t intVal {0};
+            message->getAttributes()->getInt("EntrySync", intVal);
+            newEntry.Sync = intVal > 0;
+        }
+        {
+            int64_t intVal {0};
+            message->getAttributes()->getInt("EntryReverse", intVal);
+            newEntry.Reverse = intVal > 0;
+        }
+
+        message->getAttributes()->getFloat("EntryLoop", newEntry.Tune);
+        message->getAttributes()->getFloat("EntryLoop", newEntry.Level);
+
+
         for(auto& view: viewsArray_) {
-            static_cast<AVinylEditorView*>(view.get())->initEntry(*newEntry);
+            static_cast<AVinylEditorView*>(view.get())->initEntry(newEntry);
         }
 		return kResultTrue;
 	}

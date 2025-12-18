@@ -1307,11 +1307,19 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
 void AVinyl::addSampleMessage(SampleEntry<Sample64>* newSample)
 {
     if (newSample) {
-        int64_t sampleInt = int64_t(newSample);
+        //int64_t sampleInt = int64_t(newSample);
         IMessage* msg = allocateMessage ();
         if (msg) {
             msg->setMessageID("addEntry");
-            msg->getAttributes()->setInt("Entry", sampleInt);
+            //msg->getAttributes()->setInt("Entry", sampleInt);
+            msg->getAttributes()->setBinary("EntryBufferLeft", newSample->bufferLeft(), uint32_t(newSample->bufferLength() * sizeof(Sample64)));
+            msg->getAttributes()->setBinary("EntryBufferRight", newSample->bufferRight(), uint32_t(newSample->bufferLength() * sizeof(Sample64)));
+            //msg->getAttributes()->setInt("EntrySize", newSample->bufferLength());
+            msg->getAttributes()->setInt("EntryLoop", newSample->Loop ? 1 : 0);
+            msg->getAttributes()->setInt("EntrySync", newSample->Sync ? 1 : 0);
+            msg->getAttributes()->setInt("EntryReverse", newSample->Reverse ? 1 : 0);
+            msg->getAttributes()->setFloat("EntryTune", newSample->Tune);
+            msg->getAttributes()->setFloat("EntryLevel", newSample->Level);
             sendMessage(msg);
             msg->release();
         }
@@ -1364,7 +1372,15 @@ void AVinyl::initSamplesMessage(void)
         IMessage* msg = allocateMessage();
         if (msg) {
             msg->setMessageID("addEntry");
-            msg->getAttributes()->setInt("Entry", sampleInt);
+            //msg->getAttributes()->setInt("Entry", sampleInt);
+            msg->getAttributes()->setBinary("EntryBufferLeft", SamplesArray.at(i)->bufferLeft(), uint32_t(SamplesArray.at(i)->bufferLength() * sizeof(Sample64)));
+            msg->getAttributes()->setBinary("EntryBufferRight", SamplesArray.at(i)->bufferRight(), uint32_t(SamplesArray.at(i)->bufferLength() * sizeof(Sample64)));
+            //msg->getAttributes()->setInt("EntrySize", SamplesArray.at(i)->bufferLength());
+            msg->getAttributes()->setInt("EntryLoop", SamplesArray.at(i)->Loop ? 1 : 0);
+            msg->getAttributes()->setInt("EntrySync", SamplesArray.at(i)->Sync ? 1 : 0);
+            msg->getAttributes()->setInt("EntryReverse", SamplesArray.at(i)->Reverse ? 1 : 0);
+            msg->getAttributes()->setFloat("EntryTune", SamplesArray.at(i)->Tune);
+            msg->getAttributes()->setFloat("EntryLevel", SamplesArray.at(i)->Level);
             sendMessage(msg);
             msg->release ();
         }

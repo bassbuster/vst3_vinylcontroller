@@ -716,6 +716,8 @@ void PLUGIN_API AVinylEditorView::close ()
     debugFftView_ = nullptr;
     debugInputView_ = nullptr;
 
+    // call it explicitly with false to prevent extra forget call
+    // as we store all child views as shared pointers
     getFrame()->removeAll(false);
     int32_t refCount = getFrame()->getNbReference();
     if (refCount == 1) {
