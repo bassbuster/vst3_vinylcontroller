@@ -136,28 +136,28 @@ void fft_simd(Complex<double> *X, size_t N)
     // Notes	: the length of fft must be a power of 2,and it is  a in-place algorithm
     // ref		: https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm
 
-    auto separate = [](Complex<double>* a, int n) {
+    auto separate = [](Complex<double>* a, size_t n) {
         Complex<double>* b = new Complex<double>[n / 2];				// get temp heap storage
-        for (int i = 0; i < n / 2; i++)	{	// copy all odd elements to heap storage
+        for (size_t i = 0; i < n / 2; i++)	{	// copy all odd elements to heap storage
             b[i] = a[i * 2 + 1];
         }
-        for (int i = 0; i < n / 2; i++)	{	// copy all even elements to lower-half of a[]
+        for (size_t i = 0; i < n / 2; i++)	{	// copy all even elements to lower-half of a[]
             a[i] = a[i * 2];
         }
-        for (int i = 0; i < n / 2; i++)	{	// copy all odd (from heap) to upper-half of a[]
+        for (size_t i = 0; i < n / 2; i++)	{	// copy all odd (from heap) to upper-half of a[]
             a[i + n / 2] = b[i];
         }
         delete[] b;							// delete heap storage
     };
 
-    auto fft_ = [&](Complex<double> *X, size_t N) {
+    //auto fft_ = [&](auto recourse, Complex<double> *X, size_t N) -> void {
         if (N < 2) {
             // bottom of recursion.
             // Do nothing here, because already X[0] = x[0]
         } else {
             separate(X, N);							// all evens to lower half, all odds to upper half
-            fft2_simd(X, N / 2);					// recurse even items
-            fft2_simd(X + N / 2, N / 2);			// recurse odd  items
+            fft_simd(X, N / 2);					// recurse even items
+            fft_simd(X + N / 2, N / 2);			// recurse odd  items
                 // combine results of two half recursions
             for (int k = 0; k < N / 2; k++) {
 
@@ -182,11 +182,11 @@ void fft_simd(Complex<double> *X, size_t N)
                 _mm_store_pd((double *)&X[k + N / 2], wi);
             }
         }
-    };
+    //};
 
-    separate(X, N);
-    fft_(X, N / 2);
-    //fft_(X + N / 2, N / 2);			// recurse odd  items
+    //separate(X, N);
+    //fft_(fft_, X, N / 2);
+    ////fft_(X + N / 2, N / 2);			// recurse odd  items
 }
 
 // void fft(Complex<> *a, size_t n) {

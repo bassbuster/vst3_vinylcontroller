@@ -16,7 +16,7 @@ public:
     using Type = SampleType;
     using CuePoint = Helper::CuePoint<int64_t, ParameterType>;
 
-    explicit SampleEntry(const char *name = nullptr, const char *fileName = nullptr):
+    explicit SampleEntry(const char * name = nullptr, const char * fileName = nullptr) :
         Loop(false),
         Sync(false),
         Reverse(false),
@@ -26,6 +26,7 @@ public:
         sampleName_(name),
         index_(0),
         acidBeats_(0),
+        sampleRate_(0),
         beatLength_(0),
         beatOverlap_(0),
         smoothOverlap_(-1)
@@ -35,7 +36,7 @@ public:
         }
     }
 
-    SampleEntry(const char *name, const SampleType *left, const SampleType *right, size_t size):
+    SampleEntry(const char * name, const SampleType *left, const SampleType *right, size_t size):
         Loop(false),
         Sync(false),
         Reverse(false),
@@ -47,6 +48,7 @@ public:
         sampleName_(name),
         index_(0),
         acidBeats_(0),
+        sampleRate_(0),
         beatLength_(0),
         beatOverlap_(0),
         smoothOverlap_(-1)
@@ -263,7 +265,7 @@ public:
     ParameterType noteLength(ParameterType note, ParameterType tempo) {
         if (Sync && (acidBeats_ > 0)) {
             return ParameterType(soundBufferLeft_.size()) / acidBeats_ * note;
-        } else if (tempo > 0) {
+        } else if (tempo > 0 && note > 0) {
             return ParameterType(sampleRate_) / tempo * 60. * note;
         }
         return 0;

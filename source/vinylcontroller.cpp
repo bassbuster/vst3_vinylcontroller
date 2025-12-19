@@ -478,14 +478,20 @@ tresult PLUGIN_API AVinylController::notify(IMessage* message)
         const void* bufferRight;
         uint32_t bufferLen;
 
+        TChar name[256];
+        TChar file[256];
+
         message->getAttributes()->getBinary("EntryBufferLeft", bufferLeft, bufferLen);
         message->getAttributes()->getBinary("EntryBufferLeft", bufferRight, bufferLen);
+        message->getAttributes()->getString("EntryName", name, sizeof(name));
+        message->getAttributes()->getString("EntryFile", file, sizeof(file));
 
-        SampleEntry<Sample64> newEntry("debug",
+        SampleEntry<Sample64> newEntry(String(name),
                                        reinterpret_cast<const Sample64*>(bufferLeft),
                                        reinterpret_cast<const Sample64*>(bufferRight),
                                        bufferLen / sizeof(Sample64));
 
+        newEntry.fileName(String(file));
         {
             int64_t intVal {0};
             message->getAttributes()->getInt("EntryLoop", intVal);

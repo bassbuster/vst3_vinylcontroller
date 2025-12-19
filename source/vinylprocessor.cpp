@@ -465,11 +465,11 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
 
                 Sample64 SmoothCoef = sin(Pi * Sample64(FFTCursor + EFFTFrame - ESpeedFrame) / Sample64(EFFTFrame));
-                FFTPre[FFTCursor + EFFTFrame - ESpeedFrame] = inL;// (OldSignalL - OldSignalR);
-                FFT[FFTCursor + EFFTFrame - ESpeedFrame] = (SmoothCoef * FFTPre[FFTCursor + EFFTFrame - ESpeedFrame]);
-                //filtred_[FFTCursor + EFFTFrame - ESpeedFrame] = (OldSignalL - OldSignalR);
-                //fft_[FFTCursor + EFFTFrame - ESpeedFrame].real = (SmoothCoef * filtred_[FFTCursor + EFFTFrame - ESpeedFrame]);
-                //fft_[FFTCursor + EFFTFrame - ESpeedFrame].imaginary = 0;
+                //FFTPre[FFTCursor + EFFTFrame - ESpeedFrame] = inL - inR;// (OldSignalL - OldSignalR);
+                //FFT[FFTCursor + EFFTFrame - ESpeedFrame] = (SmoothCoef * FFTPre[FFTCursor + EFFTFrame - ESpeedFrame]);
+                filtred_[FFTCursor + EFFTFrame - ESpeedFrame] = inL - inR;// (OldSignalL - OldSignalR);
+                fft_[FFTCursor + EFFTFrame - ESpeedFrame].real = (SmoothCoef * filtred_[FFTCursor + EFFTFrame - ESpeedFrame]);
+                fft_[FFTCursor + EFFTFrame - ESpeedFrame].imaginary = 0;
 
                 FFTCursor++;
                 if (FFTCursor >= ESpeedFrame) {
@@ -477,33 +477,31 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
                     if (TimeCodeAmplytude >= ETimeCodeMinAmplytude) {
                         { 
-                            //Sample64 real_[EFFTFrame];
-                            //for (size_t i = 0; i < EFFTFrame; i++) {
-                            //    real_[i] = fft_[i].real;
-                            //}
-                            debugInputMessage(FFT, EFFTFrame);
-                        }
-                        fastsine(FFT, EFFTFrame);
-                        //fft2_simd(fft_, EFFTFrame);
-                        for (size_t i = 0; i < EFFTFrame; i++) {
-                            Sample64 SmoothCoef = sin(Pi * Sample64(i) / Sample64(EFFTFrame));
-                            FFT[i] = SmoothCoef * FFT[i];
-                            //fft_[i].real = SmoothCoef * fft_[i].real;
-                            //fft_[i].imaginary = SmoothCoef * fft_[i].imaginary;
-                        }
-                        {
-                            //Sample64 real_[EFFTFrame];
-                            //for (size_t i = 0; i < EFFTFrame; i++) {
-                            //    real_[i] = fft_[i].real;
-                            //}
-                            debugFftMessage(FFT, EFFTFrame);
-                        }
-                        {
-                            //Sample64 real_[EFFTFrame];
-                            //for (size_t i = 0; i < EFFTFrame; i++) {
-                            //    real_[i] = fft_[i].imaginary;
-                            //}
                             //debugInputMessage(FFT, EFFTFrame);
+                        }
+                        //fastsine(FFT, EFFTFrame);
+                        fft_simd(fft_, EFFTFrame);
+                        /// Filterout low noise
+                        for (size_t i = 0; i < EFFTFrame; i++) {
+                            //Sample64 SmoothCoef = sin(Pi * Sample64(i) / Sample64(EFFTFrame));
+                            Sample64 SmoothCoef = i < 10 ? i * .1 : 1.;
+                            //FFT[i] = SmoothCoef * FFT[i];
+                            fft_[i].real = SmoothCoef * fft_[i].real;
+                            fft_[i].imaginary = SmoothCoef * fft_[i].imaginary;
+                        }
+                        {
+                            Sample64 real_[EFFTFrame];
+                            for (size_t i = 0; i < EFFTFrame; i++) {
+                                real_[i] = fft_[i].real;
+                            }
+                            debugFftMessage(real_, EFFTFrame);
+                        }
+                        {
+                            Sample64 real_[EFFTFrame];
+                            for (size_t i = 0; i < EFFTFrame; i++) {
+                                real_[i] = fft_[i].imaginary;
+                            }
+                            debugInputMessage(real_, EFFTFrame);
                         }
                         
 
@@ -523,11 +521,11 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                     for (size_t i = 0; i < EFFTFrame - ESpeedFrame; i++) {
                         //Sample64 SmoothCoef = 0.5 - 0.5 * cos((2.0 * Pi * Sample64(i) / EFFTFrame));
                         Sample64 SmoothCoef = sin(Pi * Sample64(i) / Sample64(EFFTFrame));
-                        FFTPre[i] =	FFTPre[ESpeedFrame + i];
-                        FFT[i] = (SmoothCoef * FFTPre[ESpeedFrame + i]);
-                        //filtred_[i] = filtred_[ESpeedFrame + i];
-                        //fft_[i].real = (SmoothCoef * filtred_[ESpeedFrame + i]);
-                        //fft_[i].imaginary = 0.;
+                        //FFTPre[i] =	FFTPre[ESpeedFrame + i];
+                        //FFT[i] = (SmoothCoef * FFTPre[ESpeedFrame + i]);
+                        filtred_[i] = filtred_[ESpeedFrame + i];
+                        fft_[i].real = (SmoothCoef * filtred_[ESpeedFrame + i]);
+                        fft_[i].imaginary = 0.;
                     }
                 }
 
@@ -921,10 +919,10 @@ void AVinyl::CalcAbsSpeed() {
     float maxY = 0.f;
 
     for (int i = 0; i < EFFTFrame; i++) {
-        if (maxY < fabs(FFT[i])) {
-            maxY = fabs(FFT[i]);
-        //if (maxY < fabs(fft_[i].real)) {
-        //    maxY = fabs(fft_[i].real);
+        //if (maxY < fabs(FFT[i])) {
+        //    maxY = fabs(FFT[i]);
+        if (maxY < fabs(fft_[i].real)) {
+            maxY = fabs(fft_[i].real);
             maxX = i;
         }
     }
@@ -933,10 +931,10 @@ void AVinyl::CalcAbsSpeed() {
     for (int i = maxX + 1; i < maxX + 3; i++) {
         if (i < EFFTFrame) {
             double koef = 100.;
-            if (FFT[i] != 0) {
-                koef = (maxY / FFT[i]) * (maxY / FFT[i]);
-            //if (fft_[i].real != 0) {
-            //    koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
+            //if (FFT[i] != 0) {
+            //    koef = (maxY / FFT[i]) * (maxY / FFT[i]);
+            if (fft_[i].real != 0) {
+                koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
             }
             tmp = (koef * tmp + double(i)) / (koef + 1.);
             continue;
@@ -947,10 +945,10 @@ void AVinyl::CalcAbsSpeed() {
     for (int i = maxX - 1; i > maxX - 3; i--) {
         if (i >= 0) {
             double koef = 100.;
-            if (FFT[i] != 0) {
-                koef = (maxY / FFT[i]) * (maxY / FFT[i]);
-            //if (fft_[i].real != 0) {
-            //   koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
+            //if (FFT[i] != 0) {
+            //    koef = (maxY / FFT[i]) * (maxY / FFT[i]);
+            if (fft_[i].real != 0) {
+               koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
             }
             tmp = (koef * tmp + double(i)) / (koef + 1.);
             continue;
@@ -1322,6 +1320,8 @@ void AVinyl::addSampleMessage(SampleEntry<Sample64>* newSample)
             msg->getAttributes()->setInt("EntryBeats", int64_t(newSample->acidBeats()));
             msg->getAttributes()->setFloat("EntryTune", newSample->Tune);
             msg->getAttributes()->setFloat("EntryLevel", newSample->Level);
+            msg->getAttributes()->setString("EntryName", String(newSample->name()));
+            msg->getAttributes()->setString("EntryFile", String(newSample->fileName()));
             sendMessage(msg);
             msg->release();
         }
@@ -1370,7 +1370,7 @@ void AVinyl::debugInputMessage(Sample64* input, size_t len)
 void AVinyl::initSamplesMessage(void)
 {
     for (int32 i = 0; i < SamplesArray.size (); i++) {
-        int64 sampleInt = int64(SamplesArray.at(i).get());
+        //int64 sampleInt = int64(SamplesArray.at(i).get());
         IMessage* msg = allocateMessage();
         if (msg) {
             msg->setMessageID("addEntry");
@@ -1383,6 +1383,8 @@ void AVinyl::initSamplesMessage(void)
             msg->getAttributes()->setInt("EntryBeats", int64_t(SamplesArray.at(i)->acidBeats()));
             msg->getAttributes()->setFloat("EntryTune", SamplesArray.at(i)->Tune);
             msg->getAttributes()->setFloat("EntryLevel", SamplesArray.at(i)->Level);
+            msg->getAttributes()->setString("EntryName", String(SamplesArray.at(i)->name()));
+            msg->getAttributes()->setString("EntryFile", String(SamplesArray.at(i)->fileName()));
             sendMessage(msg);
             msg->release ();
         }

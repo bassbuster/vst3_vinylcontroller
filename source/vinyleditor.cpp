@@ -464,7 +464,7 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
     }
 
     {
-        size(0, 0, 512, 100);
+        size(0, 0, kEditorMaxWidth, 100);
         size.offset(0, kEditorHeight);
 
         debugFftView_ = make_shared<VSTGUI::CDebugFftView>(size, this, '_FFT');
@@ -1514,7 +1514,9 @@ AVinylEditorView::SharedPointer<VSTGUI::CBitmap> AVinylEditorView::generateWavef
     }
     size_t halfWidth  = bitmapWidth / 2;
 
-    SampleEntry<Sample64>::Type norm = normolize ? 1. / sample.peakSample(0, sample.bufferLength()) : 1.;
+
+    SampleEntry<Sample64>::Type peak = sample.peakSample(0, sample.bufferLength());
+    SampleEntry<Sample64>::Type norm = (normolize && peak > 1.) ? 1. / peak : 1.;
 
     bool drawBeats =  sample.acidBeats() > 0;
 

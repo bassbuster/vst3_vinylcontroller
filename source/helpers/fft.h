@@ -24,7 +24,7 @@ struct Complex {
 
 };
 
-void fft2_simd(Complex<double> * X, size_t N);
+void fft_simd(Complex<double> * X, size_t N);
 
 
 template<typename T>
