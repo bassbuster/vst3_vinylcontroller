@@ -11,12 +11,17 @@ struct Complex {
     T imaginary {0};
 
     friend Complex operator * (const Complex &A, const Complex &B) noexcept {
-        // c version of complex multiplication
-        Complex out;
-        out.real = A.real * B.real - A.imaginary * B.imaginary;
-        out.imaginary = A.real * B.imaginary + A.imaginary * B.real;
-        return out;
+        return {A.real * B.real - A.imaginary * B.imaginary, A.real * B.imaginary + A.imaginary * B.real};
     }
+
+    friend Complex operator + (const Complex &A, const Complex &B) noexcept {
+        return {A.real + B.real, A.imaginary + B.imaginary};
+    }
+
+    friend Complex operator - (const Complex &A, const Complex &B) noexcept {
+        return {A.real - B.real, A.imaginary - B.imaginary};
+    }
+
 };
 
 void fft2_simd(Complex<double> * X, size_t N);
@@ -151,7 +156,7 @@ void fastsine(T *a, size_t len) {
         T wis = twi;
         T h1r = c1 * (a[i1] + a[i3]);
         T h1i = c1 * (a[i2] - a[i4]);
-        T h2r = -c2 * (a[i2] + a[i4]); // <---????
+        T h2r = -c2 * (a[i2] + a[i4]);
         T h2i = c2 * (a[i1] - a[i3]);
         a[i1] = h1r + wrs * h2r - wis * h2i;
         a[i2] = h1i + wrs * h2i + wis * h2r;
