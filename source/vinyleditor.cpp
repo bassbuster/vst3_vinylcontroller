@@ -1516,9 +1516,9 @@ AVinylEditorView::SharedPointer<VSTGUI::CBitmap> AVinylEditorView::generateWavef
 
     SampleEntry<Sample64>::Type norm = normolize ? 1. / sample.peakSample(0, sample.bufferLength()) : 1.;
 
-    bool drawBeats =  sample.getACIDbeats() > 0;
+    bool drawBeats =  sample.acidBeats() > 0;
 
-    double beatPeriodic = drawBeats ? double(bitmapWidth) / (2. * sample.getACIDbeats()) : 0;
+    double beatPeriodic = drawBeats ? double(bitmapWidth) / (2. * sample.acidBeats()) : 0;
     auto digits = make_shared<VSTGUI::CBitmap>(VSTGUI::CResourceDescription("digits.png"));
     auto waveForm = make_shared<VSTGUI::CBitmap>(bitmapWidth, 83);
     if (!waveForm || !digits || sample.bufferLength() == 0) {

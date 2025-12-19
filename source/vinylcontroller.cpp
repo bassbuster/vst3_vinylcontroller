@@ -473,9 +473,6 @@ tresult PLUGIN_API AVinylController::notify(IMessage* message)
 		return kResultTrue;
 	}
     if (strcmp(message->getMessageID(), "addEntry") == 0) {
-        //int64 newEntryInt;
-        //message->getAttributes()->getInt("Entry", newEntryInt);
-        //SampleEntry<Sample64> * newEntry = reinterpret_cast<SampleEntry<Sample64> *>(newEntryInt);
 
         const void* bufferLeft;
         const void* bufferRight;
@@ -489,7 +486,6 @@ tresult PLUGIN_API AVinylController::notify(IMessage* message)
                                        reinterpret_cast<const Sample64*>(bufferRight),
                                        bufferLen / sizeof(Sample64));
 
-        //msg->getAttributes()->setInt("EntrySize", SamplesArray.at(i)->bufferLength());
         {
             int64_t intVal {0};
             message->getAttributes()->getInt("EntryLoop", intVal);
@@ -505,7 +501,16 @@ tresult PLUGIN_API AVinylController::notify(IMessage* message)
             message->getAttributes()->getInt("EntryReverse", intVal);
             newEntry.Reverse = intVal > 0;
         }
-
+        {
+            int64_t intVal {0};
+            message->getAttributes()->getInt("EntryIndex", intVal);
+            newEntry.index(size_t(intVal));
+        }
+        {
+            int64_t intVal {0};
+            message->getAttributes()->getInt("EntryBeats", intVal);
+            newEntry.acidBeats(size_t(intVal));
+        }
         message->getAttributes()->getFloat("EntryLoop", newEntry.Tune);
         message->getAttributes()->getFloat("EntryLoop", newEntry.Level);
 

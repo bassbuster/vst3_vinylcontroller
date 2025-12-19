@@ -260,7 +260,7 @@ public:
         }
     }
 
-    ParameterType getNoteLength(ParameterType note, ParameterType tempo) {
+    ParameterType noteLength(ParameterType note, ParameterType tempo) {
         if (Sync && (acidBeats_ > 0)) {
             return ParameterType(soundBufferLeft_.size()) / acidBeats_ * note;
         } else if (tempo > 0) {
@@ -301,8 +301,12 @@ public:
         return soundBufferLeft_.size();
     }
 
-    size_t getACIDbeats() const {
+    size_t acidBeats() const {
         return acidBeats_;
+    }
+
+    void acidBeats(size_t beats) {
+        acidBeats_ = beats;
     }
 
     size_t index() const {
@@ -333,11 +337,11 @@ public:
         return (other.soundBufferLeft_ != soundBufferLeft_) || (other.soundBufferRight_ != soundBufferRight_);
     }
 
-    SampleType getLeft(size_t index) const {
+    SampleType left(size_t index) const {
         return soundBufferLeft_[index];
     }
 
-    SampleType getRight(size_t index) const {
+    SampleType right(size_t index) const {
         return soundBufferRight_[index];
     }
 
