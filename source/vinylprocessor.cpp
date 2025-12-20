@@ -367,13 +367,13 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
         int32 numChannels = data.inputs[0].numChannels;
 
         // ---get audio buffers----------------
-        float** in = data.inputs[0].channelBuffers32;
-        float** out = data.outputs[0].channelBuffers32;
+        Sample64** in = data.inputs[0].channelBuffers64;
+        Sample64** out = data.outputs[0].channelBuffers64;
 
         //{
         float fVuLeft = 0.f;
         float fVuRight = 0.f;
-        float fOldPosition = fPosition;
+        double fOldPosition = fPosition;
         bool bOldTimecodeLearn = bTCLearn;
         Sample64 fOldSpeed = fRealSpeed;
 
@@ -382,10 +382,10 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
             int32 sampleFrames = data.numSamples;
             int32 sampleOffset = 0;
-            Sample32* ptrInLeft = in[0];
-            Sample32* ptrOutLeft = out[0];
-            Sample32* ptrInRight = in[1];
-            Sample32* ptrOutRight = out[1];
+            Sample64* ptrInLeft = in[0];
+            Sample64* ptrOutLeft = out[0];
+            Sample64* ptrInRight = in[1];
+            Sample64* ptrOutRight = out[1];
 
             while (--sampleFrames >= 0) {
 
@@ -764,7 +764,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                         *ptrOutLeft = *ptrOutLeft * softVolume;
                         *ptrOutRight = *ptrOutRight * softVolume;
 
-                        fPosition = (float)SamplesArray.at(iCurrentEntry)->cue().integerPart() / SamplesArray.at(iCurrentEntry)->bufferLength();
+                        fPosition = SamplesArray.at(iCurrentEntry)->cue().integerPart() / double(SamplesArray.at(iCurrentEntry)->bufferLength());
                         if (*ptrOutLeft > fVuLeft) {
                             fVuLeft = *ptrOutLeft;
                         }
@@ -859,9 +859,9 @@ tresult PLUGIN_API AVinyl::setProcessing (TBool state){
 }
 
 tresult PLUGIN_API AVinyl::canProcessSampleSize (int32 symbolicSampleSize){
-    if (kSample64 == symbolicSampleSize) {
-        return kResultFalse;
-    }
+    //if (kSample64 == symbolicSampleSize) {
+    //    return kResultFalse;
+    //}
     return kResultTrue;
 }
 
@@ -900,23 +900,15 @@ void AVinyl::CalcDirectionTimeCodeAmplitude() {
 
             if ((StatusL == PStatusR) && (StatusR ==
                                           POldStatusL) && (OldStatusL == POldStatusR) &&
-                (OldStatusR == PStatusL) && (SpeedCounter >= 3)) {
+                (OldStatusR == PStatusL) && (SpeedCounter >= 1)) {
                 direction_ <<= 8;
                 direction_ |= 0xff;
-                // Direction3 = Direction2;
-                // Direction2 = Direction1;
-                // Direction1 = Direction0;
-                // Direction0 = true;
                 SpeedCounter = 0;
             } else if ((StatusL == POldStatusR) && (StatusR == PStatusL) &&
                      (OldStatusL == PStatusR) && (OldStatusR == POldStatusL) &&
-                     (SpeedCounter >= 3)) {
+                     (SpeedCounter >= 1)) {
                 direction_ <<= 8;
                 direction_ &= 0xFFFFFF00;
-                // Direction3 = Direction2;
-                // Direction2 = Direction1;
-                // Direction1 = Direction0;
-                // Direction0 = false;
                 SpeedCounter = 0;
             }
             PStatusL = StatusL;
@@ -924,12 +916,6 @@ void AVinyl::CalcDirectionTimeCodeAmplitude() {
             POldStatusL = OldStatusL;
             POldStatusR = OldStatusR;
         }
-
-        // if (!(Direction0 || Direction1 || Direction2 || Direction3)) {
-        //     Direction = -1;
-        // } else if (Direction0 || Direction1 || Direction2 || Direction3) {
-        //     Direction = 1;
-        // }
 
         if (SpeedCounter < 441000) {
             SpeedCounter++;

@@ -48,7 +48,7 @@ public:
 
 	/** Test of a communication channel between controller and component */
     tresult receiveText(const char* text) override;
-    tresult PLUGIN_API notify (IMessage* message) override;
+    tresult PLUGIN_API notify(IMessage* message) override;
 	
 	/** For persistence */
     tresult PLUGIN_API setState(IBStream* state) override;
@@ -127,7 +127,7 @@ private:
 	bool POldStatusR;
 	bool POldStatusL;
 
-    uint32_t direction_;
+    uint16_t direction_;
     // bool Direction0;
     // bool Direction1;
     // bool Direction2;
