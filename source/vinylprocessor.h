@@ -98,11 +98,11 @@ private:
     Sample64 SignalR[EFilterFrame];
     Filtred<Sample64, EFilterFrame> FSignalL;
     Filtred<Sample64, EFilterFrame> FSignalR;
-    //Sample64 FFTPre[EFFTFrame];
-    //Sample64 FFT[EFFTFrame];
+    Sample64 FFTPre[EFFTFrame];
+    Sample64 FFT[EFFTFrame];
 
-    Sample64 filtred_[EFFTFrame];
-    Complex<double> fft_[EFFTFrame];
+    //Sample64 filtred_[EFFTFrame];
+    //Complex<double> fft_[EFFTFrame];
 
     size_t SCursor;
     size_t FCursor;
@@ -174,14 +174,14 @@ private:
 
     void CalcDirectionTimeCodeAmplitude(void);
     void CalcAbsSpeed(void);
-    void SetCurrentEntry(int _newentry);
+    void currentEntry(int64_t newentry);
 
-    void SetPadState(PadEntry * _Pad);
+    //void padState(PadEntry &pad); 
 
-    bool PadWork(int _padId, Sample32 _paramValue);
-    bool PadSet(int _currentSample);
-    bool PadRemove(int _currentSample);
-    float GetNormalizeTag(int _tag);
+    bool padWork(int padId, double paramValue);
+    bool padSet(int currentSample);
+    bool padRemove(int currentSample);
+    //double normalizeTag(int _tag);
 
     // SampleBase manipulation
     void addSampleMessage(SampleEntry<Sample64>* newSample);

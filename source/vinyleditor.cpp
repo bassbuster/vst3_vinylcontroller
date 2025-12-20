@@ -1084,7 +1084,6 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
                 }
             }
             if (menuIndex==3){
-                ////////////Open FileSelector Single/////////////////////////
                 auto selector = VSTGUI::SharedPointer(VSTGUI::CNewFileSelector::create(frame, VSTGUI::CNewFileSelector::kSelectFile), false);
                 if (selector) {
                     selector->kSelectEndMessage = "ReplaceFile";

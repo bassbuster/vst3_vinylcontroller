@@ -377,8 +377,9 @@ tresult PLUGIN_API AVinylController::setParamNormalized(ParamID tag, ParamValue 
     tresult result = EditControllerEx1::setParamNormalized(tag, value);
 	
     for (auto& view: viewsArray_) {
-        if (view) {
-            static_cast<AVinylEditorView*>(view.get())->update(tag, value);
+        auto vinylView = dynamic_cast<AVinylEditorView*>(view.get());
+        if (vinylView) {
+            vinylView->update(tag, value);
 		}
 	}
 
@@ -468,7 +469,10 @@ tresult PLUGIN_API AVinylController::notify(IMessage* message)
 		int64 delEntryInd;
         message->getAttributes()->getInt("EntryIndex", delEntryInd);
         for(auto& view: viewsArray_) {
-            static_cast<AVinylEditorView*>(view.get())->delEntry(delEntryInd);
+            auto vinylView = dynamic_cast<AVinylEditorView*>(view.get());
+            if (vinylView) {
+                vinylView->delEntry(delEntryInd);
+            } 
 		}
 		return kResultTrue;
 	}
@@ -522,7 +526,10 @@ tresult PLUGIN_API AVinylController::notify(IMessage* message)
 
 
         for(auto& view: viewsArray_) {
-            static_cast<AVinylEditorView*>(view.get())->initEntry(newEntry);
+            auto vinylView = dynamic_cast<AVinylEditorView*>(view.get());
+            if (vinylView) {
+                vinylView->initEntry(newEntry);
+            }
         }
 		return kResultTrue;
 	}
@@ -536,7 +543,10 @@ tresult PLUGIN_API AVinylController::notify(IMessage* message)
                                        reinterpret_cast<const Sample64*>(buffer),
                                        bufferLen / sizeof(Sample64));
         for(auto& view: viewsArray_) {
-            static_cast<AVinylEditorView*>(view.get())->debugFft(newEntry);
+            auto vinylView = dynamic_cast<AVinylEditorView*>(view.get());
+            if (vinylView) {
+                vinylView->debugFft(newEntry);
+            }
         }
         return kResultTrue;
     }
@@ -550,7 +560,10 @@ tresult PLUGIN_API AVinylController::notify(IMessage* message)
                                        reinterpret_cast<const Sample64*>(buffer),
                                        bufferLen / sizeof(Sample64));
         for(auto& view: viewsArray_) {
-            static_cast<AVinylEditorView*>(view.get())->debugInput(newEntry);
+            auto vinylView = dynamic_cast<AVinylEditorView*>(view.get());
+            if (vinylView) {
+                vinylView->debugInput(newEntry);
+            }
         }
         return kResultTrue;
     }
@@ -558,7 +571,10 @@ tresult PLUGIN_API AVinylController::notify(IMessage* message)
 		double newSpeed;
         message->getAttributes()->getFloat("Speed", newSpeed);
         for(auto& view: viewsArray_) {
-            static_cast<AVinylEditorView*>(view.get())->setSpeedMonitor(newSpeed);
+            auto vinylView = dynamic_cast<AVinylEditorView*>(view.get());
+            if (vinylView) {
+                vinylView->setSpeedMonitor(newSpeed);
+            }
         }
 		return kResultTrue;
 	}
@@ -566,7 +582,10 @@ tresult PLUGIN_API AVinylController::notify(IMessage* message)
 		double newPosition;
         message->getAttributes()->getFloat("Position", newPosition);
         for(auto& view: viewsArray_) {
-            static_cast<AVinylEditorView*>(view.get())->setPositionMonitor(newPosition);
+            auto vinylView = dynamic_cast<AVinylEditorView*>(view.get());
+            if (vinylView) {
+                vinylView->setPositionMonitor(newPosition);
+            }
         }
 		return kResultTrue;
 	}
@@ -580,20 +599,29 @@ tresult PLUGIN_API AVinylController::notify(IMessage* message)
             if (message->getAttributes()->getInt(tmp.text8(), newState) == kResultTrue){
 
                 for(auto& view: viewsArray_) {
-                    static_cast<AVinylEditorView*>(view.get())->setPadState(i, (newState == 1));
+                    auto vinylView = dynamic_cast<AVinylEditorView*>(view.get());
+                    if (vinylView) {
+                        vinylView->setPadState(i, (newState == 1));
+                    }
                 }
             }
 			tmp = tmp.printf("PadType%02d",i);
             if (message->getAttributes()->getInt(tmp.text8(), newState) == kResultTrue){
 
                 for(auto& view: viewsArray_) {
-                    static_cast<AVinylEditorView*>(view.get())->setPadType(i, newState);
+                    auto vinylView = dynamic_cast<AVinylEditorView*>(view.get());
+                    if (vinylView) {
+                        vinylView->setPadType(i, newState);
+                    }
                 }
             }
 			tmp = tmp.printf("PadTag%02d",i);
             if (message->getAttributes()->getInt(tmp.text8(), newState) == kResultTrue) {
                 for(auto& view: viewsArray_) {
-                    static_cast<AVinylEditorView*>(view.get())->setPadTag(i, newState);
+                    auto vinylView = dynamic_cast<AVinylEditorView*>(view.get());
+                    if (vinylView) {
+                        vinylView->setPadTag(i, newState);
+                    }
                 }
             }
 		}

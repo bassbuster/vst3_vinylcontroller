@@ -97,7 +97,7 @@ void fastsine(T *a, size_t len) {
 
     const T c1 = 0.5;
     const T c2 = -0.5;
-    const T isign = 1.;
+    //const T isign = 1.;
 
     size_t j = 1;
     for (size_t ii = 1; ii <= halfLen; ii++) {
@@ -120,7 +120,7 @@ void fastsine(T *a, size_t len) {
 
     for (size_t mmax = 2; len > mmax;) {
         size_t istep = 2 * mmax;
-        theta = 2. * Pi / (isign * mmax);
+        theta = 2. * Pi / (/*isign **/ mmax);
         T wpr = -2. * sqr(sin(0.5 * theta));
         T wpi = sin(theta);
         T wr = 1.;

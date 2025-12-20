@@ -179,8 +179,8 @@ AVinyl::AVinyl() :
 
     params.addReader(kCurrentEntryId, [this] () { return double(iCurrentEntry / (EMaximumSamples - 1)); },
                      [this](Sample64 value) {
-                         SetCurrentEntry(floor(value * double(EMaximumSamples - 1) + 0.5));
-                         dirtyParams |= PadSet(iCurrentEntry);
+                         currentEntry(floor(value * double(EMaximumSamples - 1) + 0.5));
+                         dirtyParams |= padSet(iCurrentEntry);
                      });
     params.addReader(kCurrentSceneId, [this] () { return double(iCurrentScene / (EMaximumScenes - 1)); },
                      [this](Sample64 value) {
@@ -188,35 +188,35 @@ AVinyl::AVinyl() :
                          dirtyParams = true;
                      });
 
-    params.addReader(kLoopId, [this] () { return (SamplesArray.size() > 0) ? (SamplesArray.at(iCurrentEntry)->Loop ? 1. : 0.) : 0.; },
+    params.addReader(kLoopId, [this] () { return (SamplesArray.size() > iCurrentEntry) ? (SamplesArray.at(iCurrentEntry)->Loop ? 1. : 0.) : 0.; },
                      [this](Sample64 value) {
                          if (SamplesArray.size() > iCurrentEntry) {
                              SamplesArray.at(iCurrentEntry)->Loop = value > 0.5;
                          }
                      });
 
-    params.addReader(kSyncId, [this] () { return (SamplesArray.size() > 0) ? (SamplesArray.at(iCurrentEntry)->Sync ? 1. : 0.) : 0.; },
+    params.addReader(kSyncId, [this] () { return (SamplesArray.size() > iCurrentEntry) ? (SamplesArray.at(iCurrentEntry)->Sync ? 1. : 0.) : 0.; },
                      [this](Sample64 value) {
                          if (SamplesArray.size() > iCurrentEntry) {
                              SamplesArray.at(iCurrentEntry)->Sync = value > 0.5;
                          }
                      });
 
-    params.addReader(kReverseId, [this] () { return (SamplesArray.size() > 0) ? (SamplesArray.at(iCurrentEntry)->Reverse ? 1. : 0.) : 0.; },
+    params.addReader(kReverseId, [this] () { return (SamplesArray.size() > iCurrentEntry) ? (SamplesArray.at(iCurrentEntry)->Reverse ? 1. : 0.) : 0.; },
                      [this](Sample64 value) {
                          if (SamplesArray.size() > iCurrentEntry) {
                              SamplesArray.at(iCurrentEntry)->Reverse = value > 0.5;
                          }
                      });
 
-    params.addReader(kAmpId, [this] () { return (SamplesArray.size() > 0) ? (SamplesArray.at(iCurrentEntry)->Level / 2.) : 0.5; },
+    params.addReader(kAmpId, [this] () { return (SamplesArray.size() > iCurrentEntry) ? (SamplesArray.at(iCurrentEntry)->Level / 2.) : 0.5; },
                      [this](Sample64 value) {
                          if (SamplesArray.size() > iCurrentEntry) {
                              SamplesArray.at(iCurrentEntry)->Level = value * 2.0;
                          }
                      });
 
-    params.addReader(kTuneId, [this] () { return (SamplesArray.size()>0) ? (SamplesArray.at(iCurrentEntry)->Tune > 1.0 ? SamplesArray.at(iCurrentEntry)->Tune / 2.0 : SamplesArray.at(iCurrentEntry)->Tune - 0.5): 0.5; },
+    params.addReader(kTuneId, [this] () { return (SamplesArray.size() > iCurrentEntry) ? (SamplesArray.at(iCurrentEntry)->Tune > 1.0 ? SamplesArray.at(iCurrentEntry)->Tune / 2.0 : SamplesArray.at(iCurrentEntry)->Tune - 0.5): 0.5; },
                      [this](Sample64 value) {
                          if (SamplesArray.size() > iCurrentEntry) {
                              SamplesArray.at(iCurrentEntry)->Tune = value > 0.5 ? value * 2.0 : value + 0.5;
@@ -295,541 +295,560 @@ inline Sample64 noteLengthInSamples(Sample64 note, Sample64 tempo, Sample64 samp
 // ------------------------------------------------------------------------
 tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
+    try {
 
-    bool samplesParamsUpdate = false;
-    if (data.processContext) {
-        dSampleRate = data.processContext->sampleRate;
-        dTempo = data.processContext->tempo;
-        dNoteLength = noteLengthInSamples(ERollNote, dTempo, dSampleRate);
-    }
-
-    IParameterChanges* paramChanges = data.inputParameterChanges;
-    IParameterChanges* outParamChanges = data.outputParameterChanges;
-    IEventList* eventList = data.inputEvents;
-
-    params.setQueue(paramChanges);
-
-    ParameterWriter vuLeftWriter(kVuLeftId, outParamChanges);
-    ParameterWriter vuRightWriter(kVuRightId, outParamChanges);
-    ParameterWriter positionWriter(kPositionId, outParamChanges);
-
-    ParameterWriter loopWriter(kLoopId, outParamChanges);
-    ParameterWriter syncWriter(kSyncId, outParamChanges);
-    ParameterWriter levelWriter(kAmpId, outParamChanges);
-    ParameterWriter reverseWriter(kReverseId, outParamChanges);
-    ParameterWriter tuneWriter(kTuneId, outParamChanges);
-
-    ParameterWriter entryWriter(kCurrentEntryId, outParamChanges);
-    ParameterWriter sceneWriter(kCurrentSceneId, outParamChanges);
-
-    ParameterWriter holdWriter(kHoldId, outParamChanges);
-    ParameterWriter freezeWriter(kFreezeId, outParamChanges);
-    ParameterWriter vintageWriter(kVintageId, outParamChanges);
-    ParameterWriter distorsionWriter(kDistorsionId, outParamChanges);
-    ParameterWriter preRollWriter(kPreRollId, outParamChanges);
-    ParameterWriter postRollWriter(kPostRollId, outParamChanges);
-    ParameterWriter lockWriter(kLockToneId, outParamChanges);
-    ParameterWriter punchInWriter(kPunchInId, outParamChanges);
-    ParameterWriter punchOutWriter(kPunchOutId, outParamChanges);
-
-    ParameterWriter tcLearnWriter(kTimecodeLearnId, outParamChanges);
-
-    Event event;
-    Event *eventP = nullptr;
-    int32 eventIndex = 0;
-
-    Finalizer readTheRest([&](){
-
-        params.flush();
-
-        while (eventList) {
-            if (eventList->getEvent(eventIndex++, event) != kResultOk) {
-                eventList = nullptr;
-            } else {
-                processEvent(event);
-            }
+        bool samplesParamsUpdate = false;
+        if (data.processContext) {
+            dSampleRate = data.processContext->sampleRate;
+            dTempo = data.processContext->tempo;
+            dNoteLength = noteLengthInSamples(ERollNote, dTempo, dSampleRate);
         }
-    });
 
+        IParameterChanges* paramChanges = data.inputParameterChanges;
+        IParameterChanges* outParamChanges = data.outputParameterChanges;
+        IEventList* eventList = data.inputEvents;
 
-    // -------------------------------------
-    // ---3) Process Audio---------------------
-    // -------------------------------------
-    if (data.numInputs == 0 || data.numOutputs == 0) {
-        // nothing to do
-        return kResultOk;
-    }
+        params.setQueue(paramChanges);
 
-    // (simplification) we suppose in this example that we have the same input channel count than the output
-    int32 numChannels = data.inputs[0].numChannels;
+        ParameterWriter vuLeftWriter(kVuLeftId, outParamChanges);
+        ParameterWriter vuRightWriter(kVuRightId, outParamChanges);
+        ParameterWriter positionWriter(kPositionId, outParamChanges);
 
-    // ---get audio buffers----------------
-    float** in = data.inputs[0].channelBuffers32;
-    float** out = data.outputs[0].channelBuffers32;
+        ParameterWriter loopWriter(kLoopId, outParamChanges);
+        ParameterWriter syncWriter(kSyncId, outParamChanges);
+        ParameterWriter levelWriter(kAmpId, outParamChanges);
+        ParameterWriter reverseWriter(kReverseId, outParamChanges);
+        ParameterWriter tuneWriter(kTuneId, outParamChanges);
 
-    //{
-    float fVuLeft = 0.f;
-    float fVuRight = 0.f;
-    float fOldPosition = fPosition;
-    bool bOldTimecodeLearn = bTCLearn;
-    Sample64 fOldSpeed = fRealSpeed;
+        ParameterWriter entryWriter(kCurrentEntryId, outParamChanges);
+        ParameterWriter sceneWriter(kCurrentSceneId, outParamChanges);
 
-    if (numChannels >= 2) {
+        ParameterWriter holdWriter(kHoldId, outParamChanges);
+        ParameterWriter freezeWriter(kFreezeId, outParamChanges);
+        ParameterWriter vintageWriter(kVintageId, outParamChanges);
+        ParameterWriter distorsionWriter(kDistorsionId, outParamChanges);
+        ParameterWriter preRollWriter(kPreRollId, outParamChanges);
+        ParameterWriter postRollWriter(kPostRollId, outParamChanges);
+        ParameterWriter lockWriter(kLockToneId, outParamChanges);
+        ParameterWriter punchInWriter(kPunchInId, outParamChanges);
+        ParameterWriter punchOutWriter(kPunchOutId, outParamChanges);
 
+        ParameterWriter tcLearnWriter(kTimecodeLearnId, outParamChanges);
 
-        int32 sampleFrames = data.numSamples;
-        int32 sampleOffset = 0;
-        Sample32* ptrInLeft = in[0];
-        Sample32* ptrOutLeft = out[0];
-        Sample32* ptrInRight = in[1];
-        Sample32* ptrOutRight = out[1];
+        Event event;
+        Event* eventP = nullptr;
+        int32 eventIndex = 0;
 
-        while (--sampleFrames >= 0) {
+        Finalizer readTheRest([&]() {
 
-            params.checkOffset(sampleOffset);
+            params.flush();
 
-            ////////////Get Offsetted Events ////////////////////////////////////
-            if (eventList) {
-                if (eventP == nullptr){
-                    if (eventList->getEvent(eventIndex++, event) != kResultOk) {
-                        eventList = nullptr;
-                        eventP = nullptr;
-                    } else {
-                        eventP = &event;
-                    }
+            while (eventList) {
+                if (eventList->getEvent(eventIndex++, event) != kResultOk) {
+                    eventList = nullptr;
                 }
-                if ((eventP != nullptr) && (event.sampleOffset == sampleOffset)) {
+                else {
                     processEvent(event);
-                    eventP = nullptr;
                 }
             }
-            /////////////////////////////////////////////////////////////////////
-
-            if (!bBypass) {
-
-/*
-                inL = *ptrInLeft++;
-                inR = *ptrInRight++;
-                tmpL = (3.0f * tmpL + inL)/4.0f;
-                tmpR = (3.0f * tmpR + inR)/4.0f;
-
-                SignalL[FCursor] = tmpL;
-                SignalR[FCursor] = tmpR;
-                FSignalL = ((Sample64)(EFilterFrame - 1) * FSignalL + inL)
-                    / (Sample64)EFilterFrame;
-                FSignalR = ((Sample64)(EFilterFrame - 1) * FSignalR + inR)
-                    / (Sample64)EFilterFrame;
-                SignalL[SCursor] = SignalL[SCursor] - FSignalL;
-                SignalR[SCursor] = SignalR[SCursor] - FSignalR;
-                DeltaL = (3.0f * DeltaL + (SignalL[SCursor] - OldSignalL)) / 4.0f;
-                DeltaR = (3.0f * DeltaR + (SignalR[SCursor] - OldSignalR)) / 4.0f;
-
-                CalcDirectionTimeCodeAmplitude();
-
-                OldSignalL = SignalL[SCursor];
-                OldSignalR = SignalR[SCursor];
-                FCursor++;
-                if (FCursor >= EFilterFrame) {
-                    FCursor = 0;
-                }
-                SCursor++;
-                if (SCursor >= EFilterFrame) {
-                    SCursor = 0;
-                }
-*/
-
-                Sample64 inL = Sample64(*ptrInLeft++);
-                Sample64 inR = Sample64(*ptrInRight++);
-
-                SignalL[FCursor] = (filtredL.append(inL));
-                SignalR[FCursor] = (filtredL.append(inR));
-
-                SignalL[SCursor] = SignalL[SCursor] - (FSignalL.append(inL));
-                SignalR[SCursor] = SignalR[SCursor] - (FSignalR.append(inR));
-
-                DeltaL.append(SignalL[SCursor] - OldSignalL);
-                DeltaR.append(SignalR[SCursor] - OldSignalR);
-
-                CalcDirectionTimeCodeAmplitude();
-
-                OldSignalL = SignalL[SCursor];
-                OldSignalR = SignalR[SCursor];
-
-                if (++FCursor >= EFilterFrame) {
-                    FCursor = 0;
-                }
-
-                if (++SCursor >= EFilterFrame) {
-                    SCursor = 0;
-                }
+            });
 
 
-                Sample64 SmoothCoef = sin(Pi * Sample64(FFTCursor + EFFTFrame - ESpeedFrame) / Sample64(EFFTFrame));
-                //FFTPre[FFTCursor + EFFTFrame - ESpeedFrame] = inL - inR;// (OldSignalL - OldSignalR);
-                //FFT[FFTCursor + EFFTFrame - ESpeedFrame] = (SmoothCoef * FFTPre[FFTCursor + EFFTFrame - ESpeedFrame]);
-                filtred_[FFTCursor + EFFTFrame - ESpeedFrame] = inL - inR;// (OldSignalL - OldSignalR);
-                fft_[FFTCursor + EFFTFrame - ESpeedFrame].real = (SmoothCoef * filtred_[FFTCursor + EFFTFrame - ESpeedFrame]);
-                fft_[FFTCursor + EFFTFrame - ESpeedFrame].imaginary = 0;
+        // -------------------------------------
+        // ---3) Process Audio---------------------
+        // -------------------------------------
+        if (data.numInputs == 0 || data.numOutputs == 0) {
+            // nothing to do
+            return kResultOk;
+        }
 
-                FFTCursor++;
-                if (FFTCursor >= ESpeedFrame) {
-                    FFTCursor = 0;
+        // (simplification) we suppose in this example that we have the same input channel count than the output
+        int32 numChannels = data.inputs[0].numChannels;
 
-                    if (TimeCodeAmplytude >= ETimeCodeMinAmplytude) {
-                        { 
-                            //debugInputMessage(FFT, EFFTFrame);
+        // ---get audio buffers----------------
+        float** in = data.inputs[0].channelBuffers32;
+        float** out = data.outputs[0].channelBuffers32;
+
+        //{
+        float fVuLeft = 0.f;
+        float fVuRight = 0.f;
+        float fOldPosition = fPosition;
+        bool bOldTimecodeLearn = bTCLearn;
+        Sample64 fOldSpeed = fRealSpeed;
+
+        if (numChannels >= 2) {
+
+
+            int32 sampleFrames = data.numSamples;
+            int32 sampleOffset = 0;
+            Sample32* ptrInLeft = in[0];
+            Sample32* ptrOutLeft = out[0];
+            Sample32* ptrInRight = in[1];
+            Sample32* ptrOutRight = out[1];
+
+            while (--sampleFrames >= 0) {
+
+                params.checkOffset(sampleOffset);
+
+                ////////////Get Offsetted Events ////////////////////////////////////
+                if (eventList) {
+                    if (eventP == nullptr) {
+                        if (eventList->getEvent(eventIndex++, event) != kResultOk) {
+                            eventList = nullptr;
+                            eventP = nullptr;
                         }
-                        //fastsine(FFT, EFFTFrame);
-                        fft_simd(fft_, EFFTFrame);
-                        /// Filterout low noise
-                        for (size_t i = 0; i < EFFTFrame; i++) {
-                            //Sample64 SmoothCoef = sin(Pi * Sample64(i) / Sample64(EFFTFrame));
-                            Sample64 SmoothCoef = i < 10 ? i * .1 : 1.;
-                            //FFT[i] = SmoothCoef * FFT[i];
-                            fft_[i].real = SmoothCoef * fft_[i].real;
-                            fft_[i].imaginary = SmoothCoef * fft_[i].imaginary;
+                        else {
+                            eventP = &event;
                         }
-                        {
-                            Sample64 real_[EFFTFrame];
-                            for (size_t i = 0; i < EFFTFrame; i++) {
-                                real_[i] = fft_[i].real;
+                    }
+                    if ((eventP != nullptr) && (event.sampleOffset == sampleOffset)) {
+                        processEvent(event);
+                        eventP = nullptr;
+                    }
+                }
+                /////////////////////////////////////////////////////////////////////
+
+                if (!bBypass) {
+
+                    /*
+                                    inL = *ptrInLeft++;
+                                    inR = *ptrInRight++;
+                                    tmpL = (3.0f * tmpL + inL)/4.0f;
+                                    tmpR = (3.0f * tmpR + inR)/4.0f;
+
+                                    SignalL[FCursor] = tmpL;
+                                    SignalR[FCursor] = tmpR;
+                                    FSignalL = ((Sample64)(EFilterFrame - 1) * FSignalL + inL)
+                                        / (Sample64)EFilterFrame;
+                                    FSignalR = ((Sample64)(EFilterFrame - 1) * FSignalR + inR)
+                                        / (Sample64)EFilterFrame;
+                                    SignalL[SCursor] = SignalL[SCursor] - FSignalL;
+                                    SignalR[SCursor] = SignalR[SCursor] - FSignalR;
+                                    DeltaL = (3.0f * DeltaL + (SignalL[SCursor] - OldSignalL)) / 4.0f;
+                                    DeltaR = (3.0f * DeltaR + (SignalR[SCursor] - OldSignalR)) / 4.0f;
+
+                                    CalcDirectionTimeCodeAmplitude();
+
+                                    OldSignalL = SignalL[SCursor];
+                                    OldSignalR = SignalR[SCursor];
+                                    FCursor++;
+                                    if (FCursor >= EFilterFrame) {
+                                        FCursor = 0;
+                                    }
+                                    SCursor++;
+                                    if (SCursor >= EFilterFrame) {
+                                        SCursor = 0;
+                                    }
+                    */
+
+                    Sample64 inL = Sample64(*ptrInLeft++);
+                    Sample64 inR = Sample64(*ptrInRight++);
+
+                    SignalL[FCursor] = (filtredL.append(inL));
+                    SignalR[FCursor] = (filtredL.append(inR));
+
+                    SignalL[SCursor] = SignalL[SCursor] - (FSignalL.append(inL));
+                    SignalR[SCursor] = SignalR[SCursor] - (FSignalR.append(inR));
+
+                    DeltaL.append(SignalL[SCursor] - OldSignalL);
+                    DeltaR.append(SignalR[SCursor] - OldSignalR);
+
+
+                    CalcDirectionTimeCodeAmplitude();
+
+                    OldSignalL = SignalL[SCursor];
+                    OldSignalR = SignalR[SCursor];
+
+
+                    if (++FCursor >= EFilterFrame) {
+                        FCursor = 0;
+                    }
+
+                    if (++SCursor >= EFilterFrame) {
+                        SCursor = 0;
+                    }
+
+
+                    Sample64 SmoothCoef = sin(Pi * Sample64(FFTCursor + EFFTFrame - ESpeedFrame) / Sample64(EFFTFrame));
+                    FFTPre[FFTCursor + EFFTFrame - ESpeedFrame] = inL - inR;// (OldSignalL - OldSignalR);
+                    FFT[FFTCursor + EFFTFrame - ESpeedFrame] = (SmoothCoef * FFTPre[FFTCursor + EFFTFrame - ESpeedFrame]);
+                    //filtred_[FFTCursor + EFFTFrame - ESpeedFrame] = inL - inR;// (OldSignalL - OldSignalR);
+                    //fft_[FFTCursor + EFFTFrame - ESpeedFrame].real = (SmoothCoef * filtred_[FFTCursor + EFFTFrame - ESpeedFrame]);
+                    //fft_[FFTCursor + EFFTFrame - ESpeedFrame].imaginary = 0;
+
+                    FFTCursor++;
+                    if (FFTCursor >= ESpeedFrame) {
+                        FFTCursor = 0;
+
+                        if (TimeCodeAmplytude >= ETimeCodeMinAmplytude) {
+                            {
+                                debugInputMessage(FFT, EFFTFrame);
                             }
-                            debugFftMessage(real_, EFFTFrame);
-                        }
-                        {
-                            Sample64 real_[EFFTFrame];
+                            fastsine(FFT, EFFTFrame);
+                            //fft(fft_, EFFTFrame);
+                            /// Filterout low noise
                             for (size_t i = 0; i < EFFTFrame; i++) {
-                                real_[i] = fft_[i].imaginary;
+                                //Sample64 SmoothCoef = sin(Pi * Sample64(i) / Sample64(EFFTFrame));
+                                Sample64 SmoothCoef = i < 10 ? i * .1 : 1.;
+                                FFT[i] = SmoothCoef * FFT[i];
+                                //fft_[i].real = SmoothCoef * fft_[i].real;
+                                //fft_[i].imaginary = SmoothCoef * fft_[i].imaginary;
                             }
-                            debugInputMessage(real_, EFFTFrame);
-                        }
-                        
+                            {
+                                //Sample64 real_[EFFTFrame];
+                                //for (size_t i = 0; i < EFFTFrame; i++) {
+                                //    real_[i] = fft_[i].real;
+                                //}
+                                debugFftMessage(FFT, EFFTFrame);
+                            }
+                            //{
+                            //    Sample64 real_[EFFTFrame];
+                            //    for (size_t i = 0; i < EFFTFrame; i++) {
+                            //        real_[i] = fft_[i].imaginary;
+                            //    }
+                            //    debugInputMessage(real_, EFFTFrame);
+                            //}
 
-                        CalcAbsSpeed();
-                        if (TimecodeLearnCounter > 0) {
-                            TimecodeLearnCounter--;
-                            avgTimeCodeCoeff.append(Direction * absAVGSpeed);
-                            fRealSpeed = 1.;
-                        } else {
+
+                            CalcAbsSpeed();
+                            if (TimecodeLearnCounter > 0) {
+                                TimecodeLearnCounter--;
+                                avgTimeCodeCoeff.append(Direction * absAVGSpeed);
+                                fRealSpeed = 1.;
+                            }
+                            else {
+                                fRealSpeed = absAVGSpeed / avgTimeCodeCoeff;
+                                bTCLearn = false;
+                            }
+                            fVolCoeff.append(sqrt(fabs(fRealSpeed)));
+                            fRealSpeed = (Sample64)Direction * fRealSpeed;
+                        }
+
+                        for (size_t i = 0; i < EFFTFrame - ESpeedFrame; i++) {
+                            //Sample64 SmoothCoef = 0.5 - 0.5 * cos((2.0 * Pi * Sample64(i) / EFFTFrame));
+                            Sample64 SmoothCoef = sin(Pi * Sample64(i) / Sample64(EFFTFrame));
+                            FFTPre[i] = FFTPre[ESpeedFrame + i];
+                            FFT[i] = (SmoothCoef * FFTPre[ESpeedFrame + i]);
+                            //filtred_[i] = filtred_[ESpeedFrame + i];
+                            //fft_[i].real = (SmoothCoef * filtred_[ESpeedFrame + i]);
+                            //fft_[i].imaginary = 0.;
+                        }
+                    }
+
+                    if (TimeCodeAmplytude < ETimeCodeMinAmplytude) {
+                        if (fVolCoeff >= 0.00001) {
+                            absAVGSpeed = absAVGSpeed / 1.07;
                             fRealSpeed = absAVGSpeed / avgTimeCodeCoeff;
-                            bTCLearn = false;
+                            fVolCoeff.append(sqrt(fabs(fRealSpeed)));
+                            fRealSpeed = Sample64(Direction) * fRealSpeed;
                         }
-                        fVolCoeff.append(sqrt(fabs(fRealSpeed)));
-                        fRealSpeed = (Sample64)Direction * fRealSpeed;
-                    }
-
-                    for (size_t i = 0; i < EFFTFrame - ESpeedFrame; i++) {
-                        //Sample64 SmoothCoef = 0.5 - 0.5 * cos((2.0 * Pi * Sample64(i) / EFFTFrame));
-                        Sample64 SmoothCoef = sin(Pi * Sample64(i) / Sample64(EFFTFrame));
-                        //FFTPre[i] =	FFTPre[ESpeedFrame + i];
-                        //FFT[i] = (SmoothCoef * FFTPre[ESpeedFrame + i]);
-                        filtred_[i] = filtred_[ESpeedFrame + i];
-                        fft_[i].real = (SmoothCoef * filtred_[ESpeedFrame + i]);
-                        fft_[i].imaginary = 0.;
-                    }
-                }
-
-                if (TimeCodeAmplytude < ETimeCodeMinAmplytude) {
-                    if (fVolCoeff >= 0.00001) {
-                        absAVGSpeed = absAVGSpeed / 1.07;
-                        fRealSpeed = absAVGSpeed / avgTimeCodeCoeff;
-                        fVolCoeff.append(sqrt(fabs(fRealSpeed)));
-                        fRealSpeed = Sample64(Direction) * fRealSpeed;
-                    } else {
-                        absAVGSpeed = 0.;
-                        fRealSpeed = 0.;
-                        fVolCoeff = 0.;
-                    }
-
-                }
-
-
-                if ((fVolCoeff >= 0.00001) && (SamplesArray.size() > 0)) {
-
-                    ////////////////////EFFECTOR BEGIN//////////////////////////////
-
-                    softVolume.append((effectorSet & ePunchIn) ? (fGain * fVolCoeff) :
-                                           ((effectorSet & ePunchOut) ? 0. : (fRealVolume * fVolCoeff)));
-                    softPreRoll.append(effectorSet & ePreRoll ? 1. : 0.);
-                    softPostRoll.append(effectorSet & ePostRoll ? 1. : 0.);
-                    softDistorsion.append(effectorSet & eDistorsion ? 1. : 0.);
-                    softVintage.append(effectorSet & eVintage ? 1. : 0.);
-
-                    if (effectorSet & eHold) {
-                        if (!keyHold) {
-                            HoldCue = SamplesArray.at(iCurrentEntry)->cue();
-                            keyHold = true;
+                        else {
+                            absAVGSpeed = 0.;
+                            fRealSpeed = 0.;
+                            fVolCoeff = 0.;
                         }
-                        softHold.append(1.);
-                    } else {
-                        keyHold = false;
-                        softHold.append(0.);
+
                     }
 
-                    if (effectorSet & eFreeze) {
-                        if (!keyFreeze) {
-                            FreezeCue = SamplesArray.at(iCurrentEntry)->cue();
-                            FreezeCueCur = FreezeCue;
-                            keyFreeze = true;
-                        }
-                        softFreeze.append(1.);
-                    } else {
-                        if (keyFreeze) {
-                            keyFreeze = false;
-                            AfterFreezeCue = FreezeCueCur;
-                        }
-                        softFreeze.append(0.);
-                    }
 
-                    if (effectorSet & eLockTone) {
-                        if (!keyLockTone) {
-                            keyLockTone = true;
-                            lockSpeed = fabs(fRealSpeed * fRealPitch);
-                            lockVolume = fVolCoeff;
-                            lockTune = SamplesArray.at(iCurrentEntry)->Tune;
-                            SamplesArray.at(iCurrentEntry)->beginLockStrobe();
-                        }
-                        fVolCoeff = lockVolume;
-                    } else {
-                        keyLockTone = false;
-                    }
+                    if ((fVolCoeff >= 0.00001) && (SamplesArray.size() > iCurrentEntry)) {
 
-                    //////////////////////////PLAYER////////////////////////////////////////////////
-                    Sample64 _speed = 0.;//fRealSpeed * fRealPitch;
-                    Sample64 _tempo = 0.;
+                        ////////////////////EFFECTOR BEGIN//////////////////////////////
 
-                    if (keyLockTone) {
-                        Sample64 fLeft = 0;
-                        Sample64 fRight = 0;
-                        _speed = (Sample64)Direction * lockSpeed;
-                        _tempo = SamplesArray.at(iCurrentEntry)->Sync
-                                     ? fabs(dTempo * fRealSpeed * fRealPitch)
-                                     : SamplesArray.at(iCurrentEntry)->tempo() * fabs(fRealSpeed * fRealPitch) * lockTune;
-                        SamplesArray.at(iCurrentEntry)->playStereoSampleTempo(&fLeft,
-                                                                              &fRight,
-                                                                              _speed,
-                                                                              _tempo,
-                                                                              dSampleRate,
-                                                                              true);
-                        *ptrOutLeft = fLeft;
-                        *ptrOutRight = fRight;
-                    } else {
-                        Sample64 fLeft = 0;
-                        Sample64 fRight = 0;
-                        _speed = fRealSpeed * fRealPitch;
-                        _tempo = dTempo;
-                        SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft,
-                                                                         &fRight,
-                                                                         _speed,
-                                                                         _tempo,
-                                                                         dSampleRate,
-                                                                         true);
-                        *ptrOutLeft = fLeft;
-                        *ptrOutRight = fRight;
-                    }
+                        softVolume.append((effectorSet & ePunchIn) ? (fGain * fVolCoeff) :
+                            ((effectorSet & ePunchOut) ? 0. : (fRealVolume * fVolCoeff)));
+                        softPreRoll.append(effectorSet & ePreRoll ? 1. : 0.);
+                        softPostRoll.append(effectorSet & ePostRoll ? 1. : 0.);
+                        softDistorsion.append(effectorSet & eDistorsion ? 1. : 0.);
+                        softVintage.append(effectorSet & eVintage ? 1. : 0.);
 
-                    if (keyFreeze) {
-                        Sample64 fLeft = 0;
-                        Sample64 fRight = 0;
-                        FreezeCounter++;
-                        bool pushSync = SamplesArray.at(iCurrentEntry)->Sync;
-                        SamplesArray.at(iCurrentEntry)->Sync = false;
-                        auto PushCue = SamplesArray.at(iCurrentEntry)->cue();
-                        SamplesArray.at(iCurrentEntry)->cue(FreezeCueCur);
-                        SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft,
-                                                                         &fRight,
-                                                                         _speed,
-                                                                         _tempo,
-                                                                         dSampleRate,
-                                                                         true);
-                        *ptrOutLeft = fLeft;
-                        *ptrOutRight = fRight;
-                        FreezeCueCur =  SamplesArray.at(iCurrentEntry)->cue();
-                        if ((softFreeze>0.00001)&&(softFreeze<0.99)) {
-                            Sample64 fLeft = 0;
-                            Sample64 fRight = 0;
-                            SamplesArray.at(iCurrentEntry)->cue(AfterFreezeCue);
-                            SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft,
-                                                                             &fRight,
-                                                                             _speed,
-                                                                             _tempo,
-                                                                             dSampleRate,
-                                                                             true);
-                            *ptrOutLeft = *ptrOutLeft * softFreeze + fLeft * (1.0 - softFreeze);
-                            *ptrOutRight = *ptrOutRight * softFreeze + fRight * (1.0 - softFreeze);
-                            AfterFreezeCue = SamplesArray.at(iCurrentEntry)->cue();
-                        }
-                        if (_speed != 0.0){
-                            if (FreezeCounter >= dNoteLength) {
-                                FreezeCounter = 0;
-                                AfterFreezeCue = FreezeCueCur;
-                                FreezeCueCur = FreezeCue;
-                                softFreeze = 0;
+                        if (effectorSet & eHold) {
+                            if (!keyHold) {
+                                HoldCue = SamplesArray.at(iCurrentEntry)->cue();
+                                keyHold = true;
                             }
+                            softHold.append(1.);
                         }
-                        SamplesArray.at(iCurrentEntry)->Sync = pushSync;
-                        SamplesArray.at(iCurrentEntry)->cue(PushCue);
-                    }
+                        else {
+                            keyHold = false;
+                            softHold.append(0.);
+                        }
 
-                    if (keyHold) {
-                        HoldCounter++;
-                        if ((softHold>0.00001)&&(softHold<0.99)) {
+                        if (effectorSet & eFreeze) {
+                            if (!keyFreeze) {
+                                FreezeCue = SamplesArray.at(iCurrentEntry)->cue();
+                                FreezeCueCur = FreezeCue;
+                                keyFreeze = true;
+                            }
+                            softFreeze.append(1.);
+                        }
+                        else {
+                            if (keyFreeze) {
+                                keyFreeze = false;
+                                AfterFreezeCue = FreezeCueCur;
+                            }
+                            softFreeze.append(0.);
+                        }
+
+                        if (effectorSet & eLockTone) {
+                            if (!keyLockTone) {
+                                keyLockTone = true;
+                                lockSpeed = fabs(fRealSpeed * fRealPitch);
+                                lockVolume = fVolCoeff;
+                                lockTune = SamplesArray.at(iCurrentEntry)->Tune;
+                                SamplesArray.at(iCurrentEntry)->beginLockStrobe();
+                            }
+                            fVolCoeff = lockVolume;
+                        } else {
+                            keyLockTone = false;
+                        }
+
+                        //////////////////////////PLAYER////////////////////////////////////////////////
+                        Sample64 _speed = 0.;//fRealSpeed * fRealPitch;
+                        Sample64 _tempo = 0.;
+
+                        if (keyLockTone) {
                             Sample64 fLeft = 0;
                             Sample64 fRight = 0;
-                            auto PushCue = SamplesArray.at(iCurrentEntry)->cue();
-                            SamplesArray.at(iCurrentEntry)->cue(AfterHoldCue);
+                            _speed = (Sample64)Direction * lockSpeed;
+                            _tempo = SamplesArray.at(iCurrentEntry)->Sync
+                                ? fabs(dTempo * fRealSpeed * fRealPitch)
+                                : SamplesArray.at(iCurrentEntry)->tempo() * fabs(fRealSpeed * fRealPitch) * lockTune;
+                            SamplesArray.at(iCurrentEntry)->playStereoSampleTempo(&fLeft,
+                                &fRight,
+                                _speed,
+                                _tempo,
+                                dSampleRate,
+                                true);
+                            *ptrOutLeft = fLeft;
+                            *ptrOutRight = fRight;
+                        } else {
+                            Sample64 fLeft = 0;
+                            Sample64 fRight = 0;
+                            _speed = fRealSpeed * fRealPitch;
+                            _tempo = dTempo;
                             SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft,
-                                                                             &fRight,
-                                                                             _speed,
-                                                                             SamplesArray.at(iCurrentEntry)->tempo(),
-                                                                             dSampleRate,
-                                                                             true);
-                            *ptrOutLeft = *ptrOutLeft * softHold + fLeft * (1. - softHold);
-                            *ptrOutRight = *ptrOutRight * softHold + fRight * (1. - softHold);
-                            AfterHoldCue = SamplesArray.at(iCurrentEntry)->cue();
+                                &fRight,
+                                _speed,
+                                _tempo,
+                                dSampleRate,
+                                true);
+                            *ptrOutLeft = fLeft;
+                            *ptrOutRight = fRight;
+                        }
+
+                        if (keyFreeze) {
+                            Sample64 fLeft = 0;
+                            Sample64 fRight = 0;
+                            FreezeCounter++;
+                            bool pushSync = SamplesArray.at(iCurrentEntry)->Sync;
+                            SamplesArray.at(iCurrentEntry)->Sync = false;
+                            auto PushCue = SamplesArray.at(iCurrentEntry)->cue();
+                            SamplesArray.at(iCurrentEntry)->cue(FreezeCueCur);
+                            SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft,
+                                &fRight,
+                                _speed,
+                                _tempo,
+                                dSampleRate,
+                                true);
+                            *ptrOutLeft = fLeft;
+                            *ptrOutRight = fRight;
+                            FreezeCueCur = SamplesArray.at(iCurrentEntry)->cue();
+                            if ((softFreeze > 0.00001) && (softFreeze < 0.99)) {
+                                Sample64 fLeft = 0;
+                                Sample64 fRight = 0;
+                                SamplesArray.at(iCurrentEntry)->cue(AfterFreezeCue);
+                                SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft,
+                                    &fRight,
+                                    _speed,
+                                    _tempo,
+                                    dSampleRate,
+                                    true);
+                                *ptrOutLeft = *ptrOutLeft * softFreeze + fLeft * (1.0 - softFreeze);
+                                *ptrOutRight = *ptrOutRight * softFreeze + fRight * (1.0 - softFreeze);
+                                AfterFreezeCue = SamplesArray.at(iCurrentEntry)->cue();
+                            }
+                            if (_speed != 0.0) {
+                                if (FreezeCounter >= dNoteLength) {
+                                    FreezeCounter = 0;
+                                    AfterFreezeCue = FreezeCueCur;
+                                    FreezeCueCur = FreezeCue;
+                                    softFreeze = 0;
+                                }
+                            }
+                            SamplesArray.at(iCurrentEntry)->Sync = pushSync;
                             SamplesArray.at(iCurrentEntry)->cue(PushCue);
                         }
-                        if (HoldCounter >= dNoteLength) {
-                            AfterHoldCue = SamplesArray.at(iCurrentEntry)->cue();
-                            SamplesArray.at(iCurrentEntry)->cue(HoldCue);
-                            HoldCounter = 0;
-                            softHold = 0;
-                        }
-                    }
-                    ////////////////////////////////////////////////////////////////////////////
 
-                    if ((softPreRoll > 0.0001) || (softPostRoll > 0.0001)) {
-
-                        Sample64 offset = SamplesArray.at(iCurrentEntry)->noteLength(ERollNote, dTempo);
-                        Sample64 pre_offset = offset;
-                        Sample64 pos_offset = -offset;
-
-                        Sample64 fLeft = 0;
-                        Sample64 fRight = 0;
-                        for (int i = 0; i < ERollCount; i++) {
-                            Sample32 rollVolume = (1. -Sample32(i) / Sample32(ERollCount)) * .6;
-                            if (softPreRoll > 0.0001) {
-                                SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft, &fRight, pos_offset, false);
-                                *ptrOutLeft = *ptrOutLeft * (1.0 - softPreRoll * 0.1) + fLeft * rollVolume * softPreRoll;
-                                *ptrOutRight = *ptrOutRight * (1.0 - softPreRoll * 0.1) + fRight * rollVolume * softPreRoll;
-                                pos_offset = pos_offset + offset;
+                        if (keyHold) {
+                            HoldCounter++;
+                            if ((softHold > 0.00001) && (softHold < 0.99)) {
+                                Sample64 fLeft = 0;
+                                Sample64 fRight = 0;
+                                auto PushCue = SamplesArray.at(iCurrentEntry)->cue();
+                                SamplesArray.at(iCurrentEntry)->cue(AfterHoldCue);
+                                SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft,
+                                    &fRight,
+                                    _speed,
+                                    SamplesArray.at(iCurrentEntry)->tempo(),
+                                    dSampleRate,
+                                    true);
+                                *ptrOutLeft = *ptrOutLeft * softHold + fLeft * (1. - softHold);
+                                *ptrOutRight = *ptrOutRight * softHold + fRight * (1. - softHold);
+                                AfterHoldCue = SamplesArray.at(iCurrentEntry)->cue();
+                                SamplesArray.at(iCurrentEntry)->cue(PushCue);
                             }
-                            if (softPostRoll > 0.0001) {
-                                SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft, &fRight, pre_offset, false);
-                                *ptrOutLeft = *ptrOutLeft * (1.0 - softPostRoll * 0.1) + fLeft * rollVolume * softPostRoll;
-                                *ptrOutRight = *ptrOutRight * (1.0 - softPostRoll * 0.1) + fRight * rollVolume * softPostRoll;
-                                pre_offset = pre_offset - offset;
+                            if (HoldCounter >= dNoteLength) {
+                                AfterHoldCue = SamplesArray.at(iCurrentEntry)->cue();
+                                SamplesArray.at(iCurrentEntry)->cue(HoldCue);
+                                HoldCounter = 0;
+                                softHold = 0;
                             }
                         }
-                    }
+                        ////////////////////////////////////////////////////////////////////////////
 
-                    if (softDistorsion > 0.0001) {
-                        if (*ptrOutLeft > 0) {
-                            *ptrOutLeft = *ptrOutLeft * (1.0 - softDistorsion * 0.6) + 0.4 * sqrt(*ptrOutLeft) * softDistorsion;
-                        } else {
-                            *ptrOutLeft = *ptrOutLeft * (1.0 - softDistorsion * 0.6) - 0.3 * sqrt(-*ptrOutLeft) * softDistorsion;
+                        if ((softPreRoll > 0.0001) || (softPostRoll > 0.0001)) {
+
+                            Sample64 offset = SamplesArray.at(iCurrentEntry)->noteLength(ERollNote, dTempo);
+                            Sample64 pre_offset = offset;
+                            Sample64 pos_offset = -offset;
+
+                            Sample64 fLeft = 0;
+                            Sample64 fRight = 0;
+                            for (int i = 0; i < ERollCount; i++) {
+                                Sample32 rollVolume = (1. - Sample32(i) / Sample32(ERollCount)) * .6;
+                                if (softPreRoll > 0.0001) {
+                                    SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft, &fRight, pos_offset, false);
+                                    *ptrOutLeft = *ptrOutLeft * (1.0 - softPreRoll * 0.1) + fLeft * rollVolume * softPreRoll;
+                                    *ptrOutRight = *ptrOutRight * (1.0 - softPreRoll * 0.1) + fRight * rollVolume * softPreRoll;
+                                    pos_offset = pos_offset + offset;
+                                }
+                                if (softPostRoll > 0.0001) {
+                                    SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft, &fRight, pre_offset, false);
+                                    *ptrOutLeft = *ptrOutLeft * (1.0 - softPostRoll * 0.1) + fLeft * rollVolume * softPostRoll;
+                                    *ptrOutRight = *ptrOutRight * (1.0 - softPostRoll * 0.1) + fRight * rollVolume * softPostRoll;
+                                    pre_offset = pre_offset - offset;
+                                }
+                            }
                         }
-                        if (*ptrOutRight>0) {
-                            *ptrOutRight = *ptrOutRight * (1.0 - softDistorsion * 0.6) + 0.4 * sqrt(*ptrOutRight) * softDistorsion;
-                        } else {
-                            *ptrOutRight = *ptrOutRight * (1.0 - softDistorsion * 0.6) - 0.3 * sqrt(-*ptrOutRight) * softDistorsion;
+
+                        if (softDistorsion > 0.0001) {
+                            if (*ptrOutLeft > 0) {
+                                *ptrOutLeft = *ptrOutLeft * (1.0 - softDistorsion * 0.6) + 0.4 * sqrt(*ptrOutLeft) * softDistorsion;
+                            }
+                            else {
+                                *ptrOutLeft = *ptrOutLeft * (1.0 - softDistorsion * 0.6) - 0.3 * sqrt(-*ptrOutLeft) * softDistorsion;
+                            }
+                            if (*ptrOutRight > 0) {
+                                *ptrOutRight = *ptrOutRight * (1.0 - softDistorsion * 0.6) + 0.4 * sqrt(*ptrOutRight) * softDistorsion;
+                            }
+                            else {
+                                *ptrOutRight = *ptrOutRight * (1.0 - softDistorsion * 0.6) - 0.3 * sqrt(-*ptrOutRight) * softDistorsion;
+                            }
                         }
-                    }
 
-                    if (softVintage > 0.0001) {
-                        Sample64 VintageLeft = 0;
-                        Sample64 VintageRight = 0;
-                        if (VintageSample) {
-                            VintageSample->playStereoSample(&VintageLeft, &VintageRight, _speed, dTempo, dSampleRate, true);
+                        if (softVintage > 0.0001) {
+                            Sample64 VintageLeft = 0;
+                            Sample64 VintageRight = 0;
+                            if (VintageSample) {
+                                VintageSample->playStereoSample(&VintageLeft, &VintageRight, _speed, dTempo, dSampleRate, true);
+                            }
+                            *ptrOutLeft = *ptrOutLeft * (1. - softVintage * .3) + (-sqr(*ptrOutRight * .5) + VintageLeft) * softVintage;
+                            *ptrOutRight = *ptrOutRight * (1. - softVintage * .3) + (-sqr(*ptrOutLeft * .5) + VintageRight) * softVintage;
                         }
-                        *ptrOutLeft = *ptrOutLeft * (1. - softVintage * .3) + (-sqr(*ptrOutRight * .5) + VintageLeft) * softVintage;
-                        *ptrOutRight = *ptrOutRight * (1. - softVintage * .3)  + (-sqr(*ptrOutLeft * .5) + VintageRight) * softVintage;
+
+                        /////////////////////////END OF EFFECTOR//////////////////
+
+
+                        *ptrOutLeft = *ptrOutLeft * softVolume;
+                        *ptrOutRight = *ptrOutRight * softVolume;
+
+                        fPosition = (float)SamplesArray.at(iCurrentEntry)->cue().integerPart() / SamplesArray.at(iCurrentEntry)->bufferLength();
+                        if (*ptrOutLeft > fVuLeft) {
+                            fVuLeft = *ptrOutLeft;
+                        }
+                        if (*ptrOutRight > fVuRight) {
+                            fVuRight = *ptrOutRight;
+                        }
+
+                    }
+                    else {
+                        *ptrOutLeft = 0;
+                        *ptrOutRight = 0;
                     }
 
-                    /////////////////////////END OF EFFECTOR//////////////////
-
-
-                    *ptrOutLeft = *ptrOutLeft * softVolume;
-                    *ptrOutRight = *ptrOutRight * softVolume;
-
-                    fPosition = (float)SamplesArray.at(iCurrentEntry)->cue().integerPart() / SamplesArray.at(iCurrentEntry)->bufferLength();
-                    if (*ptrOutLeft > fVuLeft) {
-                        fVuLeft = *ptrOutLeft;
-                    }
-                    if (*ptrOutRight > fVuRight) {
-                        fVuRight = *ptrOutRight;
-                    }
-
-                } else {
+                }
+                else {
                     *ptrOutLeft = 0;
                     *ptrOutRight = 0;
                 }
 
-            } else {
-                *ptrOutLeft = 0;
-                *ptrOutRight = 0;
+                ptrOutLeft++;
+                ptrOutRight++;
+                sampleOffset++;
+            }
+        }
+
+        if (outParamChanges) {
+
+            if (fVuOldL != fVuLeft) {
+                vuLeftWriter.store(data.numSamples - 1, fVuLeft);
+            }
+            if (fVuOldR != fVuRight) {
+                vuRightWriter.store(data.numSamples - 1, fVuRight);
+            }
+            if (fOldPosition != fPosition) {
+                positionWriter.store(data.numSamples - 1, fPosition);
             }
 
-            ptrOutLeft++;
-            ptrOutRight++;
-            sampleOffset++;
-        }
-    }
+            if ((samplesParamsUpdate || dirtyParams) && (SamplesArray.size() > iCurrentEntry)) {
 
-    if (outParamChanges) {
-
-        if (fVuOldL != fVuLeft ) {
-            vuLeftWriter.store(data.numSamples - 1, fVuLeft);
-        }
-        if (fVuOldR != fVuRight) {
-            vuRightWriter.store(data.numSamples - 1, fVuRight);
-        }
-        if (fOldPosition != fPosition) {
-            positionWriter.store(data.numSamples - 1, fPosition);
-        }
-
-        if ((samplesParamsUpdate || dirtyParams) && (SamplesArray.size() > iCurrentEntry)){
-
-            loopWriter.store(data.numSamples - 1, SamplesArray.at(iCurrentEntry)->Loop ? 1. : 0.);
-            syncWriter.store(data.numSamples - 1, SamplesArray.at(iCurrentEntry)->Sync ? 1. : 0.);
-            levelWriter.store(data.numSamples - 1, SamplesArray.at(iCurrentEntry)->Level / 2.);
-            reverseWriter.store(data.numSamples - 1, SamplesArray.at(iCurrentEntry)->Reverse ? 1. : 0.);
-            tuneWriter.store(data.numSamples - 1, SamplesArray.at(iCurrentEntry)->Tune > 1. ? SamplesArray.at(iCurrentEntry)->Tune / 2. : SamplesArray.at(iCurrentEntry)->Tune - 0.5);
-        }
-
-        if (dirtyParams) {
-            sceneWriter.store(data.numSamples - 1, iCurrentScene / double(EMaximumScenes - 1.)); //????
-            if (SamplesArray.size() > iCurrentEntry) {
-                entryWriter.store(data.numSamples - 1, iCurrentEntry / double(EMaximumSamples - 1.));
-                updatePadsMessage();
+                loopWriter.store(data.numSamples - 1, SamplesArray.at(iCurrentEntry)->Loop ? 1. : 0.);
+                syncWriter.store(data.numSamples - 1, SamplesArray.at(iCurrentEntry)->Sync ? 1. : 0.);
+                levelWriter.store(data.numSamples - 1, SamplesArray.at(iCurrentEntry)->Level / 2.);
+                reverseWriter.store(data.numSamples - 1, SamplesArray.at(iCurrentEntry)->Reverse ? 1. : 0.);
+                tuneWriter.store(data.numSamples - 1, SamplesArray.at(iCurrentEntry)->Tune > 1. ? SamplesArray.at(iCurrentEntry)->Tune / 2. : SamplesArray.at(iCurrentEntry)->Tune - 0.5);
             }
 
-            holdWriter.store(data.numSamples - 1, effectorSet & eHold ? 1. : 0.);
-            freezeWriter.store(data.numSamples - 1, effectorSet & eFreeze ? 1. : 0.);
-            vintageWriter.store(data.numSamples - 1, effectorSet & eVintage ? 1. : 0.);
-            distorsionWriter.store(data.numSamples - 1, effectorSet & eDistorsion ? 1. : 0.);
-            preRollWriter.store(data.numSamples - 1, effectorSet & ePreRoll ? 1. : 0.);
-            postRollWriter.store(data.numSamples - 1, effectorSet & ePostRoll ? 1. : 0.);
-            lockWriter.store(data.numSamples - 1, effectorSet & eLockTone ? 1. : 0.);
-            punchInWriter.store(data.numSamples - 1, effectorSet & ePunchIn ? 1. : 0.);
-            punchOutWriter.store(data.numSamples - 1, effectorSet & ePunchOut ? 1. : 0.);
+            if (dirtyParams) {
+                sceneWriter.store(data.numSamples - 1, iCurrentScene / double(EMaximumScenes - 1.)); //????
+                if (SamplesArray.size() > iCurrentEntry) {
+                    entryWriter.store(data.numSamples - 1, iCurrentEntry / double(EMaximumSamples - 1.));
+                    updatePadsMessage();
+                }
 
-            dirtyParams = false;
-        }
+                holdWriter.store(data.numSamples - 1, effectorSet & eHold ? 1. : 0.);
+                freezeWriter.store(data.numSamples - 1, effectorSet & eFreeze ? 1. : 0.);
+                vintageWriter.store(data.numSamples - 1, effectorSet & eVintage ? 1. : 0.);
+                distorsionWriter.store(data.numSamples - 1, effectorSet & eDistorsion ? 1. : 0.);
+                preRollWriter.store(data.numSamples - 1, effectorSet & ePreRoll ? 1. : 0.);
+                postRollWriter.store(data.numSamples - 1, effectorSet & ePostRoll ? 1. : 0.);
+                lockWriter.store(data.numSamples - 1, effectorSet & eLockTone ? 1. : 0.);
+                punchInWriter.store(data.numSamples - 1, effectorSet & ePunchIn ? 1. : 0.);
+                punchOutWriter.store(data.numSamples - 1, effectorSet & ePunchOut ? 1. : 0.);
 
-        if (bTCLearn != bOldTimecodeLearn) {
-            tcLearnWriter.store(data.numSamples - 1, bTCLearn ? 1. : 0.);
+                dirtyParams = false;
+            }
+
+            if (bTCLearn != bOldTimecodeLearn) {
+                tcLearnWriter.store(data.numSamples - 1, bTCLearn ? 1. : 0.);
+            }
+            if (fabs(fOldPosition - fPosition) > 0.001) {
+                updatePositionMessage(fPosition);
+            }
+            if (fabs(fOldSpeed - fRealSpeed) > 0.001) {
+                updateSpeedMessage(fRealSpeed);
+            }
         }
-        if (fabs(fOldPosition-fPosition) > 0.001) {
-            updatePositionMessage(fPosition);
-        }
-        if (fabs(fOldSpeed-fRealSpeed) > 0.001) {
-            updateSpeedMessage(fRealSpeed);
-        }
+        fVuOldL = fVuLeft;
+        fVuOldR = fVuRight;
+
     }
-    fVuOldL = fVuLeft;
-    fVuOldR = fVuRight;
-
+    catch (std::exception& e) {
+        fprintf(stderr, "[Vinyl] exception: ");
+        fprintf(stderr, "%s", e.what());
+        fprintf(stderr, "\n");
+    }
     return kResultOk;
 }
 
@@ -919,10 +938,10 @@ void AVinyl::CalcAbsSpeed() {
     float maxY = 0.f;
 
     for (int i = 0; i < EFFTFrame; i++) {
-        //if (maxY < fabs(FFT[i])) {
-        //    maxY = fabs(FFT[i]);
-        if (maxY < fabs(fft_[i].real)) {
-            maxY = fabs(fft_[i].real);
+        if (maxY < fabs(FFT[i])) {
+            maxY = fabs(FFT[i]);
+        //if (maxY < fabs(fft_[i].real)) {
+        //    maxY = fabs(fft_[i].real);
             maxX = i;
         }
     }
@@ -931,10 +950,10 @@ void AVinyl::CalcAbsSpeed() {
     for (int i = maxX + 1; i < maxX + 3; i++) {
         if (i < EFFTFrame) {
             double koef = 100.;
-            //if (FFT[i] != 0) {
-            //    koef = (maxY / FFT[i]) * (maxY / FFT[i]);
-            if (fft_[i].real != 0) {
-                koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
+            if (FFT[i] != 0) {
+                koef = (maxY / FFT[i]) * (maxY / FFT[i]);
+            //if (fft_[i].real != 0) {
+            //    koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
             }
             tmp = (koef * tmp + double(i)) / (koef + 1.);
             continue;
@@ -945,10 +964,10 @@ void AVinyl::CalcAbsSpeed() {
     for (int i = maxX - 1; i > maxX - 3; i--) {
         if (i >= 0) {
             double koef = 100.;
-            //if (FFT[i] != 0) {
-            //    koef = (maxY / FFT[i]) * (maxY / FFT[i]);
-            if (fft_[i].real != 0) {
-               koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
+            if (FFT[i] != 0) {
+                koef = (maxY / FFT[i]) * (maxY / FFT[i]);
+            //if (fft_[i].real != 0) {
+            //   koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
             }
             tmp = (koef * tmp + double(i)) / (koef + 1.);
             continue;
@@ -1070,8 +1089,8 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
 
         for (unsigned j = 0; j < savedSceneCount; j++) {
             for (unsigned i = 0; i < savedPadCount; i++) {
-                if ((j < EMaximumScenes)&&(i < ENumberOfPads)) {
-                    SetPadState(&padStates[j][i]);
+                if ((j < EMaximumScenes) && (i < ENumberOfPads)) {
+                    padStates[j][i].updateState(iCurrentEntry, effectorSet);
                 }
             }
         }
@@ -1214,8 +1233,8 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
                 padStates[iCurrentScene][PadNumber-1].padType = PadEntry::TypePad(PadType);
                 int64 PadTag;
                 if (message->getAttributes()->getInt("PadTag", PadTag) == kResultOk) {
-                    padStates[iCurrentScene][PadNumber-1].padTag = PadTag;
-                    SetPadState(&padStates[iCurrentScene][PadNumber-1]);
+                    padStates[iCurrentScene][PadNumber - 1].padTag = PadTag;
+                    padStates[iCurrentScene][PadNumber - 1].updateState(iCurrentEntry, effectorSet);
                 }
             }
             dirtyParams = true;
@@ -1228,7 +1247,7 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
         if (message->getAttributes()->getInt("PadNumber", PadNumber) == kResultOk) {
             double PadValue;
             if (message->getAttributes()->getFloat("PadValue", PadValue) == kResultOk) {
-                dirtyParams |= PadWork(PadNumber,PadValue);
+                dirtyParams |= padWork(PadNumber, PadValue);
             }
 
         }
@@ -1245,7 +1264,7 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
                 SamplesArray.push_back(std::make_unique<SampleEntry<Sample64>>(newName, newFile));
                 SamplesArray.back()->index(SamplesArray.size());
                 if (iCurrentEntry == (SamplesArray.back()->index() - 1)) {
-                    PadSet(iCurrentEntry);
+                    padSet(iCurrentEntry);
                 }
                 addSampleMessage(SamplesArray.back().get());
                 dirtyParams = true;
@@ -1288,11 +1307,11 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
             for (size_t i = 0; i < SamplesArray.size(); i++) {
                 SamplesArray.at(i)->index(i + 1);
             }
-            PadRemove(sampleIndex);
+            padRemove(sampleIndex);
             dirtyParams = true;
         }
         return kResultTrue;
-    }
+    } 
 
     if (strcmp(message->getMessageID(), "initView") == 0) {
         initSamplesMessage();
@@ -1309,10 +1328,8 @@ void AVinyl::addSampleMessage(SampleEntry<Sample64>* newSample)
         IMessage* msg = allocateMessage ();
         if (msg) {
             msg->setMessageID("addEntry");
-            //msg->getAttributes()->setInt("Entry", sampleInt);
             msg->getAttributes()->setBinary("EntryBufferLeft", newSample->bufferLeft(), uint32_t(newSample->bufferLength() * sizeof(Sample64)));
             msg->getAttributes()->setBinary("EntryBufferRight", newSample->bufferRight(), uint32_t(newSample->bufferLength() * sizeof(Sample64)));
-            //msg->getAttributes()->setInt("EntrySize", newSample->bufferLength());
             msg->getAttributes()->setInt("EntryLoop", newSample->Loop ? 1 : 0);
             msg->getAttributes()->setInt("EntrySync", newSample->Sync ? 1 : 0);
             msg->getAttributes()->setInt("EntryReverse", newSample->Reverse ? 1 : 0);
@@ -1370,7 +1387,6 @@ void AVinyl::debugInputMessage(Sample64* input, size_t len)
 void AVinyl::initSamplesMessage(void)
 {
     for (int32 i = 0; i < SamplesArray.size (); i++) {
-        //int64 sampleInt = int64(SamplesArray.at(i).get());
         IMessage* msg = allocateMessage();
         if (msg) {
             msg->setMessageID("addEntry");
@@ -1441,7 +1457,7 @@ void AVinyl::processEvent(const Event &event)
     case Event::kNoteOnEvent:
         for (int i = 0; i < ENumberOfPads; i++) {
             if (padStates[iCurrentScene][i].padMidi == event.noteOn.pitch) {
-                dirtyParams |= PadWork(i, 1.0);
+                dirtyParams |= padWork(i, 1.);
             }
             if (padStates[iCurrentScene][i].padType == PadEntry::AssigMIDI) {
                 padStates[iCurrentScene][i].padType = PadEntry::SamplePad;
@@ -1453,7 +1469,7 @@ void AVinyl::processEvent(const Event &event)
     case Event::kNoteOffEvent:
         for (int i = 0; i < ENumberOfPads; i++) {
             if (padStates[iCurrentScene][i].padMidi == event.noteOn.pitch)
-                dirtyParams |= PadWork(i, 0);
+                dirtyParams |= padWork(i, 0);
         }
         break;
     default:
@@ -1486,7 +1502,8 @@ void AVinyl::reset(bool state)
         HoldCounter = 0;
         FreezeCounter = 0;
 
-    } else {
+    }
+    else {
         // reset the VuMeter value
         fVuOldL = 0.f;
         fVuOldR = 0.f;
@@ -1500,16 +1517,23 @@ void AVinyl::reset(bool state)
     softVintage = 0;
 }
 
-void AVinyl::SetCurrentEntry(int newentry)
+void AVinyl::currentEntry(int64_t newentry)
 {
-    if ((newentry < SamplesArray.size()) && (newentry >= 0)) {
-        iCurrentEntry = newentry;
-        SamplesArray.at(newentry)->resetCursor();
-        fPosition = 0;
+    if (newentry >= int64_t(SamplesArray.size())) {
+        newentry = int64_t(SamplesArray.size()) - 1;
     }
+    if (newentry < 0) {
+        newentry = 0;
+    }
+
+    iCurrentEntry = newentry;
+    if (newentry < int64_t(SamplesArray.size())) {
+        SamplesArray.at(newentry)->resetCursor();
+    }
+    fPosition = 0;
 }
 
-bool AVinyl::PadWork(int padId, Sample32 paramValue)
+bool AVinyl::padWork(int padId, double paramValue)
 {
     bool result = false;
     switch(padStates[iCurrentScene][padId].padType) {
@@ -1525,7 +1549,7 @@ bool AVinyl::PadWork(int padId, Sample32 paramValue)
                     }
                 }
                 padStates[iCurrentScene][padId].padState = true;
-                SetCurrentEntry (padStates[iCurrentScene][padId].padTag);
+                currentEntry(padStates[iCurrentScene][padId].padTag);
                 result = true;
             }
         }
@@ -1557,7 +1581,7 @@ bool AVinyl::PadWork(int padId, Sample32 paramValue)
     return result;
 }
 
-bool AVinyl::PadSet(int currentSample)
+bool AVinyl::padSet(int currentSample)
 {
     bool result = false;
     for (int j = 0; j < EMaximumScenes; j++) {
@@ -1575,21 +1599,21 @@ bool AVinyl::PadSet(int currentSample)
     return result;
 }
 
-void AVinyl::SetPadState(PadEntry * pad)
-{
-    switch(pad->padType){
-    case PadEntry::SamplePad:
-        pad->padState = (pad->padTag == int(iCurrentEntry));
-        break;
-    case PadEntry::SwitchPad:
-        pad->padState = (pad->padTag & effectorSet);
-        break;
-    default:
-        pad->padState = false;
-    }
-}
+//void AVinyl::padState(PadEntry &pad)
+//{
+//    switch(pad.padType){
+//    case PadEntry::SamplePad:
+//        pad.padState = (pad.padTag == int(iCurrentEntry));
+//        break;
+//    case PadEntry::SwitchPad:
+//        pad.padState = (pad.padTag & effectorSet);
+//        break;
+//    default:
+//        pad.padState = false;
+//    }
+//}
 
-bool AVinyl::PadRemove(int currentSample)
+bool AVinyl::padRemove(int currentSample)
 {
     bool result = false;
     for (int j = 0; j < EMaximumScenes; j++) {
@@ -1607,32 +1631,32 @@ bool AVinyl::PadRemove(int currentSample)
     return result;
 }
 
-float AVinyl::GetNormalizeTag(int tag)
-{
-    if (padStates[iCurrentScene][tag].padTag < 0) {
-        return 0.;
-    }
-
-    switch (padStates[iCurrentScene][tag].padType) {
-    case PadEntry::SamplePad:
-        if (padStates[iCurrentScene][tag].padTag >= SamplesArray.size()) {
-            return 0.;
-        }
-        return (padStates[iCurrentScene][tag].padTag + 1.) / SamplesArray.size();
-    case PadEntry::SwitchPad:
-        if (padStates[iCurrentScene][tag].padTag >= 5) {
-            return 0.;
-        }
-        return (padStates[iCurrentScene][tag].padTag + 1.) / 5.;
-    case PadEntry::KickPad:
-        if (padStates[iCurrentScene][tag].padTag >= 5) {
-            return 0.;
-        }
-        return (padStates[iCurrentScene][tag].padTag + 1.) / 5.;
-    default:
-        break;
-    }
-    return 0.;
-}
+//double AVinyl::normalizeTag(int tag)
+//{
+//    if (padStates[iCurrentScene][tag].padTag < 0) {
+//        return 0.;
+//    }
+//
+//    switch (padStates[iCurrentScene][tag].padType) {
+//    case PadEntry::SamplePad:
+//        if (padStates[iCurrentScene][tag].padTag >= SamplesArray.size()) {
+//            return 0.;
+//        }
+//        return (padStates[iCurrentScene][tag].padTag + 1.) / SamplesArray.size();
+//    case PadEntry::SwitchPad:
+//        if (padStates[iCurrentScene][tag].padTag >= 5) {
+//            return 0.;
+//        }
+//        return (padStates[iCurrentScene][tag].padTag + 1.) / 5.;
+//    case PadEntry::KickPad:
+//        if (padStates[iCurrentScene][tag].padTag >= 5) {
+//            return 0.;
+//        }
+//        return (padStates[iCurrentScene][tag].padTag + 1.) / 5.;
+//    default:
+//        break;
+//    }
+//    return 0.;
+//}
 
 }} // namespaces
