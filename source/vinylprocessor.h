@@ -198,15 +198,15 @@ private:
 
     bool dirtyParams;
 
-	double dSampleRate;
-	double dTempo;
-	double dNoteLength;
+    Sample64 dSampleRate;
+    Sample64 dTempo;
+    Sample64 dNoteLength;
 
-	Sample32 fRealPitch;
-	Sample32 fRealSpeed;
-	Sample32 fRealVolume;
-    Filtred<Sample32, 16> fVolCoeff;
-    Filtred<Sample32, 256> avgTimeCodeCoeff;
+    Sample64 fRealPitch;
+    Sample64 fRealSpeed;
+    Sample64 fRealVolume;
+    Filtred<Sample64, 16> fVolCoeff;
+    Filtred<Sample64, 256> avgTimeCodeCoeff;
 	int TimecodeLearnCounter;
 	int HoldCounter;
 	int FreezeCounter;

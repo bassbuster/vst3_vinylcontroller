@@ -25,17 +25,19 @@ inline double sqr(double x) {
 
 constexpr double Pi = 3.14159265358979323846264338327950288;
 
-inline float aproxParamValue(int32_t currentSampleIndex, double currentValue, int32_t nextSampleIndex, double nextValue)
+template<typename T>
+inline T aproxParamValue(int32_t currentSampleIndex, T currentValue, int32_t nextSampleIndex, T nextValue)
 {
-    double slope = (nextValue - currentValue) / double(nextSampleIndex - currentSampleIndex + 1);
-    double offset = currentValue - (slope * double(currentSampleIndex - 1));
-    return (slope * double(currentSampleIndex)) + offset; // bufferTime is any position in buffer
+    T slope = (nextValue - currentValue) / T(nextSampleIndex - currentSampleIndex + 1);
+    T offset = currentValue - (slope * T(currentSampleIndex - 1));
+    return (slope * T(currentSampleIndex)) + offset; // bufferTime is any position in buffer
 }
 
-inline float calcRealPitch(float normalPitch, float normalKoeff)
+template<typename T>
+inline T calcRealPitch(T normalPitch, T normalKoeff)
 {
     if ((normalKoeff != 0.) && (normalPitch != 0.5)) {
-        float multipleKoeff;
+        T multipleKoeff;
         if (normalKoeff <= 0.5) {
             multipleKoeff = 0.2;
         } else {
@@ -46,10 +48,11 @@ inline float calcRealPitch(float normalPitch, float normalKoeff)
         }
         return  1. - (0.5 - normalPitch) * multipleKoeff;
     }
-    return 1.0f;
+    return 1.;
 }
 
-inline float calcRealVolume(float normalGain, float normalVolume, float normalKoeff)
+template<typename T>
+inline T calcRealVolume(T normalGain, T normalVolume, T normalKoeff)
 {
     if (normalKoeff != 0.) {
         if (normalKoeff <= 0.5) {
@@ -69,13 +72,13 @@ namespace Vst {
 // AGain Implementation
 // ------------------------------------------------------------------------
 AVinyl::AVinyl() :
-    fGain(0.8f),
-    fRealVolume(0.8f),
-    fVuOldL(0.f),
-    fVuOldR(0.f),
-    fVolume(1.0f),
-    fPitch(.5f),
-    fRealPitch(1.0f),
+    fGain(0.8),
+    fRealVolume(0.8),
+    fVuOldL(0.),
+    fVuOldR(0.),
+    fVolume(1.0),
+    fPitch(.5),
+    fRealPitch(1.0),
     iCurrentEntry(0),
     iCurrentScene(0),
     fSwitch(0),
@@ -144,7 +147,7 @@ AVinyl::AVinyl() :
                          fGain = value;
                          fRealVolume = calcRealVolume(fGain, fVolume, fCurve); },
                      [this] (int32 sampleOffset, int32 currentOffset, Sample64 currentValue) {
-                         fGain = aproxParamValue(sampleOffset, fGain, currentOffset, currentValue);
+                         fGain = aproxParamValue<Sample32>(sampleOffset, fGain, currentOffset, currentValue);
                          fRealVolume = calcRealVolume(fGain, fVolume, fCurve);
                      });
     params.addReader(kVolumeId, [this] () { return fVolume; },
@@ -152,7 +155,7 @@ AVinyl::AVinyl() :
                          fVolume = value;
                          fRealVolume = calcRealVolume(fGain, fVolume, fCurve); },
                      [this] (int32 sampleOffset, int32 currentOffset, Sample64 currentValue) {
-                         fVolume = aproxParamValue(sampleOffset, fVolume, currentOffset, currentValue);
+                         fVolume = aproxParamValue<Sample32>(sampleOffset, fVolume, currentOffset, currentValue);
                          fRealVolume = calcRealVolume(fGain, fVolume, fCurve);
                      });
     params.addReader(kVolCurveId, [this] () { return fCurve; },
@@ -160,13 +163,13 @@ AVinyl::AVinyl() :
                          fCurve = value;
                          fRealVolume = calcRealVolume(fGain, fVolume, fCurve); },
                      [this] (int32 sampleOffset, int32 currentOffset, Sample64 currentValue) {
-                         fCurve = aproxParamValue(sampleOffset, fCurve, currentOffset, currentValue);
+                         fCurve = aproxParamValue<Sample32>(sampleOffset, fCurve, currentOffset, currentValue);
                          fRealVolume = calcRealVolume(fGain, fVolume, fCurve);
                      });
     params.addReader(kPitchId, [this] () { return fPitch; },
                      [this](Sample64 value) { fPitch = value; fRealPitch = calcRealPitch (fPitch, fSwitch); },
                      [this] (int32 sampleOffset, int32 currentOffset, Sample64 currentValue) {
-                         fPitch = aproxParamValue(sampleOffset, fPitch, currentOffset, currentValue);
+                         fPitch = aproxParamValue<Sample32>(sampleOffset, fPitch, currentOffset, currentValue);
                          fRealPitch = calcRealPitch (fPitch, fSwitch);
                      });
     params.addReader(kPitchSwitchId, [this] () { return fSwitch; },
@@ -174,7 +177,7 @@ AVinyl::AVinyl() :
                          fSwitch = value;
                          fRealPitch = calcRealPitch (fPitch, fSwitch); },
                      [this] (int32 sampleOffset, int32 currentOffset, Sample64 currentValue) {
-                         fSwitch = aproxParamValue(sampleOffset, fSwitch, currentOffset, currentValue);
+                         fSwitch = aproxParamValue<Sample32>(sampleOffset, fSwitch, currentOffset, currentValue);
                          fRealPitch = calcRealPitch (fPitch, fSwitch);
                      });
 
@@ -367,13 +370,13 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
         int32 numChannels = data.inputs[0].numChannels;
 
         // ---get audio buffers----------------
-        Sample64** in = data.inputs[0].channelBuffers64;
-        Sample64** out = data.outputs[0].channelBuffers64;
+        void** in = reinterpret_cast<void**>(data.inputs[0].channelBuffers64);
+        void** out = reinterpret_cast<void**>(data.outputs[0].channelBuffers64);
 
         //{
-        float fVuLeft = 0.f;
-        float fVuRight = 0.f;
-        double fOldPosition = fPosition;
+        Sample64 fVuLeft = 0.;
+        Sample64 fVuRight = 0.;
+        Sample64 fOldPosition = fPosition;
         bool bOldTimecodeLearn = bTCLearn;
         Sample64 fOldSpeed = fRealSpeed;
 
@@ -382,10 +385,11 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
             int32 sampleFrames = data.numSamples;
             int32 sampleOffset = 0;
-            Sample64* ptrInLeft = in[0];
-            Sample64* ptrOutLeft = out[0];
-            Sample64* ptrInRight = in[1];
-            Sample64* ptrOutRight = out[1];
+
+            uint8_t* ptrInLeft = reinterpret_cast<uint8_t*>(in[0]);
+            uint8_t* ptrOutLeft = reinterpret_cast<uint8_t*>(out[0]);
+            uint8_t* ptrInRight = reinterpret_cast<uint8_t*>(in[1]);
+            uint8_t* ptrOutRight = reinterpret_cast<uint8_t*>(out[1]);
 
             while (--sampleFrames >= 0) {
 
@@ -409,41 +413,24 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                 }
                 /////////////////////////////////////////////////////////////////////
 
+                Sample64 inL{0.};
+                Sample64 inR{0.};
+                Sample64 outL{0.};
+                Sample64 outR{0.};
+
                 if (!bBypass) {
 
-                    /*
-                                    inL = *ptrInLeft++;
-                                    inR = *ptrInRight++;
-                                    tmpL = (3.0f * tmpL + inL)/4.0f;
-                                    tmpR = (3.0f * tmpR + inR)/4.0f;
-
-                                    SignalL[FCursor] = tmpL;
-                                    SignalR[FCursor] = tmpR;
-                                    FSignalL = ((Sample64)(EFilterFrame - 1) * FSignalL + inL)
-                                        / (Sample64)EFilterFrame;
-                                    FSignalR = ((Sample64)(EFilterFrame - 1) * FSignalR + inR)
-                                        / (Sample64)EFilterFrame;
-                                    SignalL[SCursor] = SignalL[SCursor] - FSignalL;
-                                    SignalR[SCursor] = SignalR[SCursor] - FSignalR;
-                                    DeltaL = (3.0f * DeltaL + (SignalL[SCursor] - OldSignalL)) / 4.0f;
-                                    DeltaR = (3.0f * DeltaR + (SignalR[SCursor] - OldSignalR)) / 4.0f;
-
-                                    CalcDirectionTimeCodeAmplitude();
-
-                                    OldSignalL = SignalL[SCursor];
-                                    OldSignalR = SignalR[SCursor];
-                                    FCursor++;
-                                    if (FCursor >= EFilterFrame) {
-                                        FCursor = 0;
-                                    }
-                                    SCursor++;
-                                    if (SCursor >= EFilterFrame) {
-                                        SCursor = 0;
-                                    }
-                    */
-
-                    Sample64 inL = Sample64(*ptrInLeft++);
-                    Sample64 inR = Sample64(*ptrInRight++);
+                    if (data.symbolicSampleSize == kSample64) {
+                        inL = *reinterpret_cast<Sample64*>(ptrInLeft);
+                        inR = *reinterpret_cast<Sample64*>(ptrInRight);
+                        ptrInLeft += sizeof(Sample64);
+                        ptrInRight += sizeof(Sample64);
+                    } else {
+                        inL = *reinterpret_cast<Sample32*>(ptrInLeft);
+                        inR = *reinterpret_cast<Sample32*>(ptrInRight);
+                        ptrInLeft += sizeof(Sample32);
+                        ptrInRight += sizeof(Sample32);
+                    }
 
                     SignalL[FCursor] = (filtredL.append(inL));
                     SignalR[FCursor] = (filtredL.append(inR));
@@ -548,9 +535,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                             fRealSpeed = 0.;
                             fVolCoeff = 0.;
                         }
-
                     }
-
 
                     if ((fVolCoeff >= 0.00001) && (SamplesArray.size() > iCurrentEntry)) {
 
@@ -609,51 +594,39 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                         Sample64 _tempo = 0.;
 
                         if (keyLockTone) {
-                            Sample64 fLeft = 0;
-                            Sample64 fRight = 0;
                             _speed = /*(Sample64)Direction*/(direction_ ? 1. : -1.) * lockSpeed;
                             _tempo = SamplesArray.at(iCurrentEntry)->Sync
                                 ? fabs(dTempo * fRealSpeed * fRealPitch)
                                 : SamplesArray.at(iCurrentEntry)->tempo() * fabs(fRealSpeed * fRealPitch) * lockTune;
-                            SamplesArray.at(iCurrentEntry)->playStereoSampleTempo(&fLeft,
-                                &fRight,
+                            SamplesArray.at(iCurrentEntry)->playStereoSampleTempo(&outL,
+                                &outR,
                                 _speed,
                                 _tempo,
                                 dSampleRate,
                                 true);
-                            *ptrOutLeft = fLeft;
-                            *ptrOutRight = fRight;
                         } else {
-                            Sample64 fLeft = 0;
-                            Sample64 fRight = 0;
                             _speed = fRealSpeed * fRealPitch;
                             _tempo = dTempo;
-                            SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft,
-                                &fRight,
+                            SamplesArray.at(iCurrentEntry)->playStereoSample(&outL,
+                                &outR,
                                 _speed,
                                 _tempo,
                                 dSampleRate,
                                 true);
-                            *ptrOutLeft = fLeft;
-                            *ptrOutRight = fRight;
                         }
 
                         if (keyFreeze) {
-                            Sample64 fLeft = 0;
-                            Sample64 fRight = 0;
                             FreezeCounter++;
                             bool pushSync = SamplesArray.at(iCurrentEntry)->Sync;
                             SamplesArray.at(iCurrentEntry)->Sync = false;
                             auto PushCue = SamplesArray.at(iCurrentEntry)->cue();
                             SamplesArray.at(iCurrentEntry)->cue(FreezeCueCur);
-                            SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft,
-                                &fRight,
+                            SamplesArray.at(iCurrentEntry)->playStereoSample(&outL,
+                                &outR,
                                 _speed,
                                 _tempo,
                                 dSampleRate,
                                 true);
-                            *ptrOutLeft = fLeft;
-                            *ptrOutRight = fRight;
                             FreezeCueCur = SamplesArray.at(iCurrentEntry)->cue();
                             if ((softFreeze > 0.00001) && (softFreeze < 0.99)) {
                                 Sample64 fLeft = 0;
@@ -665,8 +638,8 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                                     _tempo,
                                     dSampleRate,
                                     true);
-                                *ptrOutLeft = *ptrOutLeft * softFreeze + fLeft * (1.0 - softFreeze);
-                                *ptrOutRight = *ptrOutRight * softFreeze + fRight * (1.0 - softFreeze);
+                                outL = outL * softFreeze + fLeft * (1.0 - softFreeze);
+                                outR = outR * softFreeze + fRight * (1.0 - softFreeze);
                                 AfterFreezeCue = SamplesArray.at(iCurrentEntry)->cue();
                             }
                             if (_speed != 0.0) {
@@ -694,8 +667,8 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                                     SamplesArray.at(iCurrentEntry)->tempo(),
                                     dSampleRate,
                                     true);
-                                *ptrOutLeft = *ptrOutLeft * softHold + fLeft * (1. - softHold);
-                                *ptrOutRight = *ptrOutRight * softHold + fRight * (1. - softHold);
+                                outL = outL * softHold + fLeft * (1. - softHold);
+                                outR = outR * softHold + fRight * (1. - softHold);
                                 AfterHoldCue = SamplesArray.at(iCurrentEntry)->cue();
                                 SamplesArray.at(iCurrentEntry)->cue(PushCue);
                             }
@@ -720,31 +693,30 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                                 Sample32 rollVolume = (1. - Sample32(i) / Sample32(ERollCount)) * .6;
                                 if (softPreRoll > 0.0001) {
                                     SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft, &fRight, pos_offset, false);
-                                    *ptrOutLeft = *ptrOutLeft * (1.0 - softPreRoll * 0.1) + fLeft * rollVolume * softPreRoll;
-                                    *ptrOutRight = *ptrOutRight * (1.0 - softPreRoll * 0.1) + fRight * rollVolume * softPreRoll;
+                                    outL = outL * (1. - softPreRoll * 0.1) + fLeft * rollVolume * softPreRoll;
+                                    outR = outR * (1. - softPreRoll * 0.1) + fRight * rollVolume * softPreRoll;
                                     pos_offset = pos_offset + offset;
                                 }
                                 if (softPostRoll > 0.0001) {
                                     SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft, &fRight, pre_offset, false);
-                                    *ptrOutLeft = *ptrOutLeft * (1.0 - softPostRoll * 0.1) + fLeft * rollVolume * softPostRoll;
-                                    *ptrOutRight = *ptrOutRight * (1.0 - softPostRoll * 0.1) + fRight * rollVolume * softPostRoll;
+                                    outL = outL * (1. - softPostRoll * 0.1) + fLeft * rollVolume * softPostRoll;
+                                    outR = outR * (1. - softPostRoll * 0.1) + fRight * rollVolume * softPostRoll;
                                     pre_offset = pre_offset - offset;
                                 }
                             }
                         }
 
                         if (softDistorsion > 0.0001) {
-                            if (*ptrOutLeft > 0) {
-                                *ptrOutLeft = *ptrOutLeft * (1.0 - softDistorsion * 0.6) + 0.4 * sqrt(*ptrOutLeft) * softDistorsion;
+                            if (outL > 0) {
+                                outL = outL * (1. - softDistorsion * 0.6) + 0.4 * sqrt(outL) * softDistorsion;
+                            } else {
+                                outL = outL * (1. - softDistorsion * 0.6) - 0.3 * sqrt(-outL) * softDistorsion;
+                            }
+                            if (outR > 0) {
+                                outR = outR * (1. - softDistorsion * 0.6) + 0.4 * sqrt(outR) * softDistorsion;
                             }
                             else {
-                                *ptrOutLeft = *ptrOutLeft * (1.0 - softDistorsion * 0.6) - 0.3 * sqrt(-*ptrOutLeft) * softDistorsion;
-                            }
-                            if (*ptrOutRight > 0) {
-                                *ptrOutRight = *ptrOutRight * (1.0 - softDistorsion * 0.6) + 0.4 * sqrt(*ptrOutRight) * softDistorsion;
-                            }
-                            else {
-                                *ptrOutRight = *ptrOutRight * (1.0 - softDistorsion * 0.6) - 0.3 * sqrt(-*ptrOutRight) * softDistorsion;
+                                outR = outR * (1. - softDistorsion * 0.6) - 0.3 * sqrt(-outR) * softDistorsion;
                             }
                         }
 
@@ -754,38 +726,39 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                             if (VintageSample) {
                                 VintageSample->playStereoSample(&VintageLeft, &VintageRight, _speed, dTempo, dSampleRate, true);
                             }
-                            *ptrOutLeft = *ptrOutLeft * (1. - softVintage * .3) + (-sqr(*ptrOutRight * .5) + VintageLeft) * softVintage;
-                            *ptrOutRight = *ptrOutRight * (1. - softVintage * .3) + (-sqr(*ptrOutLeft * .5) + VintageRight) * softVintage;
+                            outL = outL * (1. - softVintage * .3) + (-sqr(outR * .5) + VintageLeft) * softVintage;
+                            outR = outR * (1. - softVintage * .3) + (-sqr(outL * .5) + VintageRight) * softVintage;
                         }
 
                         /////////////////////////END OF EFFECTOR//////////////////
 
 
-                        *ptrOutLeft = *ptrOutLeft * softVolume;
-                        *ptrOutRight = *ptrOutRight * softVolume;
+                        outL = outL * softVolume;
+                        outR = outR * softVolume;
 
                         fPosition = SamplesArray.at(iCurrentEntry)->cue().integerPart() / double(SamplesArray.at(iCurrentEntry)->bufferLength());
-                        if (*ptrOutLeft > fVuLeft) {
-                            fVuLeft = *ptrOutLeft;
+                        if (outL > fVuLeft) {
+                            fVuLeft = outL;
                         }
-                        if (*ptrOutRight > fVuRight) {
-                            fVuRight = *ptrOutRight;
+                        if (outR > fVuRight) {
+                            fVuRight = outR;
                         }
 
                     }
-                    else {
-                        *ptrOutLeft = 0;
-                        *ptrOutRight = 0;
-                    }
 
                 }
-                else {
-                    *ptrOutLeft = 0;
-                    *ptrOutRight = 0;
-                }
 
-                ptrOutLeft++;
-                ptrOutRight++;
+                if (data.symbolicSampleSize == kSample64) {
+                    *reinterpret_cast<Sample64*>(ptrOutLeft) = outL;
+                    *reinterpret_cast<Sample64*>(ptrOutRight) = outR;
+                    ptrOutLeft += sizeof(Sample64);
+                    ptrOutRight += sizeof(Sample64);
+                } else {
+                    *reinterpret_cast<Sample32*>(ptrOutLeft) = outL;
+                    *reinterpret_cast<Sample32*>(ptrOutRight) = outR;
+                    ptrOutLeft += sizeof(Sample32);
+                    ptrOutRight += sizeof(Sample32);
+                }
                 sampleOffset++;
             }
         }
@@ -925,8 +898,8 @@ void AVinyl::CalcDirectionTimeCodeAmplitude() {
 
 void AVinyl::CalcAbsSpeed() {
 
-    int maxX = 0;
-    float maxY = 0.f;
+    size_t maxX = 0;
+    Sample64 maxY = 0.f;
 
     for (int i = 0; i < EFFTFrame; i++) {
         if (maxY < fabs(FFT[i])) {
@@ -937,30 +910,30 @@ void AVinyl::CalcAbsSpeed() {
         }
     }
 
-    double tmp = double(maxX);
-    for (int i = maxX + 1; i < maxX + 3; i++) {
+    Sample64 tmp = maxX;
+    for (size_t i = maxX + 1; i < maxX + 3; i++) {
         if (i < EFFTFrame) {
-            double koef = 100.;
+            Sample64 koef = 100.;
             if (FFT[i] != 0) {
                 koef = (maxY / FFT[i]) * (maxY / FFT[i]);
             //if (fft_[i].real != 0) {
             //    koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
             }
-            tmp = (koef * tmp + double(i)) / (koef + 1.);
+            tmp = (koef * tmp + Sample64(i)) / (koef + 1.);
             continue;
         }
         break;
     }
 
-    for (int i = maxX - 1; i > maxX - 3; i--) {
+    for (size_t i = (maxX > 1 ? maxX - 1 : 0); i > maxX - 3; i--) {
         if (i >= 0) {
-            double koef = 100.;
+            Sample64 koef = 100.;
             if (FFT[i] != 0) {
                 koef = (maxY / FFT[i]) * (maxY / FFT[i]);
             //if (fft_[i].real != 0) {
             //   koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
             }
-            tmp = (koef * tmp + double(i)) / (koef + 1.);
+            tmp = (koef * tmp + Sample64(i)) / (koef + 1.);
             continue;
         }
         break;
