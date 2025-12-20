@@ -109,7 +109,7 @@ private:
     size_t FFTCursor;
 
     Filtred<Sample64, 10> absAVGSpeed;
-	short Direction;
+//	short Direction;
     Filtred<Sample64> DeltaL;
     Filtred<Sample64> DeltaR;
     Sample64 OldSignalL;
@@ -126,12 +126,14 @@ private:
 	bool PStatusL;
 	bool POldStatusR;
 	bool POldStatusL;
-	bool Direction0;
-	bool Direction1;
-	bool Direction2;
-	bool Direction3;
 
-	int32 effectorSet;
+    uint32_t direction_;
+    // bool Direction0;
+    // bool Direction1;
+    // bool Direction2;
+    // bool Direction3;
+
+    int32 effectorSet_;
 
     // SoftCurves
     Filtred<Sample32, ESoftEffectSamples> softVolume;

@@ -90,7 +90,8 @@ AVinyl::AVinyl() :
     HoldCounter(0),
     FreezeCounter(0),
     dNoteLength(0),
-    effectorSet(eNoEffects),
+    direction_(0),
+    effectorSet_(eNoEffects),
     softVolume(0),
     softPreRoll(0),
     softPostRoll(0),
@@ -513,7 +514,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                             CalcAbsSpeed();
                             if (TimecodeLearnCounter > 0) {
                                 TimecodeLearnCounter--;
-                                avgTimeCodeCoeff.append(Direction * absAVGSpeed);
+                                avgTimeCodeCoeff.append(/*Direction*/(direction_ ? 1. : -1.) * absAVGSpeed);
                                 fRealSpeed = 1.;
                             }
                             else {
@@ -521,7 +522,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                                 bTCLearn = false;
                             }
                             fVolCoeff.append(sqrt(fabs(fRealSpeed)));
-                            fRealSpeed = (Sample64)Direction * fRealSpeed;
+                            fRealSpeed = (direction_ ? 1. : -1.)/*Direction*/ * fRealSpeed;
                         }
 
                         for (size_t i = 0; i < EFFTFrame - ESpeedFrame; i++) {
@@ -540,7 +541,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                             absAVGSpeed = absAVGSpeed / 1.07;
                             fRealSpeed = absAVGSpeed / avgTimeCodeCoeff;
                             fVolCoeff.append(sqrt(fabs(fRealSpeed)));
-                            fRealSpeed = Sample64(Direction) * fRealSpeed;
+                            fRealSpeed = (direction_ ? 1. : -1.)/*Direction*/ * fRealSpeed;
                         }
                         else {
                             absAVGSpeed = 0.;
@@ -555,14 +556,14 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
                         ////////////////////EFFECTOR BEGIN//////////////////////////////
 
-                        softVolume.append((effectorSet & ePunchIn) ? (fGain * fVolCoeff) :
-                            ((effectorSet & ePunchOut) ? 0. : (fRealVolume * fVolCoeff)));
-                        softPreRoll.append(effectorSet & ePreRoll ? 1. : 0.);
-                        softPostRoll.append(effectorSet & ePostRoll ? 1. : 0.);
-                        softDistorsion.append(effectorSet & eDistorsion ? 1. : 0.);
-                        softVintage.append(effectorSet & eVintage ? 1. : 0.);
+                        softVolume.append((effectorSet_ & ePunchIn) ? (fGain * fVolCoeff) :
+                            ((effectorSet_ & ePunchOut) ? 0. : (fRealVolume * fVolCoeff)));
+                        softPreRoll.append(effectorSet_ & ePreRoll ? 1. : 0.);
+                        softPostRoll.append(effectorSet_ & ePostRoll ? 1. : 0.);
+                        softDistorsion.append(effectorSet_ & eDistorsion ? 1. : 0.);
+                        softVintage.append(effectorSet_ & eVintage ? 1. : 0.);
 
-                        if (effectorSet & eHold) {
+                        if (effectorSet_ & eHold) {
                             if (!keyHold) {
                                 HoldCue = SamplesArray.at(iCurrentEntry)->cue();
                                 keyHold = true;
@@ -574,7 +575,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                             softHold.append(0.);
                         }
 
-                        if (effectorSet & eFreeze) {
+                        if (effectorSet_ & eFreeze) {
                             if (!keyFreeze) {
                                 FreezeCue = SamplesArray.at(iCurrentEntry)->cue();
                                 FreezeCueCur = FreezeCue;
@@ -590,7 +591,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                             softFreeze.append(0.);
                         }
 
-                        if (effectorSet & eLockTone) {
+                        if (effectorSet_ & eLockTone) {
                             if (!keyLockTone) {
                                 keyLockTone = true;
                                 lockSpeed = fabs(fRealSpeed * fRealPitch);
@@ -610,7 +611,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                         if (keyLockTone) {
                             Sample64 fLeft = 0;
                             Sample64 fRight = 0;
-                            _speed = (Sample64)Direction * lockSpeed;
+                            _speed = /*(Sample64)Direction*/(direction_ ? 1. : -1.) * lockSpeed;
                             _tempo = SamplesArray.at(iCurrentEntry)->Sync
                                 ? fabs(dTempo * fRealSpeed * fRealPitch)
                                 : SamplesArray.at(iCurrentEntry)->tempo() * fabs(fRealSpeed * fRealPitch) * lockTune;
@@ -817,15 +818,15 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                     updatePadsMessage();
                 }
 
-                holdWriter.store(data.numSamples - 1, effectorSet & eHold ? 1. : 0.);
-                freezeWriter.store(data.numSamples - 1, effectorSet & eFreeze ? 1. : 0.);
-                vintageWriter.store(data.numSamples - 1, effectorSet & eVintage ? 1. : 0.);
-                distorsionWriter.store(data.numSamples - 1, effectorSet & eDistorsion ? 1. : 0.);
-                preRollWriter.store(data.numSamples - 1, effectorSet & ePreRoll ? 1. : 0.);
-                postRollWriter.store(data.numSamples - 1, effectorSet & ePostRoll ? 1. : 0.);
-                lockWriter.store(data.numSamples - 1, effectorSet & eLockTone ? 1. : 0.);
-                punchInWriter.store(data.numSamples - 1, effectorSet & ePunchIn ? 1. : 0.);
-                punchOutWriter.store(data.numSamples - 1, effectorSet & ePunchOut ? 1. : 0.);
+                holdWriter.store(data.numSamples - 1, effectorSet_ & eHold ? 1. : 0.);
+                freezeWriter.store(data.numSamples - 1, effectorSet_ & eFreeze ? 1. : 0.);
+                vintageWriter.store(data.numSamples - 1, effectorSet_ & eVintage ? 1. : 0.);
+                distorsionWriter.store(data.numSamples - 1, effectorSet_ & eDistorsion ? 1. : 0.);
+                preRollWriter.store(data.numSamples - 1, effectorSet_ & ePreRoll ? 1. : 0.);
+                postRollWriter.store(data.numSamples - 1, effectorSet_ & ePostRoll ? 1. : 0.);
+                lockWriter.store(data.numSamples - 1, effectorSet_ & eLockTone ? 1. : 0.);
+                punchInWriter.store(data.numSamples - 1, effectorSet_ & ePunchIn ? 1. : 0.);
+                punchOutWriter.store(data.numSamples - 1, effectorSet_ & ePunchOut ? 1. : 0.);
 
                 dirtyParams = false;
             }
@@ -900,18 +901,22 @@ void AVinyl::CalcDirectionTimeCodeAmplitude() {
             if ((StatusL == PStatusR) && (StatusR ==
                                           POldStatusL) && (OldStatusL == POldStatusR) &&
                 (OldStatusR == PStatusL) && (SpeedCounter >= 3)) {
-                Direction3 = Direction2;
-                Direction2 = Direction1;
-                Direction1 = Direction0;
-                Direction0 = true;
+                direction_ <<= 8;
+                direction_ |= 0xff;
+                // Direction3 = Direction2;
+                // Direction2 = Direction1;
+                // Direction1 = Direction0;
+                // Direction0 = true;
                 SpeedCounter = 0;
             } else if ((StatusL == POldStatusR) && (StatusR == PStatusL) &&
                      (OldStatusL == PStatusR) && (OldStatusR == POldStatusL) &&
                      (SpeedCounter >= 3)) {
-                Direction3 = Direction2;
-                Direction2 = Direction1;
-                Direction1 = Direction0;
-                Direction0 = false;
+                direction_ <<= 8;
+                direction_ &= 0xFFFFFF00;
+                // Direction3 = Direction2;
+                // Direction2 = Direction1;
+                // Direction1 = Direction0;
+                // Direction0 = false;
                 SpeedCounter = 0;
             }
             PStatusL = StatusL;
@@ -920,11 +925,11 @@ void AVinyl::CalcDirectionTimeCodeAmplitude() {
             POldStatusR = OldStatusR;
         }
 
-        if (!(Direction0 || Direction1 || Direction2 || Direction3)) {
-            Direction = -1;
-        } else if (Direction0 || Direction1 || Direction2 || Direction3) {
-            Direction = 1;
-        }
+        // if (!(Direction0 || Direction1 || Direction2 || Direction3)) {
+        //     Direction = -1;
+        // } else if (Direction0 || Direction1 || Direction2 || Direction3) {
+        //     Direction = 1;
+        // }
 
         if (SpeedCounter < 441000) {
             SpeedCounter++;
@@ -1013,7 +1018,7 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
 
         uint32_t savedBypass;
         reader.readInt32u(savedBypass);
-        reader.readInt32(effectorSet);
+        reader.readInt32(effectorSet_);
 
         float savedTimeCodeCoeff;
         reader.readFloat(savedTimeCodeCoeff);
@@ -1029,7 +1034,7 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
 
         bBypass = savedBypass > 0;
 
-        keyLockTone = (effectorSet & eLockTone) > 0;
+        keyLockTone = (effectorSet_ & eLockTone) > 0;
 
         fRealPitch = calcRealPitch (fPitch,fSwitch);
         fRealVolume = calcRealVolume(fGain, fVolume, fCurve);
@@ -1090,7 +1095,7 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
         for (unsigned j = 0; j < savedSceneCount; j++) {
             for (unsigned i = 0; i < savedPadCount; i++) {
                 if ((j < EMaximumScenes) && (i < ENumberOfPads)) {
-                    padStates[j][i].updateState(iCurrentEntry, effectorSet);
+                    padStates[j][i].updateState(iCurrentEntry, effectorSet_);
                 }
             }
         }
@@ -1124,7 +1129,7 @@ tresult PLUGIN_API AVinyl::getState(IBStream* state)
         float toSaveCurve = fCurve;
         float toSaveTimecodeCoeff = avgTimeCodeCoeff;
         uint32_t toSaveBypass = bBypass ? 1 : 0;
-        uint32_t toSaveEffector = effectorSet;
+        uint32_t toSaveEffector = effectorSet_;
         uint32_t toSavePadCount = ENumberOfPads;
         uint32_t toSaveSceneCount = EMaximumScenes;
         uint32_t toSaveEntryCount = uint32_t(SamplesArray.size());
@@ -1234,7 +1239,7 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
                 int64 PadTag;
                 if (message->getAttributes()->getInt("PadTag", PadTag) == kResultOk) {
                     padStates[iCurrentScene][PadNumber - 1].padTag = PadTag;
-                    padStates[iCurrentScene][PadNumber - 1].updateState(iCurrentEntry, effectorSet);
+                    padStates[iCurrentScene][PadNumber - 1].updateState(iCurrentEntry, effectorSet_);
                 }
             }
             dirtyParams = true;
@@ -1491,7 +1496,8 @@ void AVinyl::reset(bool state)
             SignalR[i] = 0;
         }
         absAVGSpeed = 0;
-        Direction = 1;
+        //Direction = 1;
+        direction_ = 0;
         DeltaL = 0.;
         DeltaR = 0.;
         OldSignalL = 0;
@@ -1558,7 +1564,7 @@ bool AVinyl::padWork(int padId, double paramValue)
     {
         if (paramValue > 0.5) {
             padStates[iCurrentScene][padId].padState = !padStates[iCurrentScene][padId].padState;
-            effectorSet ^= padStates[iCurrentScene][padId].padTag;
+            effectorSet_ ^= padStates[iCurrentScene][padId].padTag;
             result = true;
         }
     }
@@ -1567,10 +1573,10 @@ bool AVinyl::padWork(int padId, double paramValue)
     {
         if (paramValue > 0.5) {
             padStates[iCurrentScene][padId].padState = true;
-            effectorSet |= padStates[iCurrentScene][padId].padTag;
+            effectorSet_ |= padStates[iCurrentScene][padId].padTag;
         }else{
             padStates[iCurrentScene][padId].padState = false;
-            effectorSet &= ~padStates[iCurrentScene][padId].padTag;
+            effectorSet_ &= ~padStates[iCurrentScene][padId].padTag;
         }
         result = true;
     }
