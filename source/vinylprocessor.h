@@ -73,25 +73,25 @@ private:
     public:
 
         Filtred(SampleType val = 0):
-            value(val)
+            value_(val)
         {}
 
         SampleType set(SampleType val) {
-            value = (SampleType(round - 1) * value + val) / SampleType(round);
-            return value;
+            value_ = (SampleType(round - 1) * value_ + val) / SampleType(round);
+            return value_;
         }
 
         Filtred& append(SampleType val) {
-            value = (SampleType(round - 1) * value + val) / SampleType(round);
+            value_ = (SampleType(round - 1) * value_ + val) / SampleType(round);
             return *this;
         }
 
         operator SampleType() const {
-            return value;
+            return value_;
         }
 
     private:
-        SampleType value;
+        SampleType value_;
     };
 
     Sample64 SignalL[EFilterFrame];
@@ -108,7 +108,7 @@ private:
     size_t FCursor;
     size_t FFTCursor;
 
-    Filtred<Sample64, 10> absAVGSpeed;
+    Filtred<Sample64, 10> absAvgSpeed_;
 //	short Direction;
     Filtred<Sample64> DeltaL;
     Filtred<Sample64> DeltaR;
@@ -127,7 +127,8 @@ private:
 	bool POldStatusR;
 	bool POldStatusL;
 
-    uint16_t direction_;
+    uint32_t directionBits_;
+    Sample64 direction_;
     // bool Direction0;
     // bool Direction1;
     // bool Direction2;
@@ -159,15 +160,15 @@ private:
 	Sample32 fGain;          //0..+1
 	Sample32 fVolume;        //0..+1
 	Sample32 fPitch;         //0..+1
-    uint32_t iCurrentEntry;  //0..MaximumSamples - 1
-    uint32_t iCurrentScene;  //0..MaximumScenes - 1
+    uint32_t currentEntry_;  //0..MaximumSamples - 1
+    uint32_t currentScene_;  //0..MaximumScenes - 1
 	Sample32 fSwitch;        //0..+1
 	Sample32 fCurve;         //0..+1
     bool bBypass;
 	bool bTCLearn;
 
-    std::vector<std::unique_ptr<SampleEntry<Sample64>>> SamplesArray;
-    std::unique_ptr<SampleEntry<Sample64>> VintageSample;
+    std::vector<std::unique_ptr<SampleEntry<Sample64>>> samplesArray_;
+    std::unique_ptr<SampleEntry<Sample64>> vintageSample_;
 
     PadEntry padStates[EMaximumScenes][ENumberOfPads];
 
@@ -182,7 +183,7 @@ private:
 
     bool padWork(int padId, double paramValue);
     bool padSet(int currentSample);
-    bool padRemove(int currentSample);
+    void padRemove(int currentSample);
     //double normalizeTag(int _tag);
 
     // SampleBase manipulation
@@ -196,7 +197,7 @@ private:
     void debugFftMessage(Sample64 *fft, size_t len);
     void debugInputMessage(Sample64 *input, size_t len);
 
-    bool dirtyParams;
+    bool dirtyParams_;
 
     Sample64 dSampleRate;
     Sample64 dTempo;
@@ -220,7 +221,7 @@ private:
     void processEvent(const Event &event);
     void reset(bool state);
 
-    ReaderManager params;
+    ReaderManager params_;
 };
 
 

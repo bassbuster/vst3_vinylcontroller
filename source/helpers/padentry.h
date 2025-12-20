@@ -1,5 +1,7 @@
 #pragma once
 
+#include <inttypes.h>
+
 namespace Steinberg::Vst {
 
 class PadEntry {

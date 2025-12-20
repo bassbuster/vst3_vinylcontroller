@@ -79,8 +79,8 @@ AVinyl::AVinyl() :
     fVolume(1.0),
     fPitch(.5),
     fRealPitch(1.0),
-    iCurrentEntry(0),
-    iCurrentScene(0),
+    currentEntry_(0),
+    currentScene_(0),
     fSwitch(0),
     fCurve(0),
     currentProcessMode(-1), // -1 means not initialized
@@ -93,7 +93,8 @@ AVinyl::AVinyl() :
     HoldCounter(0),
     FreezeCounter(0),
     dNoteLength(0),
-    direction_(0),
+    directionBits_(0),
+    direction_(1.),
     effectorSet_(eNoEffects),
     softVolume(0),
     softPreRoll(0),
@@ -109,11 +110,11 @@ AVinyl::AVinyl() :
 
 
     //VintageSample = std::make_unique<SampleEntry<Sample32>>("vintage", "c:\\Work\\vst3sdk\\build\\VST3\\Debug\\vinylcontroller.vst3\\Contents\\Resources\\vintage.wav");
-    VintageSample = std::make_unique<SampleEntry<Sample64>>("vintage", vintageLeft, vintageRight, sizeof(vintageLeft) / sizeof(Sample64));
-    if (VintageSample) {
-        VintageSample->Loop = true;
-        VintageSample->Sync = false;
-        VintageSample->Reverse = false;
+    vintageSample_ = std::make_unique<SampleEntry<Sample64>>("vintage", vintageLeft, vintageRight, sizeof(vintageLeft) / sizeof(Sample64));
+    if (vintageSample_) {
+        vintageSample_->Loop = true;
+        vintageSample_->Sync = false;
+        vintageSample_->Reverse = false;
     }
 
 
@@ -138,11 +139,11 @@ AVinyl::AVinyl() :
     //}
 
 
-    params.addReader(kBypassId, [this] () { return bBypass ? 1. : 0.; },
+    params_.addReader(kBypassId, [this] () { return bBypass ? 1. : 0.; },
                      [this](Sample64 value) {
                          bBypass = value > 0.5;
                      });
-    params.addReader(kGainId,   [this] () { return fGain; },
+    params_.addReader(kGainId,   [this] () { return fGain; },
                      [this](Sample64 value) {
                          fGain = value;
                          fRealVolume = calcRealVolume(fGain, fVolume, fCurve); },
@@ -150,7 +151,7 @@ AVinyl::AVinyl() :
                          fGain = aproxParamValue<Sample32>(sampleOffset, fGain, currentOffset, currentValue);
                          fRealVolume = calcRealVolume(fGain, fVolume, fCurve);
                      });
-    params.addReader(kVolumeId, [this] () { return fVolume; },
+    params_.addReader(kVolumeId, [this] () { return fVolume; },
                      [this](Sample64 value) {
                          fVolume = value;
                          fRealVolume = calcRealVolume(fGain, fVolume, fCurve); },
@@ -158,7 +159,7 @@ AVinyl::AVinyl() :
                          fVolume = aproxParamValue<Sample32>(sampleOffset, fVolume, currentOffset, currentValue);
                          fRealVolume = calcRealVolume(fGain, fVolume, fCurve);
                      });
-    params.addReader(kVolCurveId, [this] () { return fCurve; },
+    params_.addReader(kVolCurveId, [this] () { return fCurve; },
                      [this](Sample64 value) {
                          fCurve = value;
                          fRealVolume = calcRealVolume(fGain, fVolume, fCurve); },
@@ -166,13 +167,13 @@ AVinyl::AVinyl() :
                          fCurve = aproxParamValue<Sample32>(sampleOffset, fCurve, currentOffset, currentValue);
                          fRealVolume = calcRealVolume(fGain, fVolume, fCurve);
                      });
-    params.addReader(kPitchId, [this] () { return fPitch; },
+    params_.addReader(kPitchId, [this] () { return fPitch; },
                      [this](Sample64 value) { fPitch = value; fRealPitch = calcRealPitch (fPitch, fSwitch); },
                      [this] (int32 sampleOffset, int32 currentOffset, Sample64 currentValue) {
                          fPitch = aproxParamValue<Sample32>(sampleOffset, fPitch, currentOffset, currentValue);
                          fRealPitch = calcRealPitch (fPitch, fSwitch);
                      });
-    params.addReader(kPitchSwitchId, [this] () { return fSwitch; },
+    params_.addReader(kPitchSwitchId, [this] () { return fSwitch; },
                      [this](Sample64 value) {
                          fSwitch = value;
                          fRealPitch = calcRealPitch (fPitch, fSwitch); },
@@ -181,53 +182,53 @@ AVinyl::AVinyl() :
                          fRealPitch = calcRealPitch (fPitch, fSwitch);
                      });
 
-    params.addReader(kCurrentEntryId, [this] () { return double(iCurrentEntry / (EMaximumSamples - 1)); },
+    params_.addReader(kCurrentEntryId, [this] () { return double(currentEntry_ / (EMaximumSamples - 1)); },
                      [this](Sample64 value) {
                          currentEntry(floor(value * double(EMaximumSamples - 1) + 0.5));
-                         dirtyParams |= padSet(iCurrentEntry);
+                         dirtyParams_ |= padSet(currentEntry_);
                      });
-    params.addReader(kCurrentSceneId, [this] () { return double(iCurrentScene / (EMaximumScenes - 1)); },
+    params_.addReader(kCurrentSceneId, [this] () { return double(currentScene_ / (EMaximumScenes - 1)); },
                      [this](Sample64 value) {
-                         iCurrentScene = floor(value * float(EMaximumScenes - 1) + 0.5f);
-                         dirtyParams = true;
+                         currentScene_ = floor(value * float(EMaximumScenes - 1) + 0.5f);
+                         dirtyParams_ = true;
                      });
 
-    params.addReader(kLoopId, [this] () { return (SamplesArray.size() > iCurrentEntry) ? (SamplesArray.at(iCurrentEntry)->Loop ? 1. : 0.) : 0.; },
+    params_.addReader(kLoopId, [this] () { return (samplesArray_.size() > currentEntry_) ? (samplesArray_.at(currentEntry_)->Loop ? 1. : 0.) : 0.; },
                      [this](Sample64 value) {
-                         if (SamplesArray.size() > iCurrentEntry) {
-                             SamplesArray.at(iCurrentEntry)->Loop = value > 0.5;
+                         if (samplesArray_.size() > currentEntry_) {
+                             samplesArray_.at(currentEntry_)->Loop = value > 0.5;
                          }
                      });
 
-    params.addReader(kSyncId, [this] () { return (SamplesArray.size() > iCurrentEntry) ? (SamplesArray.at(iCurrentEntry)->Sync ? 1. : 0.) : 0.; },
+    params_.addReader(kSyncId, [this] () { return (samplesArray_.size() > currentEntry_) ? (samplesArray_.at(currentEntry_)->Sync ? 1. : 0.) : 0.; },
                      [this](Sample64 value) {
-                         if (SamplesArray.size() > iCurrentEntry) {
-                             SamplesArray.at(iCurrentEntry)->Sync = value > 0.5;
+                         if (samplesArray_.size() > currentEntry_) {
+                             samplesArray_.at(currentEntry_)->Sync = value > 0.5;
                          }
                      });
 
-    params.addReader(kReverseId, [this] () { return (SamplesArray.size() > iCurrentEntry) ? (SamplesArray.at(iCurrentEntry)->Reverse ? 1. : 0.) : 0.; },
+    params_.addReader(kReverseId, [this] () { return (samplesArray_.size() > currentEntry_) ? (samplesArray_.at(currentEntry_)->Reverse ? 1. : 0.) : 0.; },
                      [this](Sample64 value) {
-                         if (SamplesArray.size() > iCurrentEntry) {
-                             SamplesArray.at(iCurrentEntry)->Reverse = value > 0.5;
+                         if (samplesArray_.size() > currentEntry_) {
+                             samplesArray_.at(currentEntry_)->Reverse = value > 0.5;
                          }
                      });
 
-    params.addReader(kAmpId, [this] () { return (SamplesArray.size() > iCurrentEntry) ? (SamplesArray.at(iCurrentEntry)->Level / 2.) : 0.5; },
+    params_.addReader(kAmpId, [this] () { return (samplesArray_.size() > currentEntry_) ? (samplesArray_.at(currentEntry_)->Level / 2.) : 0.5; },
                      [this](Sample64 value) {
-                         if (SamplesArray.size() > iCurrentEntry) {
-                             SamplesArray.at(iCurrentEntry)->Level = value * 2.0;
+                         if (samplesArray_.size() > currentEntry_) {
+                             samplesArray_.at(currentEntry_)->Level = value * 2.0;
                          }
                      });
 
-    params.addReader(kTuneId, [this] () { return (SamplesArray.size() > iCurrentEntry) ? (SamplesArray.at(iCurrentEntry)->Tune > 1.0 ? SamplesArray.at(iCurrentEntry)->Tune / 2.0 : SamplesArray.at(iCurrentEntry)->Tune - 0.5): 0.5; },
+    params_.addReader(kTuneId, [this] () { return (samplesArray_.size() > currentEntry_) ? (samplesArray_.at(currentEntry_)->Tune > 1.0 ? samplesArray_.at(currentEntry_)->Tune / 2.0 : samplesArray_.at(currentEntry_)->Tune - 0.5): 0.5; },
                      [this](Sample64 value) {
-                         if (SamplesArray.size() > iCurrentEntry) {
-                             SamplesArray.at(iCurrentEntry)->Tune = value > 0.5 ? value * 2.0 : value + 0.5;
+                         if (samplesArray_.size() > currentEntry_) {
+                             samplesArray_.at(currentEntry_)->Tune = value > 0.5 ? value * 2.0 : value + 0.5;
                          }
                      });
 
-    params.addReader(kTimecodeLearnId, [this] () { return bTCLearn ? 1. : 0.; },
+    params_.addReader(kTimecodeLearnId, [this] () { return bTCLearn ? 1. : 0.; },
                      [this](Sample64 value) {
                          if (value>0.5) {
                              TimecodeLearnCounter = ETimecodeLearnCount;
@@ -263,21 +264,21 @@ tresult PLUGIN_API AVinyl::initialize(FUnknown* context) {
     for (int j = 0; j < EMaximumScenes; j++) {
         for (int i = 0; i < ENumberOfPads; i++) {
             padStates[j][i].padType = PadEntry::SamplePad;
-            padStates[j][i].padTag =j * ENumberOfPads + i;
+            padStates[j][i].padTag = j * ENumberOfPads + i;
             padStates[j][i].padState = false;
             padStates[j][i].padMidi = gPad[i];
         }
     }
 
     reset(true);
-    dirtyParams = false;
+    dirtyParams_ = false;
     return kResultOk;
 }
 
 // ------------------------------------------------------------------------
 tresult PLUGIN_API AVinyl::terminate() {
     // nothing to do here yet...except calling our parent terminate
-    SamplesArray.clear();
+    samplesArray_.clear();
     return AudioEffect::terminate();
 }
 
@@ -312,7 +313,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
         IParameterChanges* outParamChanges = data.outputParameterChanges;
         IEventList* eventList = data.inputEvents;
 
-        params.setQueue(paramChanges);
+        params_.setQueue(paramChanges);
 
         ParameterWriter vuLeftWriter(kVuLeftId, outParamChanges);
         ParameterWriter vuRightWriter(kVuRightId, outParamChanges);
@@ -345,7 +346,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
         Finalizer readTheRest([&]() {
 
-            params.flush();
+            params_.flush();
 
             while (eventList) {
                 if (eventList->getEvent(eventIndex++, event) != kResultOk) {
@@ -393,7 +394,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
             while (--sampleFrames >= 0) {
 
-                params.checkOffset(sampleOffset);
+                params_.checkOffset(sampleOffset);
 
                 ////////////Get Offsetted Events ////////////////////////////////////
                 if (eventList) {
@@ -501,15 +502,15 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                             CalcAbsSpeed();
                             if (TimecodeLearnCounter > 0) {
                                 TimecodeLearnCounter--;
-                                avgTimeCodeCoeff.append(/*Direction*/(direction_ ? 1. : -1.) * absAVGSpeed);
+                                avgTimeCodeCoeff.append(direction_ * absAvgSpeed_);
                                 fRealSpeed = 1.;
                             }
                             else {
-                                fRealSpeed = absAVGSpeed / avgTimeCodeCoeff;
+                                fRealSpeed = absAvgSpeed_ / avgTimeCodeCoeff;
                                 bTCLearn = false;
                             }
                             fVolCoeff.append(sqrt(fabs(fRealSpeed)));
-                            fRealSpeed = (direction_ ? 1. : -1.)/*Direction*/ * fRealSpeed;
+                            fRealSpeed = direction_ * fRealSpeed;
                         }
 
                         for (size_t i = 0; i < EFFTFrame - ESpeedFrame; i++) {
@@ -525,19 +526,19 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
                     if (TimeCodeAmplytude < ETimeCodeMinAmplytude) {
                         if (fVolCoeff >= 0.00001) {
-                            absAVGSpeed = absAVGSpeed / 1.07;
-                            fRealSpeed = absAVGSpeed / avgTimeCodeCoeff;
+                            absAvgSpeed_ = absAvgSpeed_ / 1.07;
+                            fRealSpeed = absAvgSpeed_ / avgTimeCodeCoeff;
                             fVolCoeff.append(sqrt(fabs(fRealSpeed)));
-                            fRealSpeed = (direction_ ? 1. : -1.)/*Direction*/ * fRealSpeed;
+                            fRealSpeed = direction_ * fRealSpeed;
                         }
                         else {
-                            absAVGSpeed = 0.;
+                            absAvgSpeed_ = 0.;
                             fRealSpeed = 0.;
                             fVolCoeff = 0.;
                         }
                     }
 
-                    if ((fVolCoeff >= 0.00001) && (SamplesArray.size() > iCurrentEntry)) {
+                    if ((fVolCoeff >= 0.00001) && (samplesArray_.size() > currentEntry_)) {
 
                         ////////////////////EFFECTOR BEGIN//////////////////////////////
 
@@ -550,7 +551,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
                         if (effectorSet_ & eHold) {
                             if (!keyHold) {
-                                HoldCue = SamplesArray.at(iCurrentEntry)->cue();
+                                HoldCue = samplesArray_.at(currentEntry_)->cue();
                                 keyHold = true;
                             }
                             softHold.append(1.);
@@ -562,7 +563,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
                         if (effectorSet_ & eFreeze) {
                             if (!keyFreeze) {
-                                FreezeCue = SamplesArray.at(iCurrentEntry)->cue();
+                                FreezeCue = samplesArray_.at(currentEntry_)->cue();
                                 FreezeCueCur = FreezeCue;
                                 keyFreeze = true;
                             }
@@ -581,8 +582,8 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                                 keyLockTone = true;
                                 lockSpeed = fabs(fRealSpeed * fRealPitch);
                                 lockVolume = fVolCoeff;
-                                lockTune = SamplesArray.at(iCurrentEntry)->Tune;
-                                SamplesArray.at(iCurrentEntry)->beginLockStrobe();
+                                lockTune = samplesArray_.at(currentEntry_)->Tune;
+                                samplesArray_.at(currentEntry_)->beginLockStrobe();
                             }
                             fVolCoeff = lockVolume;
                         } else {
@@ -594,11 +595,11 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                         Sample64 _tempo = 0.;
 
                         if (keyLockTone) {
-                            _speed = /*(Sample64)Direction*/(direction_ ? 1. : -1.) * lockSpeed;
-                            _tempo = SamplesArray.at(iCurrentEntry)->Sync
+                            _speed = direction_ * lockSpeed;
+                            _tempo = samplesArray_.at(currentEntry_)->Sync
                                 ? fabs(dTempo * fRealSpeed * fRealPitch)
-                                : SamplesArray.at(iCurrentEntry)->tempo() * fabs(fRealSpeed * fRealPitch) * lockTune;
-                            SamplesArray.at(iCurrentEntry)->playStereoSampleTempo(&outL,
+                                : samplesArray_.at(currentEntry_)->tempo() * fabs(fRealSpeed * fRealPitch) * lockTune;
+                            samplesArray_.at(currentEntry_)->playStereoSampleTempo(&outL,
                                 &outR,
                                 _speed,
                                 _tempo,
@@ -607,7 +608,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                         } else {
                             _speed = fRealSpeed * fRealPitch;
                             _tempo = dTempo;
-                            SamplesArray.at(iCurrentEntry)->playStereoSample(&outL,
+                            samplesArray_.at(currentEntry_)->playStereoSample(&outL,
                                 &outR,
                                 _speed,
                                 _tempo,
@@ -617,22 +618,22 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
                         if (keyFreeze) {
                             FreezeCounter++;
-                            bool pushSync = SamplesArray.at(iCurrentEntry)->Sync;
-                            SamplesArray.at(iCurrentEntry)->Sync = false;
-                            auto PushCue = SamplesArray.at(iCurrentEntry)->cue();
-                            SamplesArray.at(iCurrentEntry)->cue(FreezeCueCur);
-                            SamplesArray.at(iCurrentEntry)->playStereoSample(&outL,
+                            bool pushSync = samplesArray_.at(currentEntry_)->Sync;
+                            samplesArray_.at(currentEntry_)->Sync = false;
+                            auto PushCue = samplesArray_.at(currentEntry_)->cue();
+                            samplesArray_.at(currentEntry_)->cue(FreezeCueCur);
+                            samplesArray_.at(currentEntry_)->playStereoSample(&outL,
                                 &outR,
                                 _speed,
                                 _tempo,
                                 dSampleRate,
                                 true);
-                            FreezeCueCur = SamplesArray.at(iCurrentEntry)->cue();
+                            FreezeCueCur = samplesArray_.at(currentEntry_)->cue();
                             if ((softFreeze > 0.00001) && (softFreeze < 0.99)) {
                                 Sample64 fLeft = 0;
                                 Sample64 fRight = 0;
-                                SamplesArray.at(iCurrentEntry)->cue(AfterFreezeCue);
-                                SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft,
+                                samplesArray_.at(currentEntry_)->cue(AfterFreezeCue);
+                                samplesArray_.at(currentEntry_)->playStereoSample(&fLeft,
                                     &fRight,
                                     _speed,
                                     _tempo,
@@ -640,7 +641,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                                     true);
                                 outL = outL * softFreeze + fLeft * (1.0 - softFreeze);
                                 outR = outR * softFreeze + fRight * (1.0 - softFreeze);
-                                AfterFreezeCue = SamplesArray.at(iCurrentEntry)->cue();
+                                AfterFreezeCue = samplesArray_.at(currentEntry_)->cue();
                             }
                             if (_speed != 0.0) {
                                 if (FreezeCounter >= dNoteLength) {
@@ -650,8 +651,8 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                                     softFreeze = 0;
                                 }
                             }
-                            SamplesArray.at(iCurrentEntry)->Sync = pushSync;
-                            SamplesArray.at(iCurrentEntry)->cue(PushCue);
+                            samplesArray_.at(currentEntry_)->Sync = pushSync;
+                            samplesArray_.at(currentEntry_)->cue(PushCue);
                         }
 
                         if (keyHold) {
@@ -659,22 +660,22 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                             if ((softHold > 0.00001) && (softHold < 0.99)) {
                                 Sample64 fLeft = 0;
                                 Sample64 fRight = 0;
-                                auto PushCue = SamplesArray.at(iCurrentEntry)->cue();
-                                SamplesArray.at(iCurrentEntry)->cue(AfterHoldCue);
-                                SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft,
+                                auto PushCue = samplesArray_.at(currentEntry_)->cue();
+                                samplesArray_.at(currentEntry_)->cue(AfterHoldCue);
+                                samplesArray_.at(currentEntry_)->playStereoSample(&fLeft,
                                     &fRight,
                                     _speed,
-                                    SamplesArray.at(iCurrentEntry)->tempo(),
+                                    samplesArray_.at(currentEntry_)->tempo(),
                                     dSampleRate,
                                     true);
                                 outL = outL * softHold + fLeft * (1. - softHold);
                                 outR = outR * softHold + fRight * (1. - softHold);
-                                AfterHoldCue = SamplesArray.at(iCurrentEntry)->cue();
-                                SamplesArray.at(iCurrentEntry)->cue(PushCue);
+                                AfterHoldCue = samplesArray_.at(currentEntry_)->cue();
+                                samplesArray_.at(currentEntry_)->cue(PushCue);
                             }
                             if (HoldCounter >= dNoteLength) {
-                                AfterHoldCue = SamplesArray.at(iCurrentEntry)->cue();
-                                SamplesArray.at(iCurrentEntry)->cue(HoldCue);
+                                AfterHoldCue = samplesArray_.at(currentEntry_)->cue();
+                                samplesArray_.at(currentEntry_)->cue(HoldCue);
                                 HoldCounter = 0;
                                 softHold = 0;
                             }
@@ -683,7 +684,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
                         if ((softPreRoll > 0.0001) || (softPostRoll > 0.0001)) {
 
-                            Sample64 offset = SamplesArray.at(iCurrentEntry)->noteLength(ERollNote, dTempo);
+                            Sample64 offset = samplesArray_.at(currentEntry_)->noteLength(ERollNote, dTempo);
                             Sample64 pre_offset = offset;
                             Sample64 pos_offset = -offset;
 
@@ -692,13 +693,13 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                             for (int i = 0; i < ERollCount; i++) {
                                 Sample32 rollVolume = (1. - Sample32(i) / Sample32(ERollCount)) * .6;
                                 if (softPreRoll > 0.0001) {
-                                    SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft, &fRight, pos_offset, false);
+                                    samplesArray_.at(currentEntry_)->playStereoSample(&fLeft, &fRight, pos_offset, false);
                                     outL = outL * (1. - softPreRoll * 0.1) + fLeft * rollVolume * softPreRoll;
                                     outR = outR * (1. - softPreRoll * 0.1) + fRight * rollVolume * softPreRoll;
                                     pos_offset = pos_offset + offset;
                                 }
                                 if (softPostRoll > 0.0001) {
-                                    SamplesArray.at(iCurrentEntry)->playStereoSample(&fLeft, &fRight, pre_offset, false);
+                                    samplesArray_.at(currentEntry_)->playStereoSample(&fLeft, &fRight, pre_offset, false);
                                     outL = outL * (1. - softPostRoll * 0.1) + fLeft * rollVolume * softPostRoll;
                                     outR = outR * (1. - softPostRoll * 0.1) + fRight * rollVolume * softPostRoll;
                                     pre_offset = pre_offset - offset;
@@ -723,8 +724,8 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                         if (softVintage > 0.0001) {
                             Sample64 VintageLeft = 0;
                             Sample64 VintageRight = 0;
-                            if (VintageSample) {
-                                VintageSample->playStereoSample(&VintageLeft, &VintageRight, _speed, dTempo, dSampleRate, true);
+                            if (vintageSample_) {
+                                vintageSample_->playStereoSample(&VintageLeft, &VintageRight, _speed, dTempo, dSampleRate, true);
                             }
                             outL = outL * (1. - softVintage * .3) + (-sqr(outR * .5) + VintageLeft) * softVintage;
                             outR = outR * (1. - softVintage * .3) + (-sqr(outL * .5) + VintageRight) * softVintage;
@@ -736,7 +737,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                         outL = outL * softVolume;
                         outR = outR * softVolume;
 
-                        fPosition = SamplesArray.at(iCurrentEntry)->cue().integerPart() / double(SamplesArray.at(iCurrentEntry)->bufferLength());
+                        fPosition = samplesArray_.at(currentEntry_)->cue().integerPart() / double(samplesArray_.at(currentEntry_)->bufferLength());
                         if (outL > fVuLeft) {
                             fVuLeft = outL;
                         }
@@ -775,19 +776,19 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                 positionWriter.store(data.numSamples - 1, fPosition);
             }
 
-            if ((samplesParamsUpdate || dirtyParams) && (SamplesArray.size() > iCurrentEntry)) {
+            if ((samplesParamsUpdate || dirtyParams_) && (samplesArray_.size() > currentEntry_)) {
 
-                loopWriter.store(data.numSamples - 1, SamplesArray.at(iCurrentEntry)->Loop ? 1. : 0.);
-                syncWriter.store(data.numSamples - 1, SamplesArray.at(iCurrentEntry)->Sync ? 1. : 0.);
-                levelWriter.store(data.numSamples - 1, SamplesArray.at(iCurrentEntry)->Level / 2.);
-                reverseWriter.store(data.numSamples - 1, SamplesArray.at(iCurrentEntry)->Reverse ? 1. : 0.);
-                tuneWriter.store(data.numSamples - 1, SamplesArray.at(iCurrentEntry)->Tune > 1. ? SamplesArray.at(iCurrentEntry)->Tune / 2. : SamplesArray.at(iCurrentEntry)->Tune - 0.5);
+                loopWriter.store(data.numSamples - 1, samplesArray_.at(currentEntry_)->Loop ? 1. : 0.);
+                syncWriter.store(data.numSamples - 1, samplesArray_.at(currentEntry_)->Sync ? 1. : 0.);
+                levelWriter.store(data.numSamples - 1, samplesArray_.at(currentEntry_)->Level / 2.);
+                reverseWriter.store(data.numSamples - 1, samplesArray_.at(currentEntry_)->Reverse ? 1. : 0.);
+                tuneWriter.store(data.numSamples - 1, samplesArray_.at(currentEntry_)->Tune > 1. ? samplesArray_.at(currentEntry_)->Tune / 2. : samplesArray_.at(currentEntry_)->Tune - 0.5);
             }
 
-            if (dirtyParams) {
-                sceneWriter.store(data.numSamples - 1, iCurrentScene / double(EMaximumScenes - 1.)); //????
-                if (SamplesArray.size() > iCurrentEntry) {
-                    entryWriter.store(data.numSamples - 1, iCurrentEntry / double(EMaximumSamples - 1.));
+            if (dirtyParams_) {
+                sceneWriter.store(data.numSamples - 1, currentScene_ / double(EMaximumScenes - 1.)); //????
+                if (samplesArray_.size() > currentEntry_) {
+                    entryWriter.store(data.numSamples - 1, currentEntry_ / double(EMaximumSamples - 1.));
                     updatePadsMessage();
                 }
 
@@ -801,7 +802,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                 punchInWriter.store(data.numSamples - 1, effectorSet_ & ePunchIn ? 1. : 0.);
                 punchOutWriter.store(data.numSamples - 1, effectorSet_ & ePunchOut ? 1. : 0.);
 
-                dirtyParams = false;
+                dirtyParams_ = false;
             }
 
             if (bTCLearn != bOldTimecodeLearn) {
@@ -871,23 +872,27 @@ void AVinyl::CalcDirectionTimeCodeAmplitude() {
         if ((StatusL != PStatusL) || (StatusR != PStatusR) ||
             (OldStatusL != POldStatusL) || (OldStatusR != POldStatusR)) {
 
-            if ((StatusL == PStatusR) && (StatusR ==
-                                          POldStatusL) && (OldStatusL == POldStatusR) &&
-                (OldStatusR == PStatusL) && (SpeedCounter >= 1)) {
-                direction_ <<= 8;
-                direction_ |= 0xff;
+            if ((StatusL == PStatusR) && (StatusR == POldStatusL) && (OldStatusL == POldStatusR) && (OldStatusR == PStatusL) 
+                && (SpeedCounter >= 3)) {
+                directionBits_ <<= 8;
+                directionBits_ |= 0xff;
                 SpeedCounter = 0;
-            } else if ((StatusL == POldStatusR) && (StatusR == PStatusL) &&
-                     (OldStatusL == PStatusR) && (OldStatusR == POldStatusL) &&
-                     (SpeedCounter >= 1)) {
-                direction_ <<= 8;
-                direction_ &= 0xFFFFFF00;
+            } else if ((StatusL == POldStatusR) && (StatusR == PStatusL) && (OldStatusL == PStatusR) && (OldStatusR == POldStatusL)
+                && (SpeedCounter >= 3)) {
+                directionBits_ <<= 8;
+                directionBits_ &= 0xffffff00;
                 SpeedCounter = 0;
             }
             PStatusL = StatusL;
             PStatusR = StatusR;
             POldStatusL = OldStatusL;
             POldStatusR = OldStatusR;
+        }
+
+        if (directionBits_ == 0) {
+            direction_ = -1.;
+        } else if (directionBits_ == 0xffffffff) {
+            direction_ = 1.;
         }
 
         if (SpeedCounter < 441000) {
@@ -939,10 +944,10 @@ void AVinyl::CalcAbsSpeed() {
         break;
     }
 
-    if (fabs(tmp - absAVGSpeed) > 0.7) {
-        absAVGSpeed = tmp;
+    if (fabs(tmp - absAvgSpeed_) > 0.7) {
+        absAvgSpeed_ = tmp;
     } else {
-        absAVGSpeed.append(tmp);
+        absAvgSpeed_.append(tmp);
     }
 }
 
@@ -969,8 +974,8 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
         reader.readFloat(fVolume);
         reader.readFloat(fPitch);
 
-        reader.readInt32u(iCurrentEntry);
-        reader.readInt32u(iCurrentScene);
+        reader.readInt32u(currentEntry_);
+        reader.readInt32u(currentScene_);
 
         reader.readFloat(fSwitch);
         reader.readFloat(fCurve);
@@ -1009,7 +1014,7 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
 
                 if ((j < EMaximumScenes) && (i < ENumberOfPads)) {
                     padStates[j][i].padType = PadEntry::TypePad(savedType);
-                    padStates[j][i].padTag =savedTag;
+                    padStates[j][i].padTag = savedTag;
                     padStates[j][i].padMidi = savedMidi;
                 }
             }
@@ -1041,20 +1046,20 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
             String sName (bufname.data());
             String sFile (buffile.data());
 
-            SamplesArray.push_back(std::make_unique<SampleEntry<Sample64>>(sName,sFile));
-            SamplesArray.back()->index(SamplesArray.size());
-            SamplesArray.back()->Loop = savedLoop > 0;
-            SamplesArray.back()->Reverse = savedReverse > 0;
-            SamplesArray.back()->Sync = savedSync > 0;
-            SamplesArray.back()->Tune = savedTune;
-            SamplesArray.back()->Level = savedLevel;
+            samplesArray_.push_back(std::make_unique<SampleEntry<Sample64>>(sName, sFile));
+            samplesArray_.back()->index(samplesArray_.size());
+            samplesArray_.back()->Loop = savedLoop > 0;
+            samplesArray_.back()->Reverse = savedReverse > 0;
+            samplesArray_.back()->Sync = savedSync > 0;
+            samplesArray_.back()->Tune = savedTune;
+            samplesArray_.back()->Level = savedLevel;
 
         }
 
         for (unsigned j = 0; j < savedSceneCount; j++) {
             for (unsigned i = 0; i < savedPadCount; i++) {
                 if ((j < EMaximumScenes) && (i < ENumberOfPads)) {
-                    padStates[j][i].updateState(iCurrentEntry, effectorSet_);
+                    padStates[j][i].updateState(currentEntry_, effectorSet_);
                 }
             }
         }
@@ -1067,7 +1072,7 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
         lockSpeed = savedLockedSpeed;
         lockVolume = savedLockedVolume;
 
-        dirtyParams = true;
+        dirtyParams_ = true;
         return kResultOk;
     }
     return kResultFalse;
@@ -1082,8 +1087,8 @@ tresult PLUGIN_API AVinyl::getState(IBStream* state)
         float toSaveGain = fGain;
         float toSaveVolume = fVolume;
         float toSavePitch = fPitch;
-        uint32_t toSaveEntry = iCurrentEntry;
-        uint32_t toSaveScene = iCurrentScene;
+        uint32_t toSaveEntry = currentEntry_;
+        uint32_t toSaveScene = currentScene_;
         float toSaveSwitch = fSwitch;
         float toSaveCurve = fCurve;
         float toSaveTimecodeCoeff = avgTimeCodeCoeff;
@@ -1091,7 +1096,7 @@ tresult PLUGIN_API AVinyl::getState(IBStream* state)
         uint32_t toSaveEffector = effectorSet_;
         uint32_t toSavePadCount = ENumberOfPads;
         uint32_t toSaveSceneCount = EMaximumScenes;
-        uint32_t toSaveEntryCount = uint32_t(SamplesArray.size());
+        uint32_t toSaveEntryCount = uint32_t(samplesArray_.size());
         float toSavelockSpeed = lockSpeed;
         float toSavelockVolume = lockVolume;
 
@@ -1120,14 +1125,14 @@ tresult PLUGIN_API AVinyl::getState(IBStream* state)
             }
         }
 
-        for (int i = 0; i < SamplesArray.size(); i++) {
-            uint32_t toSavedLoop = SamplesArray.at(i)->Loop ? 1 : 0;
-            uint32_t toSavedReverse = SamplesArray.at(i)->Reverse ? 1 : 0;
-            uint32_t toSavedSync = SamplesArray.at(i)->Sync ? 1 : 0;
-            float toSavedTune = SamplesArray.at(i)->Tune;
-            float toSavedLevel = SamplesArray.at(i)->Level;
-            String tmpName (SamplesArray.at(i)->name());
-            String tmpFile (SamplesArray.at(i)->fileName());
+        for (int i = 0; i < samplesArray_.size(); i++) {
+            uint32_t toSavedLoop = samplesArray_.at(i)->Loop ? 1 : 0;
+            uint32_t toSavedReverse = samplesArray_.at(i)->Reverse ? 1 : 0;
+            uint32_t toSavedSync = samplesArray_.at(i)->Sync ? 1 : 0;
+            float toSavedTune = samplesArray_.at(i)->Tune;
+            float toSavedLevel = samplesArray_.at(i)->Level;
+            String tmpName (samplesArray_.at(i)->name());
+            String tmpFile (samplesArray_.at(i)->fileName());
             uint32_t toSaveNameLen = tmpName.length();
             uint32_t toSaveFileNameLen = tmpFile.length();
 
@@ -1191,17 +1196,17 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
     if (strcmp(message->getMessageID(), "setPad") == 0) {
         int64 PadNumber;
         if (message->getAttributes()->getInt("PadNumber", PadNumber) == kResultOk) {
-            padStates[iCurrentScene][PadNumber-1].padState = false;
+            padStates[currentScene_][PadNumber-1].padState = false;
             int64 PadType;
             if (message->getAttributes()->getInt("PadType", PadType) == kResultOk) {
-                padStates[iCurrentScene][PadNumber-1].padType = PadEntry::TypePad(PadType);
+                padStates[currentScene_][PadNumber-1].padType = PadEntry::TypePad(PadType);
                 int64 PadTag;
                 if (message->getAttributes()->getInt("PadTag", PadTag) == kResultOk) {
-                    padStates[iCurrentScene][PadNumber - 1].padTag = PadTag;
-                    padStates[iCurrentScene][PadNumber - 1].updateState(iCurrentEntry, effectorSet_);
+                    padStates[currentScene_][PadNumber - 1].padTag = PadTag;
+                    padStates[currentScene_][PadNumber - 1].updateState(currentEntry_, effectorSet_);
                 }
             }
-            dirtyParams = true;
+            dirtyParams_ = true;
         }
         return kResultTrue;
     }
@@ -1211,7 +1216,7 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
         if (message->getAttributes()->getInt("PadNumber", PadNumber) == kResultOk) {
             double PadValue;
             if (message->getAttributes()->getFloat("PadValue", PadValue) == kResultOk) {
-                dirtyParams |= padWork(PadNumber, PadValue);
+                dirtyParams_ |= padWork(PadNumber, PadValue);
             }
 
         }
@@ -1225,13 +1230,13 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
             memset(stringBuff, 0, 256 * sizeof(tchar));
             if (message->getAttributes()->getString("Sample", stringBuff, sizeof(stringBuff) / sizeof(TChar)) == kResultOk) {
                 String newName(stringBuff);
-                SamplesArray.push_back(std::make_unique<SampleEntry<Sample64>>(newName, newFile));
-                SamplesArray.back()->index(SamplesArray.size());
-                if (iCurrentEntry == (SamplesArray.back()->index() - 1)) {
-                    padSet(iCurrentEntry);
+                samplesArray_.push_back(std::make_unique<SampleEntry<Sample64>>(newName, newFile));
+                samplesArray_.back()->index(samplesArray_.size());
+                if (currentEntry_ == (samplesArray_.back()->index() - 1)) {
+                    padSet(currentEntry_);
                 }
-                addSampleMessage(SamplesArray.back().get());
-                dirtyParams = true;
+                addSampleMessage(samplesArray_.back().get());
+                dirtyParams_ = true;
             }
         }
 
@@ -1244,8 +1249,8 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
             String newFile(stringBuff);
             if (message->getAttributes()->getString("Sample", stringBuff, sizeof (stringBuff) / sizeof (TChar)) == kResultOk) {
                 String newName(stringBuff);
-                SamplesArray[iCurrentEntry] = std::make_unique<SampleEntry<Sample64>>(newName, newFile);
-                SamplesArray[iCurrentEntry]->index(iCurrentEntry + 1);
+                samplesArray_[currentEntry_] = std::make_unique<SampleEntry<Sample64>>(newName, newFile);
+                samplesArray_[currentEntry_]->index(currentEntry_ + 1);
             }
         }
         return kResultTrue;
@@ -1257,29 +1262,30 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
             int64 sampleIndex;
             if (message->getAttributes()->getInt("SampleNumber", sampleIndex) == kResultOk) {
                 String newName(stringBuff);
-                SamplesArray.at(iCurrentEntry)->name(newName);
+                samplesArray_.at(currentEntry_)->name(newName);
             }
         }
         return kResultTrue;
     }
 
     if (strcmp(message->getMessageID(), "deleteEntry") == 0) {
-        int64 sampleIndex;
+        int64 sampleIndex {0};
         if (message->getAttributes()->getInt ("SampleNumber", sampleIndex) == kResultOk) {
-            delSampleMessage(SamplesArray.at(sampleIndex).get());
-            SamplesArray.erase(SamplesArray.begin() + sampleIndex);
-            for (size_t i = 0; i < SamplesArray.size(); i++) {
-                SamplesArray.at(i)->index(i + 1);
+            delSampleMessage(samplesArray_.at(sampleIndex).get());
+            samplesArray_.erase(samplesArray_.begin() + sampleIndex);
+            for (size_t i = sampleIndex; i < samplesArray_.size(); i++) {
+                samplesArray_.at(i)->index(i + 1);
             }
             padRemove(sampleIndex);
-            dirtyParams = true;
+            dirtyParams_ = true;
         }
+        currentEntry(currentEntry_);
         return kResultTrue;
     } 
 
     if (strcmp(message->getMessageID(), "initView") == 0) {
         initSamplesMessage();
-        dirtyParams = true;
+        dirtyParams_ = true;
         return kResultTrue;
     }
     return AudioEffect::notify (message);
@@ -1350,21 +1356,21 @@ void AVinyl::debugInputMessage(Sample64* input, size_t len)
 
 void AVinyl::initSamplesMessage(void)
 {
-    for (int32 i = 0; i < SamplesArray.size (); i++) {
+    for (int32 i = 0; i < samplesArray_.size (); i++) {
         IMessage* msg = allocateMessage();
         if (msg) {
             msg->setMessageID("addEntry");
-            msg->getAttributes()->setBinary("EntryBufferLeft", SamplesArray.at(i)->bufferLeft(), uint32_t(SamplesArray.at(i)->bufferLength() * sizeof(Sample64)));
-            msg->getAttributes()->setBinary("EntryBufferRight", SamplesArray.at(i)->bufferRight(), uint32_t(SamplesArray.at(i)->bufferLength() * sizeof(Sample64)));
-            msg->getAttributes()->setInt("EntryLoop", SamplesArray.at(i)->Loop ? 1 : 0);
-            msg->getAttributes()->setInt("EntrySync", SamplesArray.at(i)->Sync ? 1 : 0);
-            msg->getAttributes()->setInt("EntryReverse", SamplesArray.at(i)->Reverse ? 1 : 0);
-            msg->getAttributes()->setInt("EntryIndex", int64_t(SamplesArray.at(i)->index()));
-            msg->getAttributes()->setInt("EntryBeats", int64_t(SamplesArray.at(i)->acidBeats()));
-            msg->getAttributes()->setFloat("EntryTune", SamplesArray.at(i)->Tune);
-            msg->getAttributes()->setFloat("EntryLevel", SamplesArray.at(i)->Level);
-            msg->getAttributes()->setString("EntryName", String(SamplesArray.at(i)->name()));
-            msg->getAttributes()->setString("EntryFile", String(SamplesArray.at(i)->fileName()));
+            msg->getAttributes()->setBinary("EntryBufferLeft", samplesArray_.at(i)->bufferLeft(), uint32_t(samplesArray_.at(i)->bufferLength() * sizeof(Sample64)));
+            msg->getAttributes()->setBinary("EntryBufferRight", samplesArray_.at(i)->bufferRight(), uint32_t(samplesArray_.at(i)->bufferLength() * sizeof(Sample64)));
+            msg->getAttributes()->setInt("EntryLoop", samplesArray_.at(i)->Loop ? 1 : 0);
+            msg->getAttributes()->setInt("EntrySync", samplesArray_.at(i)->Sync ? 1 : 0);
+            msg->getAttributes()->setInt("EntryReverse", samplesArray_.at(i)->Reverse ? 1 : 0);
+            msg->getAttributes()->setInt("EntryIndex", int64_t(samplesArray_.at(i)->index()));
+            msg->getAttributes()->setInt("EntryBeats", int64_t(samplesArray_.at(i)->acidBeats()));
+            msg->getAttributes()->setFloat("EntryTune", samplesArray_.at(i)->Tune);
+            msg->getAttributes()->setFloat("EntryLevel", samplesArray_.at(i)->Level);
+            msg->getAttributes()->setString("EntryName", String(samplesArray_.at(i)->name()));
+            msg->getAttributes()->setString("EntryFile", String(samplesArray_.at(i)->fileName()));
             sendMessage(msg);
             msg->release ();
         }
@@ -1404,11 +1410,11 @@ void AVinyl::updatePadsMessage(void)
         String ttmp3[ENumberOfPads];
         for (int i = 0; i < ENumberOfPads; i++) {
             ttmp1[i] = tmp.printf("PadState%02d", i);
-            msg->getAttributes()->setInt(ttmp1[i].text8(), padStates[iCurrentScene][i].padState ? 1 : 0);
+            msg->getAttributes()->setInt(ttmp1[i].text8(), padStates[currentScene_][i].padState ? 1 : 0);
             ttmp2[i] = tmp.printf("PadType%02d", i);
-            msg->getAttributes()->setInt(ttmp2[i].text8(), padStates[iCurrentScene][i].padType);
+            msg->getAttributes()->setInt(ttmp2[i].text8(), padStates[currentScene_][i].padType);
             ttmp3[i] = tmp.printf("PadTag%02d", i);
-            msg->getAttributes()->setInt(ttmp3[i].text8(), padStates[iCurrentScene][i].padTag);
+            msg->getAttributes()->setInt(ttmp3[i].text8(), padStates[currentScene_][i].padTag);
         }
         sendMessage(msg);
         msg->release();
@@ -1420,20 +1426,20 @@ void AVinyl::processEvent(const Event &event)
     switch (event.type) {
     case Event::kNoteOnEvent:
         for (int i = 0; i < ENumberOfPads; i++) {
-            if (padStates[iCurrentScene][i].padMidi == event.noteOn.pitch) {
-                dirtyParams |= padWork(i, 1.);
+            if (padStates[currentScene_][i].padMidi == event.noteOn.pitch) {
+                dirtyParams_ |= padWork(i, 1.);
             }
-            if (padStates[iCurrentScene][i].padType == PadEntry::AssigMIDI) {
-                padStates[iCurrentScene][i].padType = PadEntry::SamplePad;
-                padStates[iCurrentScene][i].padMidi = event.noteOn.pitch;
-                dirtyParams = true;
+            if (padStates[currentScene_][i].padType == PadEntry::AssigMIDI) {
+                padStates[currentScene_][i].padType = PadEntry::SamplePad;
+                padStates[currentScene_][i].padMidi = event.noteOn.pitch;
+                dirtyParams_ = true;
             }
         }
         break;
     case Event::kNoteOffEvent:
         for (int i = 0; i < ENumberOfPads; i++) {
-            if (padStates[iCurrentScene][i].padMidi == event.noteOn.pitch)
-                dirtyParams |= padWork(i, 0);
+            if (padStates[currentScene_][i].padMidi == event.noteOn.pitch)
+                dirtyParams_ |= padWork(i, 0);
         }
         break;
     default:
@@ -1454,9 +1460,9 @@ void AVinyl::reset(bool state)
             SignalL[i] = 0;
             SignalR[i] = 0;
         }
-        absAVGSpeed = 0;
+        absAvgSpeed_ = 0;
         //Direction = 1;
-        direction_ = 0;
+        directionBits_ = 0;
         DeltaL = 0.;
         DeltaR = 0.;
         OldSignalL = 0;
@@ -1484,16 +1490,16 @@ void AVinyl::reset(bool state)
 
 void AVinyl::currentEntry(int64_t newentry)
 {
-    if (newentry >= int64_t(SamplesArray.size())) {
-        newentry = int64_t(SamplesArray.size()) - 1;
+    if (newentry >= int64_t(samplesArray_.size())) {
+        newentry = int64_t(samplesArray_.size()) - 1;
     }
     if (newentry < 0) {
         newentry = 0;
     }
 
-    iCurrentEntry = newentry;
-    if (newentry < int64_t(SamplesArray.size())) {
-        SamplesArray.at(newentry)->resetCursor();
+    currentEntry_ = newentry;
+    if (newentry < int64_t(samplesArray_.size())) {
+        samplesArray_.at(newentry)->resetCursor();
     }
     fPosition = 0;
 }
@@ -1501,10 +1507,10 @@ void AVinyl::currentEntry(int64_t newentry)
 bool AVinyl::padWork(int padId, double paramValue)
 {
     bool result = false;
-    switch(padStates[iCurrentScene][padId].padType) {
+    switch(padStates[currentScene_][padId].padType) {
     case PadEntry::SamplePad:
-        if ((padStates[iCurrentScene][padId].padTag >= 0)
-            && (SamplesArray.size() > padStates[iCurrentScene][padId].padTag)) {
+        if ((padStates[currentScene_][padId].padTag >= 0)
+            && (samplesArray_.size() > padStates[currentScene_][padId].padTag)) {
             if (paramValue > 0.5) {
                 for (int j = 0; j < EMaximumScenes; j++) {
                     for (int i = 0; i < ENumberOfPads; i++) {
@@ -1513,8 +1519,8 @@ bool AVinyl::padWork(int padId, double paramValue)
                         }
                     }
                 }
-                padStates[iCurrentScene][padId].padState = true;
-                currentEntry(padStates[iCurrentScene][padId].padTag);
+                padStates[currentScene_][padId].padState = true;
+                currentEntry(padStates[currentScene_][padId].padTag);
                 result = true;
             }
         }
@@ -1522,8 +1528,8 @@ bool AVinyl::padWork(int padId, double paramValue)
     case PadEntry::SwitchPad:
     {
         if (paramValue > 0.5) {
-            padStates[iCurrentScene][padId].padState = !padStates[iCurrentScene][padId].padState;
-            effectorSet_ ^= padStates[iCurrentScene][padId].padTag;
+            padStates[currentScene_][padId].padState = !padStates[currentScene_][padId].padState;
+            effectorSet_ ^= padStates[currentScene_][padId].padTag;
             result = true;
         }
     }
@@ -1531,11 +1537,11 @@ bool AVinyl::padWork(int padId, double paramValue)
     case PadEntry::KickPad:
     {
         if (paramValue > 0.5) {
-            padStates[iCurrentScene][padId].padState = true;
-            effectorSet_ |= padStates[iCurrentScene][padId].padTag;
+            padStates[currentScene_][padId].padState = true;
+            effectorSet_ |= padStates[currentScene_][padId].padTag;
         }else{
-            padStates[iCurrentScene][padId].padState = false;
-            effectorSet_ &= ~padStates[iCurrentScene][padId].padTag;
+            padStates[currentScene_][padId].padState = false;
+            effectorSet_ &= ~padStates[currentScene_][padId].padTag;
         }
         result = true;
     }
@@ -1578,22 +1584,20 @@ bool AVinyl::padSet(int currentSample)
 //    }
 //}
 
-bool AVinyl::padRemove(int currentSample)
+void AVinyl::padRemove(int currentSample)
 {
-    bool result = false;
     for (int j = 0; j < EMaximumScenes; j++) {
         for (int i = 0; i < ENumberOfPads; i++) {
             if (padStates[j][i].padType == PadEntry::SamplePad) {
                 if (padStates[j][i].padTag == currentSample) {
                     padStates[j][i].padTag = -1;
+                    padStates[j][i].padType = PadEntry::EmptyPad;
                 } else if (padStates[j][i].padTag > currentSample) {
                     padStates[j][i].padTag = padStates[j][i].padTag - 1;
                 }
-                result = true;
             }
         }
     }
-    return result;
 }
 
 //double AVinyl::normalizeTag(int tag)
