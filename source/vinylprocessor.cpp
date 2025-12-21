@@ -182,14 +182,14 @@ AVinyl::AVinyl() :
                          fRealPitch = calcRealPitch (fPitch, fSwitch);
                      });
 
-    params_.addReader(kCurrentEntryId, [this] () { return double(currentEntry_ / (EMaximumSamples - 1)); },
+    params_.addReader(kCurrentEntryId, [this] () { return double(currentEntry_) / (EMaximumSamples - 1.); },
                      [this](Sample64 value) {
                          currentEntry(floor(value * double(EMaximumSamples - 1) + 0.5));
                          dirtyParams_ |= padSet(currentEntry_);
                      });
-    params_.addReader(kCurrentSceneId, [this] () { return double(currentScene_ / (EMaximumScenes - 1)); },
+    params_.addReader(kCurrentSceneId, [this] () { return double(currentScene_) / (EMaximumScenes - 1.); },
                      [this](Sample64 value) {
-                         currentScene_ = floor(value * float(EMaximumScenes - 1) + 0.5f);
+                         currentScene_ = floor(value * double(EMaximumScenes - 1.) + 0.5);
                          dirtyParams_ = true;
                      });
 
@@ -470,9 +470,11 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                         FFTCursor = 0;
 
                         if (TimeCodeAmplytude >= ETimeCodeMinAmplytude) {
+#ifdef DEVELOPMENT
                             {
                                 debugInputMessage(FFT, EFFTFrame);
                             }
+#endif // DEBUG
                             fastsine(FFT, EFFTFrame);
                             //fft(fft_, EFFTFrame);
                             /// Filterout low noise
@@ -483,6 +485,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                                 //fft_[i].real = SmoothCoef * fft_[i].real;
                                 //fft_[i].imaginary = SmoothCoef * fft_[i].imaginary;
                             }
+#ifdef DEVELOPMENT
                             {
                                 //Sample64 real_[EFFTFrame];
                                 //for (size_t i = 0; i < EFFTFrame; i++) {
@@ -497,7 +500,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                             //    }
                             //    debugInputMessage(real_, EFFTFrame);
                             //}
-
+#endif // DEBUG
 
                             CalcAbsSpeed();
                             if (TimecodeLearnCounter > 0) {
@@ -1197,10 +1200,10 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
     if (strcmp(message->getMessageID(), "setPad") == 0) {
         int64 PadNumber;
         if (message->getAttributes()->getInt("PadNumber", PadNumber) == kResultOk) {
-            padStates[currentScene_][PadNumber-1].padState = false;
+            padStates[currentScene_][PadNumber - 1].padState = false;
             int64 PadType;
             if (message->getAttributes()->getInt("PadType", PadType) == kResultOk) {
-                padStates[currentScene_][PadNumber-1].padType = PadEntry::TypePad(PadType);
+                padStates[currentScene_][PadNumber - 1].padType = PadEntry::TypePad(PadType);
                 int64 PadTag;
                 if (message->getAttributes()->getInt("PadTag", PadTag) == kResultOk) {
                     padStates[currentScene_][PadNumber - 1].padTag = PadTag;
@@ -1540,7 +1543,7 @@ bool AVinyl::padWork(int padId, double paramValue)
         if (paramValue > 0.5) {
             padStates[currentScene_][padId].padState = true;
             effectorSet_ |= padStates[currentScene_][padId].padTag;
-        }else{
+        } else {
             padStates[currentScene_][padId].padState = false;
             effectorSet_ &= ~padStates[currentScene_][padId].padTag;
         }
@@ -1593,6 +1596,7 @@ void AVinyl::padRemove(int currentSample)
                 if (padStates[j][i].padTag == currentSample) {
                     padStates[j][i].padTag = -1;
                     padStates[j][i].padType = PadEntry::EmptyPad;
+                    padStates[j][i].padState = false;
                 } else if (padStates[j][i].padTag > currentSample) {
                     padStates[j][i].padTag = padStates[j][i].padTag - 1;
                 }

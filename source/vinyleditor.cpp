@@ -48,7 +48,7 @@ AVinylEditorView::AVinylEditorView (void* controller)
     : VSTGUIEditor(controller)
     , lastVuLeftMeterValue_(0.f)
     , lastVuRightMeterValue_(0.f)
-    , currentEntry_(0)
+    , currentEntry_(-1)
     , lastSpeedValue_(0)
     , lastPositionValue_(0)
 {
@@ -463,7 +463,7 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
         wavView_ = make_shared<VSTGUI::CWaveView>(size, this, 'Wave', glass);
         frame->addView(wavView_);
     }
-
+#ifdef DEVELOPMENT
     {
         size(0, 0, kEditorMaxWidth, 100);
         size.offset(0, kEditorHeight);
@@ -476,7 +476,7 @@ bool PLUGIN_API AVinylEditorView::open (void* parent, const VSTGUI::PlatformType
         debugInputView_ = make_shared<VSTGUI::CDebugFftView>(size, this, '_INP');
         frame->addView(debugInputView_);
     }
-
+#endif
 
     ///////CheckBoxes/////////////////////////////////////////////////////////////////////
     {
@@ -1021,8 +1021,12 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
 
     case 'Name':
     {
-        if (sampleBase_) sampleBase_->getEntry(int32_t(currentEntry_))->setTitle(nameEdit_->getText());
-        if (padBase_) padBase_->getEntry(int32_t(currentEntry_))->setTitle(nameEdit_->getText());
+        if (sampleBase_ && sampleBase_->getEntry(int32_t(currentEntry_))) {
+            sampleBase_->getEntry(int32_t(currentEntry_))->setTitle(nameEdit_->getText());
+        }
+        if (padBase_ && padBase_->getEntry(int32_t(currentEntry_))) {
+            padBase_->getEntry(int32_t(currentEntry_))->setTitle(nameEdit_->getText());
+        }
         IMessage* msg = controller->allocateMessage ();
         if (msg)
         {
@@ -1097,10 +1101,10 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             }
             if (menuIndex==4){
                 using namespace VSTGUI::Standalone;
-                auto wndw = Detail::createAlertBox({"Delete from base",
+                auto wndw = Detail::createAlertBox({"Delete sample from base",
                                                     "Are you sure?",
-                                                    "Cancel",
-                                                    "Ok"},
+                                                    "No",
+                                                    "Yes"},
                                                    [&](AlertResult res) {
 
                                                        if(res == AlertResult::SecondButton) {
@@ -1112,6 +1116,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
                                                                msg->release();
                                                            }}
                                                    });
+
                 VSTGUI::CCoord x;
                 VSTGUI::CCoord y;
                 getFrame()->getPosition(x, y);
@@ -1586,46 +1591,49 @@ void AVinylEditorView::delEntry(size_t delEntryIndex)
 {
     if ((delEntryIndex >= 0) && (delEntryIndex < sampleBitmaps_.size())) {
 
-        //VSTGUI::CBitmap * waveForm = sampleBitmaps.at(delEntryIndex);
-
         sampleBitmaps_.erase(sampleBitmaps_.begin() + delEntryIndex);
-        //waveForm->forget();
+
         if (sampleBase_) {
             sampleBase_->removeEntry(int32_t(delEntryIndex));
-            if (padBase_) {
-                padBase_->removeEntry(int32_t(delEntryIndex));
-            }
-            if (currentEntry_ >= sampleBase_->getNbEntries()) {
-                currentEntry_ = sampleBase_->getNbEntries() - 1;
-            }
-            if (sampleBase_->getNbEntries()==0) {
-                sampleBase_->addEntry(EEmptyBaseTitle, 0, VSTGUI::CMenuItem::kTitle|VSTGUI::CMenuItem::kDisabled);
-                if (padBase_) {
-                    padBase_->addEntry(EEmptyBaseTitle, 0, VSTGUI::CMenuItem::kTitle|VSTGUI::CMenuItem::kDisabled);
-                }
-                currentEntry_ = 0;
-                if (wavView_) {
-                    wavView_->setWave(nullptr);
-                }
-                if (nameEdit_) {
-                    nameEdit_->setText(0);
-                }
-                if (sampleNumber_) {
-                    sampleNumber_->setText(" ");
-                }
-
-                if (samplePopup_) {
-                    samplePopup_->getEntry(3)->setEnabled(false);
-                    samplePopup_->getEntry(4)->setEnabled(false);
-                    if (EMaximumSamples > samplePopup_->getNbEntries()) {
-                        samplePopup_->getEntry(2)->setEnabled(true);
-                    }
-                }
-            } else {
-                controller->setParamNormalized (kCurrentEntryId, (float)currentEntry_/(EMaximumSamples-1));
-                controller->performEdit (kCurrentEntryId, (float)currentEntry_/(EMaximumSamples-1));
-            }
         }
+        if (padBase_) {
+            padBase_->removeEntry(int32_t(delEntryIndex));
+        }
+        if (currentEntry_ >= sampleBase_->getNbEntries()) {
+            currentEntry_ = sampleBase_->getNbEntries() - 1;
+        }
+        if (sampleBase_->getNbEntries() == 0) {
+            sampleBase_->addEntry(EEmptyBaseTitle, 0, VSTGUI::CMenuItem::kTitle|VSTGUI::CMenuItem::kDisabled);
+            if (padBase_) {
+                padBase_->addEntry(EEmptyBaseTitle, 0, VSTGUI::CMenuItem::kTitle|VSTGUI::CMenuItem::kDisabled);
+            }
+            //currentEntry_ = 0;
+            if (wavView_) {
+                wavView_->setWave(nullptr);
+            }
+            if (nameEdit_) {
+                nameEdit_->setText(0);
+            }
+            if (sampleNumber_) {
+                sampleNumber_->setText(" ");
+            }
+
+            if (samplePopup_) {
+                samplePopup_->getEntry(3)->setEnabled(false);
+                samplePopup_->getEntry(4)->setEnabled(false);
+                if (EMaximumSamples > samplePopup_->getNbEntries()) {
+                    samplePopup_->getEntry(2)->setEnabled(true);
+                }
+            }
+        } else {
+            if (wavView_ && currentEntry_ < int64_t(sampleBitmaps_.size())) {
+                wavView_->setWave(sampleBitmaps_.at(currentEntry_));
+                wavView_->setPosition(0);
+            }
+            controller->setParamNormalized(kCurrentEntryId, currentEntry_ / double(EMaximumSamples - 1));
+            controller->performEdit(kCurrentEntryId, currentEntry_ / double(EMaximumSamples - 1));
+        }
+        
     }
 }
 
@@ -1741,74 +1749,74 @@ bool AVinylEditorView::callBeforePopup(VSTGUI::IControlListener *listener, VSTGU
     switch (view->padType_[view->padForSetting_]->getPosition()) {
     case PadEntry::SamplePad:
         if (view->padBase_) {
-            view->padBase_->setCurrent(view->padTag_[view->padForSetting_],false);
+            view->padBase_->setCurrent(view->padTag_[view->padForSetting_], false);
         }
         if (view->effectBase1_) {
-            view->effectBase1_->setCurrent(-1,false);
+            view->effectBase1_->setCurrent(-1, false);
         }
         if (view->effectBase2_) {
-            view->effectBase2_->setCurrent(-1,false);
+            view->effectBase2_->setCurrent(-1, false);
         }
         break;
     case PadEntry::SwitchPad:
         if (view->padBase_) {
-            view->padBase_->setCurrent(-1,false);
+            view->padBase_->setCurrent(-1, false);
         }
         if (view->effectBase1_) {
-            view->effectBase1_->setCurrent(bitNumber(view->padTag_[view->padForSetting_]),false);
+            view->effectBase1_->setCurrent(bitNumber(view->padTag_[view->padForSetting_]), false);
         }
         if (view->effectBase2_) {
-            view->effectBase2_->setCurrent(-1,false);
+            view->effectBase2_->setCurrent(-1, false);
         }
         break;
     case PadEntry::KickPad:
         if (view->padBase_) {
-            view->padBase_->setCurrent(-1,false);
+            view->padBase_->setCurrent(-1, false);
         }
         if (view->effectBase1_) {
-            view->effectBase1_->setCurrent(-1,false);
+            view->effectBase1_->setCurrent(-1, false);
         }
         if (view->effectBase2_) {
-            view->effectBase2_->setCurrent(bitNumber(view->padTag_[view->padForSetting_]),false);
+            view->effectBase2_->setCurrent(bitNumber(view->padTag_[view->padForSetting_]), false);
         }
         break;
     default:
         if (view->padBase_) {
-            view->padBase_->setCurrent(-1,false);
+            view->padBase_->setCurrent(-1, false);
         }
         if (view->effectBase1_) {
-            view->effectBase1_->setCurrent(-1,false);
+            view->effectBase1_->setCurrent(-1, false);
         }
         if (view->effectBase2_) {
-            view->effectBase2_->setCurrent(-1,false);
+            view->effectBase2_->setCurrent(-1, false);
         }
         break;
     }
     return true;
 }
 
-void AVinylEditorView::setPadMessage(int _pad,int _type,int _tag)
+void AVinylEditorView::setPadMessage(int pad, int type, int tag)
 {
     IMessage* msg = controller->allocateMessage ();
     if (msg)
     {
         msg->setMessageID("setPad");
-        msg->getAttributes()->setInt("PadNumber", _pad);
-        msg->getAttributes()->setInt("PadType", _type);
-        msg->getAttributes()->setInt("PadTag", _tag);
+        msg->getAttributes()->setInt("PadNumber", pad);
+        msg->getAttributes()->setInt("PadType", type);
+        msg->getAttributes()->setInt("PadTag", tag);
         controller->sendMessage(msg);
         msg->release();
     }
 }
 
-void AVinylEditorView::setPadMessage(int _pad,int _type)
+void AVinylEditorView::setPadMessage(int pad, int type)
 {
     IMessage* msg = controller->allocateMessage ();
     if (msg)
     {
         msg->setMessageID("setPad");
-        msg->getAttributes()->setInt("PadNumber", _pad);
-        msg->getAttributes()->setInt("PadType", _type);
+        msg->getAttributes()->setInt("PadNumber", pad);
+        msg->getAttributes()->setInt("PadType", type);
         controller->sendMessage(msg);
         msg->release();
     }
