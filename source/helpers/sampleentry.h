@@ -156,7 +156,7 @@ public:
     }
 
     void playStereoSample(SampleType *left, SampleType *right, ParameterType speed, ParameterType tempo, ParameterType sampleRate, bool changeCursors) {
-        if (Sync && (acidBeats_>0)) {
+        if (Sync && (acidBeats_ > 0)) {
             playStereoSampleTempo(left, right, speed * (ParameterType(sampleRate_) / ParameterType(sampleRate)), fabs(tempo * speed), sampleRate, changeCursors);
         } else {
             playStereoSample(left, right, calcRealSpeed(speed, sampleRate), changeCursors);
@@ -546,20 +546,28 @@ private:
 
     SampleEntry::CuePoint normalizeCue(const CuePoint& cue) {
         CuePoint ret(cue);
-        if (Loop
-            || ((ret.integerPart() >= 0) && (ret.integerPart() < int64_t(soundBufferLeft_.size())))) {
+        if (Loop || ((ret.integerPart() >= 0) && (ret.integerPart() < int64_t(soundBufferLeft_.size())))) {
 
-            if (ret.integerPart() >= int64_t(soundBufferLeft_.size())) {
-                ret.set(ret.integerPart() % soundBufferLeft_.size(), cue.floatPart());
+            if ((ret.integerPart() >= int64_t(soundBufferLeft_.size()))) {
+
+                ret.set(ret.integerPart() % int64_t(soundBufferLeft_.size()), ret.floatPart());
+
             }
             if (ret.integerPart() < 0) {
-                ret.set(soundBufferLeft_.size() - (ret.integerPart() % soundBufferLeft_.size()), cue.floatPart());
+                ret.set(soundBufferLeft_.size() + ret.integerPart() % int64_t(soundBufferLeft_.size()), ret.floatPart());
+
             }
 
-        } else if (ret.integerPart() >= int64_t(soundBufferLeft_.size())) {
-            ret.set(soundBufferLeft_.size() - 1, 0.);
-        } else if (ret.integerPart() < 0) {
-            ret.clear();
+        } else {
+            if (ret.integerPart() >= int64_t(soundBufferLeft_.size())) {
+
+                ret.set(int64_t(soundBufferLeft_.size()) - 1, 0);
+
+            }
+            if (ret.integerPart() < 0) {
+                ret.set(0, 0);
+
+            }
         }
         return ret;
     }

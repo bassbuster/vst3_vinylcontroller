@@ -109,8 +109,8 @@ AVinyl::AVinyl() :
     setControllerClass(AVinylControllerUID);
 
 
-    //VintageSample = std::make_unique<SampleEntry<Sample32>>("vintage", "c:\\Work\\vst3sdk\\build\\VST3\\Debug\\vinylcontroller.vst3\\Contents\\Resources\\vintage.wav");
-    vintageSample_ = std::make_unique<SampleEntry<Sample64>>("vintage", vintageLeft, vintageRight, sizeof(vintageLeft) / sizeof(Sample64));
+    vintageSample_ = std::make_unique<SampleEntry<Sample64>>("vintage", "c:\\Work\\vst3sdk\\build\\VST3\\Debug\\vinylcontroller.vst3\\Contents\\Resources\\vintage.wav");
+    //vintageSample_ = std::make_unique<SampleEntry<Sample64>>("vintage", vintageLeft, vintageRight, sizeof(vintageLeft) / sizeof(Sample64));
     if (vintageSample_) {
         vintageSample_->Loop = true;
         vintageSample_->Sync = false;
@@ -729,6 +729,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
                             }
                             outL = outL * (1. - softVintage * .3) + (-sqr(outR * .5) + VintageLeft) * softVintage;
                             outR = outR * (1. - softVintage * .3) + (-sqr(outL * .5) + VintageRight) * softVintage;
+
                         }
 
                         /////////////////////////END OF EFFECTOR//////////////////
