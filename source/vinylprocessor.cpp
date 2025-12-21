@@ -1169,7 +1169,7 @@ tresult PLUGIN_API AVinyl::setBusArrangements(SpeakerArrangement* inputs,
                                               int32 numIns,
                                               SpeakerArrangement* outputs,
                                               int32 numOuts) {
-    if ((numIns == 1 || numIns == 2) && numOuts == 1) {
+    if (numIns > 0 && numIns <= 2 && numOuts == 1) {
         if (SpeakerArr::getChannelCount(inputs[0]) == 2
             && SpeakerArr::getChannelCount(outputs[0]) == 2) {
 

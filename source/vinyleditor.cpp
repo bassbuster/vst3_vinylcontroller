@@ -5,6 +5,7 @@
 #include "helpers/padentry.h"
 
 #include "base/source/fstring.h"
+#include "vstgui/standalone/source/genericalertbox.h"
 
 #include <cmath>
 #include <filesystem>
@@ -806,7 +807,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             msg->release();
         }
     }
-        break;
+    break;
 
     case 'Pd01': {
         IMessage *msg = controller->allocateMessage();
@@ -820,7 +821,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             msg->release();
         }
     }
-        break;
+    break;
 
     case 'Pd02': {
         IMessage *msg = controller->allocateMessage();
@@ -834,7 +835,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             msg->release();
         }
     }
-        break;
+    break;
 
     case 'Pd03': {
         IMessage *msg = controller->allocateMessage();
@@ -848,7 +849,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             msg->release();
         }
     }
-        break;
+    break;
 
     case 'Pd04': {
         IMessage *msg = controller->allocateMessage();
@@ -862,7 +863,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             msg->release();
         }
     }
-        break;
+    break;
 
     case 'Pd05': {
         IMessage *msg = controller->allocateMessage();
@@ -876,7 +877,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             msg->release();
         }
     }
-        break;
+    break;
 
     case 'Pd06': {
         IMessage *msg = controller->allocateMessage();
@@ -890,7 +891,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             msg->release();
         }
     }
-        break;
+    break;
 
     case 'Pd07': {
         IMessage *msg = controller->allocateMessage();
@@ -904,7 +905,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             msg->release();
         }
     }
-        break;
+    break;
 
     case 'Pd08': {
         IMessage *msg = controller->allocateMessage();
@@ -918,7 +919,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             msg->release();
         }
     }
-        break;
+    break;
 
     case 'Pd09': {
         IMessage *msg = controller->allocateMessage();
@@ -932,7 +933,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             msg->release();
         }
     }
-        break;
+    break;
 
     case 'Pd00' + 10: {
         IMessage *msg = controller->allocateMessage();
@@ -946,7 +947,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             msg->release();
         }
     }
-        break;
+    break;
 
     case 'Pd00' + 11: {
         IMessage *msg = controller->allocateMessage();
@@ -960,7 +961,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             msg->release();
         }
     }
-        break;
+    break;
 
     case 'Pd00' + 12: {
         IMessage *msg = controller->allocateMessage();
@@ -974,7 +975,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             msg->release();
         }
     }
-        break;
+    break;
 
     case 'Pd00' + 13: {
         IMessage *msg = controller->allocateMessage();
@@ -988,7 +989,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             msg->release();
         }
     }
-        break;
+    break;
 
     case 'Pd00' + 14: {
         IMessage *msg = controller->allocateMessage();
@@ -1002,7 +1003,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             msg->release();
         }
     }
-        break;
+    break;
 
     case 'Pd00' + 15: {
         IMessage *msg = controller->allocateMessage();
@@ -1016,7 +1017,7 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
             msg->release();
         }
     }
-        break;
+    break;
 
     case 'Name':
     {
@@ -1095,17 +1096,32 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
                 }
             }
             if (menuIndex==4){
-                //TODO: create own dialogue
-                //if (IDYES==MessageBox(0,STR("Are you sure?"),STR("Delete from base"),MB_YESNO|MB_ICONWARNING|MB_DEFBUTTON2|MB_APPLMODAL)) {
-                IMessage* msg = controller->allocateMessage();
-                if (msg) {
-                    msg->setMessageID("deleteEntry");
-                    msg->getAttributes()->setInt("SampleNumber", currentEntry_);
-                    //msg->getAttributes()->setString("SampleName", STR(SelectedMenu->getEntry(menuIndex)->getTitle()));
-                    controller->sendMessage(msg);
-                    msg->release();
-                }
-                //}
+                using namespace VSTGUI::Standalone;
+                auto wndw = Detail::createAlertBox({"Delete from base",
+                                                    "Are you sure?",
+                                                    "Cancel",
+                                                    "Ok"},
+                                                   [&](AlertResult res) {
+
+                                                       if(res == AlertResult::SecondButton) {
+                                                           IMessage* msg = controller->allocateMessage();
+                                                           if (msg) {
+                                                               msg->setMessageID("deleteEntry");
+                                                               msg->getAttributes()->setInt("SampleNumber", currentEntry_);
+                                                               controller->sendMessage(msg);
+                                                               msg->release();
+                                                           }}
+                                                   });
+                VSTGUI::CCoord x;
+                VSTGUI::CCoord y;
+                getFrame()->getPosition(x, y);
+
+                auto parentRect = getFrame()->getViewSize();
+                parentRect.offset({ x, y });
+                auto wndSize = wndw->getSize();
+                wndw->setPosition({(parentRect.left + parentRect.right) / 2 - (wndSize.x / 2),
+                                   (parentRect.top + parentRect.bottom) / 2 - (wndSize.y / 2)});
+                wndw->show();
             }
         }
     }	break;
@@ -1344,7 +1360,7 @@ void AVinylEditorView::update(ParamID tag, ParamValue value)
             }
         }
     }
-        break;
+    break;
 
     case kVuLeftId:
         lastVuLeftMeterValue_ = float(value);
@@ -1432,8 +1448,8 @@ VSTGUI::CMessageResult AVinylEditorView::notify (CBaseObject* sender, const char
         if (sel) {
             if (strcmp(sel->kSelectEndMessage,"LoadingFile")==0) {
                 size_t MaxCount = (sel->getNumSelectedFiles()<(EMaximumSamples - sampleBitmaps_.size())) ?
-                                     sel->getNumSelectedFiles() :
-                                     EMaximumSamples-sampleBitmaps_.size();
+                                      sel->getNumSelectedFiles() :
+                                      EMaximumSamples-sampleBitmaps_.size();
                 for(size_t i = 0; i < MaxCount; i++)
                 {
                     IMessage* msg = controller->allocateMessage ();
@@ -1616,62 +1632,62 @@ void AVinylEditorView::delEntry(size_t delEntryIndex)
 void AVinylEditorView::initEntry(SampleEntry<Sample64> &newEntry)
 {
 
-        auto waveForm = generateWaveform(newEntry);
-        if (!waveForm) {
-            // not readable format
-            return;
+    auto waveForm = generateWaveform(newEntry);
+    if (!waveForm) {
+        // not readable format
+        return;
+    }
+
+    size_t index = newEntry.index() - 1;
+    if (index < sampleBitmaps_.size()) {
+        sampleBitmaps_[index] = std::move(waveForm);
+
+        if (sampleBase_) {
+            sampleBase_->getEntry(int32_t(index))->setTitle(VSTGUI::UTF8String(newEntry.name()));
         }
+        if (padBase_) {
+            padBase_->getEntry(int32_t(index))->setTitle(VSTGUI::UTF8String(newEntry.name()));
+        }
+    } else {
 
-        size_t index = newEntry.index() - 1;
-        if (index < sampleBitmaps_.size()) {
-            sampleBitmaps_[index] = std::move(waveForm);
+        index = sampleBitmaps_.size();
+        sampleBitmaps_.push_back(std::move(waveForm));
 
-            if (sampleBase_) {
-                sampleBase_->getEntry(int32_t(index))->setTitle(VSTGUI::UTF8String(newEntry.name()));
-            }
-            if (padBase_) {
-                padBase_->getEntry(int32_t(index))->setTitle(VSTGUI::UTF8String(newEntry.name()));
-            }
-        } else {
-
-            index = sampleBitmaps_.size();
-            sampleBitmaps_.push_back(std::move(waveForm));
-
-            if (sampleBase_) {
-                if (strcmp(sampleBase_->getEntry(0)->getTitle(), EEmptyBaseTitle)==0) {
-                    sampleBase_->removeAllEntry();
-                    if (padBase_) padBase_->removeAllEntry();
-                    if (samplePopup_) {
-                        samplePopup_->getEntry(3)->setEnabled(true);
-                        samplePopup_->getEntry(4)->setEnabled(true);
-                        if (EMaximumSamples <= samplePopup_->getNbEntries()) {
-                            samplePopup_->getEntry(2)->setEnabled(false);
-                        }
+        if (sampleBase_) {
+            if (strcmp(sampleBase_->getEntry(0)->getTitle(), EEmptyBaseTitle)==0) {
+                sampleBase_->removeAllEntry();
+                if (padBase_) padBase_->removeAllEntry();
+                if (samplePopup_) {
+                    samplePopup_->getEntry(3)->setEnabled(true);
+                    samplePopup_->getEntry(4)->setEnabled(true);
+                    if (EMaximumSamples <= samplePopup_->getNbEntries()) {
+                        samplePopup_->getEntry(2)->setEnabled(false);
                     }
                 }
-                sampleBase_->addEntry(VSTGUI::UTF8String(newEntry.name()), sampleBase_->getNbEntries(), VSTGUI::CMenuItem::kChecked);
-                if (padBase_) {
-                    padBase_->addEntry(VSTGUI::UTF8String(newEntry.name()), sampleBase_->getNbEntries(), 0);
-                }
+            }
+            sampleBase_->addEntry(VSTGUI::UTF8String(newEntry.name()), sampleBase_->getNbEntries(), VSTGUI::CMenuItem::kChecked);
+            if (padBase_) {
+                padBase_->addEntry(VSTGUI::UTF8String(newEntry.name()), sampleBase_->getNbEntries(), 0);
             }
         }
+    }
 
-        if (index == currentEntry_) {
-            if (samplePopup_) {
-                sampleBase_->setCurrent(currentEntry_, true);
-            }
-            if (wavView_) {
-                wavView_->setWave(sampleBitmaps_[index]);
-                wavView_->setLoop(newEntry.Loop);
-            }
-            if (nameEdit_) {
-                nameEdit_->setText(VSTGUI::UTF8String(newEntry.name()));
-            }
-            if (sampleNumber_) {
-                String tmp;
-                sampleNumber_->setText(VSTGUI::UTF8String(tmp.printf("#%03d", newEntry.index())));
-            }
+    if (index == currentEntry_) {
+        if (samplePopup_) {
+            sampleBase_->setCurrent(currentEntry_, true);
         }
+        if (wavView_) {
+            wavView_->setWave(sampleBitmaps_[index]);
+            wavView_->setLoop(newEntry.Loop);
+        }
+        if (nameEdit_) {
+            nameEdit_->setText(VSTGUI::UTF8String(newEntry.name()));
+        }
+        if (sampleNumber_) {
+            String tmp;
+            sampleNumber_->setText(VSTGUI::UTF8String(tmp.printf("#%03d", newEntry.index())));
+        }
+    }
 }
 
 void AVinylEditorView::debugFft(SampleEntry<Sample64> &newEntry)

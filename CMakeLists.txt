@@ -54,6 +54,7 @@ target_compile_features(${target}
 target_link_libraries(${target}
     PRIVATE
         vstgui_support
+        vstgui_standalone
 )
 
 smtg_target_add_plugin_resources(${target}
