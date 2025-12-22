@@ -6,6 +6,7 @@
 #include "helpers/sampleentry.h"
 #include "helpers/parameterreader.h"
 #include "helpers/padentry.h"
+#include "helpers/ringbuffer.h"
 
 #include "vinylconfigconst.h"
 
@@ -93,30 +94,33 @@ private:
         SampleType value_;
     };
 
-    Sample64 SignalL[EFilterFrame];
-    Sample64 SignalR[EFilterFrame];
-    Filtred<Sample64, EFilterFrame> FSignalL;
-    Filtred<Sample64, EFilterFrame> FSignalR;
-    Sample64 FFTPre[EFFTFrame];
-    Sample64 FFT[EFFTFrame];
+    RingBuffer<Sample64, EFilterFrame> filterBufferLeft_;
+    RingBuffer<Sample64, EFilterFrame> filterBufferRight_;
+
+    // Sample64 SignalL[EFilterFrame];
+    // Sample64 SignalR[EFilterFrame];
+    Filtred<Sample64, EFilterFrame> filtredLoLeft_;
+    Filtred<Sample64, EFilterFrame> filtredLoRight_;
+    Sample64 originalBuffer_[EFFTFrame];
+    Sample64 fftBuffer_[EFFTFrame];
 
     //Sample64 filtred_[EFFTFrame];
     //Complex<double> fft_[EFFTFrame];
 
-    size_t SCursor;
-    size_t FCursor;
-    size_t FFTCursor;
+    // size_t tailCursor_;
+    // size_t headCursor_;
+    size_t speedFrameIndex_;
 
     Filtred<Sample64, 10> absAvgSpeed_;
 //	short Direction;
-    Filtred<Sample64> DeltaL;
-    Filtred<Sample64> DeltaR;
-    Sample64 OldSignalL;
-    Sample64 OldSignalR;
-    Filtred<Sample64> filtredL;
-    Filtred<Sample64> filtredR;
-    Sample64 TimeCodeAmplytude;
-    size_t SpeedCounter;
+    Filtred<Sample64> deltaLeft_;
+    Filtred<Sample64> deltaRight_;
+    Sample64 oldSignalLeft_;
+    Sample64 oldSignalRight_;
+    Filtred<Sample64> filtredHiLeft_;
+    Filtred<Sample64> filtredHiRight_;
+    Sample64 timeCodeAmplytude_;
+    size_t speedCounter_;
 	bool StatusR;
 	bool StatusL;
 	bool OldStatusR;
@@ -174,8 +178,8 @@ private:
 	int32 currentProcessMode;
 	bool currentProcessStatus;
 
-    void CalcDirectionTimeCodeAmplitude(void);
-    void CalcAbsSpeed(void);
+    void calcDirectionTimeCodeAmplitude();
+    void calcAbsSpeed();
     void currentEntry(int64_t newentry);
 
     //void padState(PadEntry &pad); 
@@ -206,8 +210,8 @@ private:
     Sample64 fRealSpeed;
     Sample64 fRealVolume;
     Filtred<Sample64, 16> fVolCoeff;
-    Filtred<Sample64, 256> avgTimeCodeCoeff;
-	int TimecodeLearnCounter;
+    Filtred<Sample64, 256> avgTimeCodeCoeff_;
+    int timecodeLearnCounter_;
 	int HoldCounter;
 	int FreezeCounter;
     SampleEntry<Sample64>::CuePoint HoldCue;

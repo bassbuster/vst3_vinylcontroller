@@ -41,7 +41,9 @@ smtg_add_vst3plugin(${target}
     source/helpers/fft.cpp
     source/helpers/resourcepath.h
     source/helpers/resourcepath.cpp
+    source/helpers/ringbuffer.h
 )
+
 
 set_target_properties(${target} 
     PROPERTIES

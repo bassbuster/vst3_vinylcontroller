@@ -83,11 +83,11 @@ AVinyl::AVinyl() :
     fCurve(0),
     currentProcessMode(-1), // -1 means not initialized
     bBypass(false),
-    avgTimeCodeCoeff(ETimeCodeCoeff),
+    avgTimeCodeCoeff_(ETimeCodeCoeff),
     bTCLearn(false),
     dSampleRate(EDefaultSampleRate),
     dTempo(EDefaultTempo),
-    TimecodeLearnCounter(0),
+    timecodeLearnCounter_(0),
     HoldCounter(0),
     FreezeCounter(0),
     dNoteLength(0),
@@ -229,7 +229,7 @@ AVinyl::AVinyl() :
     params_.addReader(kTimecodeLearnId, [this] () { return bTCLearn ? 1. : 0.; },
                      [this](Sample64 value) {
                          if (value>0.5) {
-                             TimecodeLearnCounter = ETimecodeLearnCount;
+                             timecodeLearnCounter_ = ETimecodeLearnCount;
                              bTCLearn = true;
                          }
                      });
@@ -431,54 +431,44 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                         ptrInRight += sizeof(Sample32);
                     }
 
-                    SignalL[FCursor] = (filtredL.append(inL));
-                    SignalR[FCursor] = (filtredL.append(inR));
+                    filterBufferLeft_.writeHead(filtredHiLeft_.append(inL));
+                    filterBufferRight_.writeHead(filtredHiRight_.append(inR));
 
-                    SignalL[SCursor] = SignalL[SCursor] - (FSignalL.append(inL));
-                    SignalR[SCursor] = SignalR[SCursor] - (FSignalR.append(inR));
+                    Sample64 newSignalLeft = filterBufferLeft_.readTail() - filtredLoLeft_.append(inL);
+                    Sample64 newSignalRight = filterBufferRight_.readTail() - filtredLoRight_.append(inR);
 
-                    DeltaL.append(SignalL[SCursor] - OldSignalL);
-                    DeltaR.append(SignalR[SCursor] - OldSignalR);
-
-
-                    CalcDirectionTimeCodeAmplitude();
-
-                    OldSignalL = SignalL[SCursor];
-                    OldSignalR = SignalR[SCursor];
-
-                    if (++FCursor >= EFilterFrame) {
-                        FCursor = 0;
-                    }
-
-                    if (++SCursor >= EFilterFrame) {
-                        SCursor = 0;
-                    }
+                    deltaLeft_.append(newSignalLeft - oldSignalLeft_);
+                    deltaRight_.append(newSignalRight - oldSignalRight_);
 
 
-                    Sample64 SmoothCoef = sin(Pi * Sample64(FFTCursor + EFFTFrame - ESpeedFrame) / Sample64(EFFTFrame));
-                    FFTPre[FFTCursor + EFFTFrame - ESpeedFrame] = inL - inR;// (OldSignalL - OldSignalR);
-                    FFT[FFTCursor + EFFTFrame - ESpeedFrame] = (SmoothCoef * FFTPre[FFTCursor + EFFTFrame - ESpeedFrame]);
+                    calcDirectionTimeCodeAmplitude();
+
+                    oldSignalLeft_ = newSignalLeft;
+                    oldSignalRight_ = newSignalRight;
+
+                    Sample64 smoothWindow = sin(Pi * Sample64(speedFrameIndex_ + EFFTFrame - ESpeedFrame) / Sample64(EFFTFrame));
+                    originalBuffer_[speedFrameIndex_ + EFFTFrame - ESpeedFrame] = oldSignalLeft_ - oldSignalRight_;
+                    fftBuffer_[speedFrameIndex_ + EFFTFrame - ESpeedFrame] = (smoothWindow * originalBuffer_[speedFrameIndex_ + EFFTFrame - ESpeedFrame]);
                     //filtred_[FFTCursor + EFFTFrame - ESpeedFrame] = inL - inR;// (OldSignalL - OldSignalR);
                     //fft_[FFTCursor + EFFTFrame - ESpeedFrame].real = (SmoothCoef * filtred_[FFTCursor + EFFTFrame - ESpeedFrame]);
                     //fft_[FFTCursor + EFFTFrame - ESpeedFrame].imaginary = 0;
 
-                    FFTCursor++;
-                    if (FFTCursor >= ESpeedFrame) {
-                        FFTCursor = 0;
+                    speedFrameIndex_++;
+                    if (speedFrameIndex_ >= ESpeedFrame) {
+                        speedFrameIndex_ = 0;
 
-                        if (TimeCodeAmplytude >= ETimeCodeMinAmplytude) {
+                        if (timeCodeAmplytude_ >= ETimeCodeMinAmplytude) {
 #ifdef DEVELOPMENT
                             {
-                                debugInputMessage(FFT, EFFTFrame);
+                                debugInputMessage(fftBuffer_, EFFTFrame);
                             }
 #endif // DEBUG
-                            fastsine(FFT, EFFTFrame);
+                            fastsine(fftBuffer_, EFFTFrame);
                             //fft(fft_, EFFTFrame);
-                            /// Filterout low noise
-                            for (size_t i = 0; i < EFFTFrame; i++) {
-                                //Sample64 SmoothCoef = sin(Pi * Sample64(i) / Sample64(EFFTFrame));
-                                Sample64 SmoothCoef = i < 10 ? i * .1 : 1.;
-                                FFT[i] = SmoothCoef * FFT[i];
+                            /// Filter out low noise
+                            for (size_t i = 0; i < 10; i++) {
+                                Sample64 SmoothCoef =  i * .1 + .01;
+                                fftBuffer_[i] = SmoothCoef * fftBuffer_[i];
                                 //fft_[i].real = SmoothCoef * fft_[i].real;
                                 //fft_[i].imaginary = SmoothCoef * fft_[i].imaginary;
                             }
@@ -488,7 +478,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                                 //for (size_t i = 0; i < EFFTFrame; i++) {
                                 //    real_[i] = fft_[i].real;
                                 //}
-                                debugFftMessage(FFT, EFFTFrame);
+                                debugFftMessage(fftBuffer_, EFFTFrame);
                             }
                             //{
                             //    Sample64 real_[EFFTFrame];
@@ -499,14 +489,14 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                             //}
 #endif // DEBUG
 
-                            CalcAbsSpeed();
-                            if (TimecodeLearnCounter > 0) {
-                                TimecodeLearnCounter--;
-                                avgTimeCodeCoeff.append(direction_ * absAvgSpeed_);
+                            calcAbsSpeed();
+                            if (timecodeLearnCounter_ > 0) {
+                                timecodeLearnCounter_--;
+                                avgTimeCodeCoeff_.append(direction_ * absAvgSpeed_);
                                 fRealSpeed = 1.;
                             }
                             else {
-                                fRealSpeed = absAvgSpeed_ / avgTimeCodeCoeff;
+                                fRealSpeed = absAvgSpeed_ / avgTimeCodeCoeff_;
                                 bTCLearn = false;
                             }
                             fVolCoeff.append(sqrt(fabs(fRealSpeed)));
@@ -516,22 +506,21 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                         for (size_t i = 0; i < EFFTFrame - ESpeedFrame; i++) {
                             //Sample64 SmoothCoef = 0.5 - 0.5 * cos((2.0 * Pi * Sample64(i) / EFFTFrame));
                             Sample64 SmoothCoef = sin(Pi * Sample64(i) / Sample64(EFFTFrame));
-                            FFTPre[i] = FFTPre[ESpeedFrame + i];
-                            FFT[i] = (SmoothCoef * FFTPre[ESpeedFrame + i]);
+                            originalBuffer_[i] = originalBuffer_[ESpeedFrame + i];
+                            fftBuffer_[i] = (SmoothCoef * originalBuffer_[ESpeedFrame + i]);
                             //filtred_[i] = filtred_[ESpeedFrame + i];
                             //fft_[i].real = (SmoothCoef * filtred_[ESpeedFrame + i]);
                             //fft_[i].imaginary = 0.;
                         }
                     }
 
-                    if (TimeCodeAmplytude < ETimeCodeMinAmplytude) {
+                    if (timeCodeAmplytude_ < ETimeCodeMinAmplytude) {
                         if (fVolCoeff >= 0.00001) {
                             absAvgSpeed_ = absAvgSpeed_ / 1.07;
-                            fRealSpeed = absAvgSpeed_ / avgTimeCodeCoeff;
+                            fRealSpeed = absAvgSpeed_ / avgTimeCodeCoeff_;
                             fVolCoeff.append(sqrt(fabs(fRealSpeed)));
                             fRealSpeed = direction_ * fRealSpeed;
-                        }
-                        else {
+                        } else {
                             absAvgSpeed_ = 0.;
                             fRealSpeed = 0.;
                             fVolCoeff = 0.;
@@ -555,8 +544,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                                 keyHold = true;
                             }
                             softHold.append(1.);
-                        }
-                        else {
+                        } else {
                             keyHold = false;
                             softHold.append(0.);
                         }
@@ -568,8 +556,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                                 keyFreeze = true;
                             }
                             softFreeze.append(1.);
-                        }
-                        else {
+                        } else {
                             if (keyFreeze) {
                                 keyFreeze = false;
                                 AfterFreezeCue = FreezeCueCur;
@@ -591,27 +578,27 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                         }
 
                         //////////////////////////PLAYER////////////////////////////////////////////////
-                        Sample64 _speed = 0.;//fRealSpeed * fRealPitch;
-                        Sample64 _tempo = 0.;
+                        Sample64 speed = 0.;//fRealSpeed * fRealPitch;
+                        Sample64 tempo = 0.;
 
                         if (keyLockTone) {
-                            _speed = direction_ * lockSpeed;
-                            _tempo = samplesArray_.at(currentEntry_)->Sync
+                            speed = direction_ * lockSpeed;
+                            tempo = samplesArray_.at(currentEntry_)->Sync
                                 ? fabs(dTempo * fRealSpeed * fRealPitch)
                                 : samplesArray_.at(currentEntry_)->tempo() * fabs(fRealSpeed * fRealPitch) * lockTune;
                             samplesArray_.at(currentEntry_)->playStereoSampleTempo(&outL,
                                 &outR,
-                                _speed,
-                                _tempo,
+                                speed,
+                                tempo,
                                 dSampleRate,
                                 true);
                         } else {
-                            _speed = fRealSpeed * fRealPitch;
-                            _tempo = dTempo;
+                            speed = fRealSpeed * fRealPitch;
+                            tempo = dTempo;
                             samplesArray_.at(currentEntry_)->playStereoSample(&outL,
                                 &outR,
-                                _speed,
-                                _tempo,
+                                speed,
+                                tempo,
                                 dSampleRate,
                                 true);
                         }
@@ -624,8 +611,8 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                             samplesArray_.at(currentEntry_)->cue(FreezeCueCur);
                             samplesArray_.at(currentEntry_)->playStereoSample(&outL,
                                 &outR,
-                                _speed,
-                                _tempo,
+                                speed,
+                                tempo,
                                 dSampleRate,
                                 true);
                             FreezeCueCur = samplesArray_.at(currentEntry_)->cue();
@@ -635,15 +622,15 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                                 samplesArray_.at(currentEntry_)->cue(AfterFreezeCue);
                                 samplesArray_.at(currentEntry_)->playStereoSample(&fLeft,
                                     &fRight,
-                                    _speed,
-                                    _tempo,
+                                    speed,
+                                    tempo,
                                     dSampleRate,
                                     true);
                                 outL = outL * softFreeze + fLeft * (1.0 - softFreeze);
                                 outR = outR * softFreeze + fRight * (1.0 - softFreeze);
                                 AfterFreezeCue = samplesArray_.at(currentEntry_)->cue();
                             }
-                            if (_speed != 0.0) {
+                            if (speed != 0.0) {
                                 if (FreezeCounter >= dNoteLength) {
                                     FreezeCounter = 0;
                                     AfterFreezeCue = FreezeCueCur;
@@ -664,7 +651,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                                 samplesArray_.at(currentEntry_)->cue(AfterHoldCue);
                                 samplesArray_.at(currentEntry_)->playStereoSample(&fLeft,
                                     &fRight,
-                                    _speed,
+                                    speed,
                                     samplesArray_.at(currentEntry_)->tempo(),
                                     dSampleRate,
                                     true);
@@ -715,8 +702,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                             }
                             if (outR > 0) {
                                 outR = outR * (1. - softDistorsion * 0.6) + 0.4 * sqrt(outR) * softDistorsion;
-                            }
-                            else {
+                            } else {
                                 outR = outR * (1. - softDistorsion * 0.6) - 0.3 * sqrt(-outR) * softDistorsion;
                             }
                         }
@@ -725,7 +711,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                             Sample64 VintageLeft = 0;
                             Sample64 VintageRight = 0;
                             if (vintageSample_) {
-                                vintageSample_->playStereoSample(&VintageLeft, &VintageRight, _speed, dTempo, dSampleRate, true);
+                                vintageSample_->playStereoSample(&VintageLeft, &VintageRight, speed, dTempo, dSampleRate, true);
                             }
                             outL = outL * (1. - softVintage * .3) + (-sqr(outR * .5) + VintageLeft) * softVintage;
                             outR = outR * (1. - softVintage * .3) + (-sqr(outL * .5) + VintageRight) * softVintage;
@@ -828,61 +814,66 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
     return kResultOk;
 }
 
-tresult PLUGIN_API AVinyl::setProcessing (TBool state){
+tresult PLUGIN_API AVinyl::setProcessing(TBool state)
+{
     currentProcessStatus = state;
     return kResultTrue;
 }
 
-tresult PLUGIN_API AVinyl::canProcessSampleSize (int32 symbolicSampleSize){
+tresult PLUGIN_API AVinyl::canProcessSampleSize(int32 symbolicSampleSize)
+{
     //if (kSample64 == symbolicSampleSize) {
     //    return kResultFalse;
     //}
     return kResultTrue;
 }
 
-uint32 PLUGIN_API AVinyl::getLatencySamples (){
+uint32 PLUGIN_API AVinyl::getLatencySamples()
+{
     return ESpeedFrame;
 }
 
-uint32 PLUGIN_API AVinyl::getTailSamples (){
+uint32 PLUGIN_API AVinyl::getTailSamples()
+{
     return ETimecodeLearnCount;
 }
 
-void AVinyl::CalcDirectionTimeCodeAmplitude() {
-    if ((StatusR) && (DeltaR < 0.0)) {
+void AVinyl::calcDirectionTimeCodeAmplitude()
+{
+    if ((StatusR) && (deltaRight_ < 0.0)) {
         OldStatusR = StatusR;
         StatusR = false;
-        TimeCodeAmplytude = (63.0 * TimeCodeAmplytude + fabs(OldSignalR)) / 64.0;
-    } else if ((!StatusR) && (DeltaR > 0.0)) {
+        timeCodeAmplytude_ = (63.0 * timeCodeAmplytude_ + fabs(oldSignalRight_)) / 64.0;
+    } else if ((!StatusR) && (deltaRight_ > 0.0)) {
         OldStatusR = StatusR;
         StatusR = true;
-        TimeCodeAmplytude = (63.0 * TimeCodeAmplytude + fabs(OldSignalR)) / 64.0;
+        timeCodeAmplytude_ = (63.0 * timeCodeAmplytude_ + fabs(oldSignalRight_)) / 64.0;
     }
 
-    if ((StatusL) && (DeltaL < 0.0)) {
+    if ((StatusL) && (deltaLeft_ < 0.0)) {
         OldStatusL = StatusL;
         StatusL = false;
-        TimeCodeAmplytude = (63.0 * TimeCodeAmplytude + fabs(OldSignalL)) / 64.0;
-    } else if ((!StatusL) && (DeltaL > 0.0)) {
+        timeCodeAmplytude_ = (63.0 * timeCodeAmplytude_ + fabs(oldSignalLeft_)) / 64.0;
+    } else if ((!StatusL) && (deltaLeft_ > 0.0)) {
         OldStatusL = StatusL;
         StatusL = true;
-        TimeCodeAmplytude = (63.0 * TimeCodeAmplytude + fabs(OldSignalL)) / 64.0;
+        timeCodeAmplytude_ = (63.0 * timeCodeAmplytude_ + fabs(oldSignalLeft_)) / 64.0;
     }
 
-    if (TimeCodeAmplytude >= ETimeCodeMinAmplytude) {
+    if (timeCodeAmplytude_ >= ETimeCodeMinAmplytude) {
         if ((StatusL != PStatusL) || (StatusR != PStatusR) ||
             (OldStatusL != POldStatusL) || (OldStatusR != POldStatusR)) {
 
             if ((StatusL == PStatusR) && (StatusR == POldStatusL) && (OldStatusL == POldStatusR) && (OldStatusR == PStatusL) 
-                && (SpeedCounter >= 3)) {
+                && (speedCounter_ >= 3)) {
                 directionBits_ <<= 8;
                 directionBits_ |= 0xff;
-                SpeedCounter = 0;
+                speedCounter_ = 0;
             } else if ((StatusL == POldStatusR) && (StatusR == PStatusL) && (OldStatusL == PStatusR) && (OldStatusR == POldStatusL)
-                && (SpeedCounter >= 3)) {
+                && (speedCounter_ >= 3)) {
                 directionBits_ <<= 8;
                 directionBits_ &= 0xffffff00;
-                SpeedCounter = 0;
+                speedCounter_ = 0;
             }
             PStatusL = StatusL;
             PStatusR = StatusR;
@@ -896,20 +887,21 @@ void AVinyl::CalcDirectionTimeCodeAmplitude() {
             direction_ = 1.;
         }
 
-        if (SpeedCounter < 441000) {
-            SpeedCounter++;
+        if (speedCounter_ < 441000) {
+            speedCounter_++;
         }
     }
 }
 
-void AVinyl::CalcAbsSpeed() {
+void AVinyl::calcAbsSpeed()
+{
 
     size_t maxX = 0;
     Sample64 maxY = 0.f;
 
     for (int i = 0; i < EFFTFrame; i++) {
-        if (maxY < fabs(FFT[i])) {
-            maxY = fabs(FFT[i]);
+        if (maxY < fabs(fftBuffer_[i])) {
+            maxY = fabs(fftBuffer_[i]);
         //if (maxY < fabs(fft_[i].real)) {
         //    maxY = fabs(fft_[i].real);
             maxX = i;
@@ -920,8 +912,8 @@ void AVinyl::CalcAbsSpeed() {
     for (size_t i = maxX + 1; i < maxX + 3; i++) {
         if (i < EFFTFrame) {
             Sample64 koef = 100.;
-            if (FFT[i] != 0) {
-                koef = (maxY / FFT[i]) * (maxY / FFT[i]);
+            if (fftBuffer_[i] != 0) {
+                koef = (maxY / fftBuffer_[i]) * (maxY / fftBuffer_[i]);
             //if (fft_[i].real != 0) {
             //    koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
             }
@@ -934,8 +926,8 @@ void AVinyl::CalcAbsSpeed() {
     for (size_t i = (maxX > 1 ? maxX - 1 : 0); i > maxX - 3; i--) {
         if (i >= 0) {
             Sample64 koef = 100.;
-            if (FFT[i] != 0) {
-                koef = (maxY / FFT[i]) * (maxY / FFT[i]);
+            if (fftBuffer_[i] != 0) {
+                koef = (maxY / fftBuffer_[i]) * (maxY / fftBuffer_[i]);
             //if (fft_[i].real != 0) {
             //   koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
             }
@@ -995,7 +987,7 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
         reader.readInt32u(savedSceneCount);
         reader.readInt32u(savedEntryCount);
 
-        avgTimeCodeCoeff = savedTimeCodeCoeff;
+        avgTimeCodeCoeff_ = savedTimeCodeCoeff;
 
         bBypass = savedBypass > 0;
 
@@ -1092,7 +1084,7 @@ tresult PLUGIN_API AVinyl::getState(IBStream* state)
         uint32_t toSaveScene = currentScene_;
         float toSaveSwitch = fSwitch;
         float toSaveCurve = fCurve;
-        float toSaveTimecodeCoeff = avgTimeCodeCoeff;
+        float toSaveTimecodeCoeff = avgTimeCodeCoeff_;
         uint32_t toSaveBypass = bBypass ? 1 : 0;
         uint32_t toSaveEffector = effectorSet_;
         uint32_t toSavePadCount = ENumberOfPads;
@@ -1452,25 +1444,20 @@ void AVinyl::reset(bool state)
 {
     if (state) {
         // ---Reset filters------
-        SCursor = 0;
-        FCursor = EFilterFrame - 1;
-        FFTCursor = 0;
-        FSignalL = 0;
-        FSignalR = 0;
-        for (int i = 0; i < EFilterFrame; i++) {
-            SignalL[i] = 0;
-            SignalR[i] = 0;
-        }
+        speedFrameIndex_ = 0;
+        filtredLoLeft_ = 0;
+        filtredLoRight_ = 0;
+        filterBufferLeft_.reset();
+        filterBufferRight_.reset();
         absAvgSpeed_ = 0;
-        //Direction = 1;
         directionBits_ = 0;
-        DeltaL = 0.;
-        DeltaR = 0.;
-        OldSignalL = 0;
-        OldSignalR = 0;
-        filtredL = 0.;
-        filtredR = 0.;
-        TimeCodeAmplytude = 0;
+        deltaLeft_ = 0.;
+        deltaRight_ = 0.;
+        oldSignalLeft_ = 0;
+        oldSignalRight_ = 0;
+        filtredHiLeft_ = 0.;
+        filtredHiRight_ = 0.;
+        timeCodeAmplytude_ = 0;
         HoldCounter = 0;
         FreezeCounter = 0;
 
