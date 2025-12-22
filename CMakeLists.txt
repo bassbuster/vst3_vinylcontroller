@@ -39,6 +39,8 @@ smtg_add_vst3plugin(${target}
     source/helpers/padentry.h
     source/helpers/fft.h
     source/helpers/fft.cpp
+    source/helpers/resourcepath.h
+    source/helpers/resourcepath.cpp
 )
 
 set_target_properties(${target} 

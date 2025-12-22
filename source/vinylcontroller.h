@@ -1,9 +1,6 @@
 #pragma once
 
 #include "public.sdk/source/vst/vsteditcontroller.h"
-// #include "helpers/sampleentry.h"
-// #include "vinylconfigconst.h"
-// #include "vstgui/lib/vstguibase.h"
 
 namespace Steinberg {
 namespace Vst {

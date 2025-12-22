@@ -243,8 +243,8 @@ tresult PLUGIN_API AVinylController::setComponentState(IBStream* state)
             setParamNormalized(kGainId, savedGain);
             setParamNormalized(kVolumeId, savedVolume);
             setParamNormalized(kPitchId, savedPitch);
-            setParamNormalized(kCurrentEntryId, savedEntry/float(EMaximumSamples - 1));
-            setParamNormalized(kCurrentSceneId, savedScene/float(EMaximumScenes - 1));
+            setParamNormalized(kCurrentEntryId, savedEntry / double(EMaximumSamples - 1));
+            setParamNormalized(kCurrentSceneId, savedScene / double(EMaximumScenes - 1));
             setParamNormalized(kPitchSwitchId, savedSwitch);
             setParamNormalized(kVolCurveId, savedCurve);
 

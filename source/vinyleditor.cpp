@@ -62,12 +62,19 @@ tresult PLUGIN_API AVinylEditorView::onSize (ViewRect* newSize)
     return VSTGUIEditor::onSize (newSize);
 }
 
+tresult AVinylEditorView::canResize() {
+#ifdef DEVELOPMENT
+    return kResultTrue;
+#else
+    return kResultFalse;
+#endif
+}
+
 //------------------------------------------------------------------------
 tresult PLUGIN_API AVinylEditorView::checkSizeConstraint (ViewRect* rect)
 {
     if ((rect->right - rect->left) <= ((kEditorMinWidth + kEditorMaxWidth) / 2)) {
         rect->right = rect->left + kEditorMinWidth;
-        //result = result && kResultFalse;
     } else if ((rect->right - rect->left) > ((kEditorMinWidth + kEditorMaxWidth) / 2)) {
         rect->right = rect->left + kEditorMaxWidth;
     }
@@ -98,27 +105,27 @@ tresult PLUGIN_API AVinylEditorView::findParameter (int32 xPos, int32 yPos, Para
 
 
     // test wether xPos/yPos is inside the gainSlider.
-    if (volumeSlider_->hitTest (where, 0)) {
+    if (volumeSlider_->hitTest(where, 0)) {
         resultTag = kVolumeId;
         return kResultOk;
     }
-    if (pitchSlider_->hitTest (where, 0)) {
+    if (pitchSlider_->hitTest(where, 0)) {
         resultTag = kPitchId;
         return kResultOk;
     }
-    if (gainKnob_->hitTest (where, 0)) {
+    if (gainKnob_->hitTest(where, 0)) {
         resultTag = kGainId;
         return kResultOk;
     }
-    if (scenKnob_->hitTest (where, 0)) {
+    if (scenKnob_->hitTest(where, 0)) {
         resultTag = kCurrentSceneId;
         return kResultOk;
     }
-    if (loopBox_->hitTest (where, 0)) {
+    if (loopBox_->hitTest(where, 0)) {
         resultTag = kLoopId;
         return kResultOk;
     }
-    if (syncBox_->hitTest (where, 0)) {
+    if (syncBox_->hitTest(where, 0)) {
         resultTag = kSyncId;
         return kResultOk;
     }
@@ -126,19 +133,19 @@ tresult PLUGIN_API AVinylEditorView::findParameter (int32 xPos, int32 yPos, Para
         resultTag = kReverseId;
         return kResultOk;
     }
-    if (curvSwitch_->hitTest (where, 0)) {
+    if (curvSwitch_->hitTest(where, 0)) {
         resultTag = kVolCurveId;
         return kResultOk;
     }
-    if (pitchSwitch_->hitTest (where, 0)) {
+    if (pitchSwitch_->hitTest(where, 0)) {
         resultTag = kPitchSwitchId;
         return kResultOk;
     }
-    if (ampSlide_->hitTest (where, 0)) {
+    if (ampSlide_->hitTest(where, 0)) {
         resultTag = kAmpId;
         return kResultOk;
     }
-    if (tuneSlide_->hitTest (where, 0)) {
+    if (tuneSlide_->hitTest(where, 0)) {
         resultTag = kTuneId;
         return kResultOk;
     }
@@ -795,228 +802,68 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
         break;
         //------------------
 
-    case 'Pd00': {
-        IMessage *msg = controller->allocateMessage();
-        if (msg) {
-            String sampleName(nameEdit_->getText());
-            msg->setMessageID("touchPad");
-            msg->getAttributes()->setInt("PadNumber", 0);
-            msg->getAttributes()->setFloat("PadValue",
-                                           pControl->getValueNormalized());
-            controller->sendMessage(msg);
-            msg->release();
-        }
-    }
+    case 'Pd00':
+        touchPadMessage(0, pControl->getValueNormalized());
     break;
 
-    case 'Pd01': {
-        IMessage *msg = controller->allocateMessage();
-        if (msg) {
-            String sampleName(nameEdit_->getText());
-            msg->setMessageID("touchPad");
-            msg->getAttributes()->setInt("PadNumber", 1);
-            msg->getAttributes()->setFloat("PadValue",
-                                           pControl->getValueNormalized());
-            controller->sendMessage(msg);
-            msg->release();
-        }
-    }
+    case 'Pd01':
+        touchPadMessage(1, pControl->getValueNormalized());
     break;
 
-    case 'Pd02': {
-        IMessage *msg = controller->allocateMessage();
-        if (msg) {
-            String sampleName(nameEdit_->getText());
-            msg->setMessageID("touchPad");
-            msg->getAttributes()->setInt("PadNumber", 2);
-            msg->getAttributes()->setFloat("PadValue",
-                                           pControl->getValueNormalized());
-            controller->sendMessage(msg);
-            msg->release();
-        }
-    }
+    case 'Pd02':
+        touchPadMessage(2, pControl->getValueNormalized());
     break;
 
-    case 'Pd03': {
-        IMessage *msg = controller->allocateMessage();
-        if (msg) {
-            String sampleName(nameEdit_->getText());
-            msg->setMessageID("touchPad");
-            msg->getAttributes()->setInt("PadNumber", 3);
-            msg->getAttributes()->setFloat("PadValue",
-                                           pControl->getValueNormalized());
-            controller->sendMessage(msg);
-            msg->release();
-        }
-    }
+    case 'Pd03':
+        touchPadMessage(3, pControl->getValueNormalized());
     break;
 
-    case 'Pd04': {
-        IMessage *msg = controller->allocateMessage();
-        if (msg) {
-            String sampleName(nameEdit_->getText());
-            msg->setMessageID("touchPad");
-            msg->getAttributes()->setInt("PadNumber", 4);
-            msg->getAttributes()->setFloat("PadValue",
-                                           pControl->getValueNormalized());
-            controller->sendMessage(msg);
-            msg->release();
-        }
-    }
+    case 'Pd04':
+        touchPadMessage(4, pControl->getValueNormalized());
     break;
 
-    case 'Pd05': {
-        IMessage *msg = controller->allocateMessage();
-        if (msg) {
-            String sampleName(nameEdit_->getText());
-            msg->setMessageID("touchPad");
-            msg->getAttributes()->setInt("PadNumber", 5);
-            msg->getAttributes()->setFloat("PadValue",
-                                           pControl->getValueNormalized());
-            controller->sendMessage(msg);
-            msg->release();
-        }
-    }
+    case 'Pd05':
+        touchPadMessage(5, pControl->getValueNormalized());
     break;
 
-    case 'Pd06': {
-        IMessage *msg = controller->allocateMessage();
-        if (msg) {
-            String sampleName(nameEdit_->getText());
-            msg->setMessageID("touchPad");
-            msg->getAttributes()->setInt("PadNumber", 6);
-            msg->getAttributes()->setFloat("PadValue",
-                                           pControl->getValueNormalized());
-            controller->sendMessage(msg);
-            msg->release();
-        }
-    }
+    case 'Pd06':
+        touchPadMessage(6, pControl->getValueNormalized());
     break;
 
-    case 'Pd07': {
-        IMessage *msg = controller->allocateMessage();
-        if (msg) {
-            String sampleName(nameEdit_->getText());
-            msg->setMessageID("touchPad");
-            msg->getAttributes()->setInt("PadNumber", 7);
-            msg->getAttributes()->setFloat("PadValue",
-                                           pControl->getValueNormalized());
-            controller->sendMessage(msg);
-            msg->release();
-        }
-    }
+    case 'Pd07':
+        touchPadMessage(7, pControl->getValueNormalized());
     break;
 
-    case 'Pd08': {
-        IMessage *msg = controller->allocateMessage();
-        if (msg) {
-            String sampleName(nameEdit_->getText());
-            msg->setMessageID("touchPad");
-            msg->getAttributes()->setInt("PadNumber", 8);
-            msg->getAttributes()->setFloat("PadValue",
-                                           pControl->getValueNormalized());
-            controller->sendMessage(msg);
-            msg->release();
-        }
-    }
+    case 'Pd08':
+        touchPadMessage(8, pControl->getValueNormalized());
     break;
 
-    case 'Pd09': {
-        IMessage *msg = controller->allocateMessage();
-        if (msg) {
-            String sampleName(nameEdit_->getText());
-            msg->setMessageID("touchPad");
-            msg->getAttributes()->setInt("PadNumber", 9);
-            msg->getAttributes()->setFloat("PadValue",
-                                           pControl->getValueNormalized());
-            controller->sendMessage(msg);
-            msg->release();
-        }
-    }
+    case 'Pd09':
+        touchPadMessage(9, pControl->getValueNormalized());
     break;
 
-    case 'Pd00' + 10: {
-        IMessage *msg = controller->allocateMessage();
-        if (msg) {
-            String sampleName(nameEdit_->getText());
-            msg->setMessageID("touchPad");
-            msg->getAttributes()->setInt("PadNumber", 10);
-            msg->getAttributes()->setFloat("PadValue",
-                                           pControl->getValueNormalized());
-            controller->sendMessage(msg);
-            msg->release();
-        }
-    }
+    case 'Pd00' + 10:
+        touchPadMessage(10, pControl->getValueNormalized());
     break;
 
-    case 'Pd00' + 11: {
-        IMessage *msg = controller->allocateMessage();
-        if (msg) {
-            String sampleName(nameEdit_->getText());
-            msg->setMessageID("touchPad");
-            msg->getAttributes()->setInt("PadNumber", 11);
-            msg->getAttributes()->setFloat("PadValue",
-                                           pControl->getValueNormalized());
-            controller->sendMessage(msg);
-            msg->release();
-        }
-    }
+    case 'Pd00' + 11:
+        touchPadMessage(11, pControl->getValueNormalized());
     break;
 
-    case 'Pd00' + 12: {
-        IMessage *msg = controller->allocateMessage();
-        if (msg) {
-            String sampleName(nameEdit_->getText());
-            msg->setMessageID("touchPad");
-            msg->getAttributes()->setInt("PadNumber", 12);
-            msg->getAttributes()->setFloat("PadValue",
-                                           pControl->getValueNormalized());
-            controller->sendMessage(msg);
-            msg->release();
-        }
-    }
+    case 'Pd00' + 12:
+        touchPadMessage(12, pControl->getValueNormalized());
     break;
 
-    case 'Pd00' + 13: {
-        IMessage *msg = controller->allocateMessage();
-        if (msg) {
-            String sampleName(nameEdit_->getText());
-            msg->setMessageID("touchPad");
-            msg->getAttributes()->setInt("PadNumber", 13);
-            msg->getAttributes()->setFloat("PadValue",
-                                           pControl->getValueNormalized());
-            controller->sendMessage(msg);
-            msg->release();
-        }
-    }
+    case 'Pd00' + 13:
+        touchPadMessage(13, pControl->getValueNormalized());
     break;
 
-    case 'Pd00' + 14: {
-        IMessage *msg = controller->allocateMessage();
-        if (msg) {
-            String sampleName(nameEdit_->getText());
-            msg->setMessageID("touchPad");
-            msg->getAttributes()->setInt("PadNumber", 14);
-            msg->getAttributes()->setFloat("PadValue",
-                                           pControl->getValueNormalized());
-            controller->sendMessage(msg);
-            msg->release();
-        }
-    }
+    case 'Pd00' + 14:
+        touchPadMessage(14, pControl->getValueNormalized());
     break;
 
-    case 'Pd00' + 15: {
-        IMessage *msg = controller->allocateMessage();
-        if (msg) {
-            String sampleName(nameEdit_->getText());
-            msg->setMessageID("touchPad");
-            msg->getAttributes()->setInt("PadNumber", 15);
-            msg->getAttributes()->setFloat("PadValue",
-                                           pControl->getValueNormalized());
-            controller->sendMessage(msg);
-            msg->release();
-        }
-    }
+    case 'Pd00' + 15:
+        touchPadMessage(15, pControl->getValueNormalized());
     break;
 
     case 'Name':
@@ -1027,18 +874,18 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
         if (padBase_ && padBase_->getEntry(int32_t(currentEntry_))) {
             padBase_->getEntry(int32_t(currentEntry_))->setTitle(nameEdit_->getText());
         }
-        IMessage* msg = controller->allocateMessage ();
-        if (msg)
-        {
-            String sampleName (nameEdit_->getText());
-            msg->setMessageID ("renameEntry");
-            msg->getAttributes ()->setInt("SampleNumber", currentEntry_);
-            msg->getAttributes ()->setString("SampleName", sampleName);
-            controller->sendMessage (msg);
-            msg->release ();
+        IMessage* msg = controller->allocateMessage();
+        if (msg) {
+            String sampleName(nameEdit_->getText());
+            msg->setMessageID("renameEntry");
+            msg->getAttributes()->setInt("SampleNumber", currentEntry_);
+            msg->getAttributes()->setString("SampleName", sampleName);
+            controller->sendMessage(msg);
+            msg->release();
         }
 
-    }	break;
+    }
+    break;
     //------------------
     case 'PpUp':
     {
@@ -1061,18 +908,17 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
                 setPadMessage(padForSetting_ + 1, PadEntry::EmptyPad, -1);
             }
         }
-
-
-    }	break;
+    }
+    break;
     //------------------
     case 'Comb':
     {
         int menuIndex;
         VSTGUI::COptionMenu * SelectedMenu = samplePopup_->getLastItemMenu(menuIndex);
         if (SelectedMenu == sampleBase_) {
-            float normalValue = (float)menuIndex/(float)(EMaximumSamples-1);
-            controller->setParamNormalized (kCurrentEntryId, normalValue);
-            controller->performEdit (kCurrentEntryId, normalValue);
+            double normalValue = menuIndex / double(EMaximumSamples - 1.);
+            controller->setParamNormalized(kCurrentEntryId, normalValue);
+            controller->performEdit(kCurrentEntryId, normalValue);
         }
         if (SelectedMenu == samplePopup_) {
             if (menuIndex==2) {
@@ -1085,7 +931,6 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
                     selector->setTitle("Choose Samples for load in base");
                     selector->setAllowMultiFileSelection(true);
                     selector->run(this);
-                    //selector->forget();
                 }
             }
             if (menuIndex==3){
@@ -1096,7 +941,6 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
                     selector->setTitle("Choose Sample for replace");
                     selector->setAllowMultiFileSelection(false);
                     selector->run(this);
-                    //selector->forget();
                 }
             }
             if (menuIndex==4){
@@ -1129,7 +973,8 @@ void AVinylEditorView::valueChanged (VSTGUI::CControl *pControl)
                 wndw->show();
             }
         }
-    }	break;
+    }
+    break;
 
     }
 }
@@ -1817,6 +1662,18 @@ void AVinylEditorView::setPadMessage(int pad, int type)
         msg->setMessageID("setPad");
         msg->getAttributes()->setInt("PadNumber", pad);
         msg->getAttributes()->setInt("PadType", type);
+        controller->sendMessage(msg);
+        msg->release();
+    }
+}
+
+void AVinylEditorView::touchPadMessage(int pad, double value)
+{
+    IMessage *msg = controller->allocateMessage();
+    if (msg) {
+        msg->setMessageID("touchPad");
+        msg->getAttributes()->setInt("PadNumber", pad);
+        msg->getAttributes()->setFloat("PadValue", value);
         controller->sendMessage(msg);
         msg->release();
     }

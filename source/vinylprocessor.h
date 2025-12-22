@@ -6,7 +6,6 @@
 #include "helpers/sampleentry.h"
 #include "helpers/parameterreader.h"
 #include "helpers/padentry.h"
-#include "helpers/fft.h"
 
 #include "vinylconfigconst.h"
 

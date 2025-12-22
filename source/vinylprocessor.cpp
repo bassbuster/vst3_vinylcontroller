@@ -3,6 +3,9 @@
 #include "vinylprocessor.h"
 #include "vinylparamids.h"
 #include "vinylcids.h"	// for class ids
+#include "helpers/parameterwriter.h"
+#include "helpers/resourcepath.h"
+#include "helpers/fft.h"
 
 #include "pluginterfaces/base/ibstream.h"
 #include "base/source/fstring.h"
@@ -10,12 +13,7 @@
 
 #include <stdio.h>
 #include <cmath>
-#include "helpers/parameterwriter.h"
-#include "helpers/fft.h"
 
-#include "vintage.h"
-
-//#include <fstream>
 
 namespace {
 
@@ -108,8 +106,8 @@ AVinyl::AVinyl() :
     // register its editor class (the same than used in againentry.cpp)
     setControllerClass(AVinylControllerUID);
 
-
-    vintageSample_ = std::make_unique<SampleEntry<Sample64>>("vintage", "c:\\Work\\vst3sdk\\build\\VST3\\Debug\\vinylcontroller.vst3\\Contents\\Resources\\vintage.wav");
+    vintageSample_ = std::make_unique<SampleEntry<Sample64>>("vintage", (getResourcePath() + "\\vintage.wav").c_str());
+    //vintageSample_ = std::make_unique<SampleEntry<Sample64>>("vintage", "c:\\Work\\vst3sdk\\build\\VST3\\Debug\\vinylcontroller.vst3\\Contents\\Resources\\vintage.wav");
     //vintageSample_ = std::make_unique<SampleEntry<Sample64>>("vintage", vintageLeft, vintageRight, sizeof(vintageLeft) / sizeof(Sample64));
     if (vintageSample_) {
         vintageSample_->Loop = true;
@@ -298,8 +296,8 @@ inline Sample64 noteLengthInSamples(Sample64 note, Sample64 tempo, Sample64 samp
 }
 
 // ------------------------------------------------------------------------
-tresult PLUGIN_API AVinyl::process(ProcessData& data) {
-
+tresult PLUGIN_API AVinyl::process(ProcessData& data)
+{
     try {
 
         bool samplesParamsUpdate = false;
@@ -371,8 +369,8 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
         int32 numChannels = data.inputs[0].numChannels;
 
         // ---get audio buffers----------------
-        void** in = reinterpret_cast<void**>(data.inputs[0].channelBuffers64);
-        void** out = reinterpret_cast<void**>(data.outputs[0].channelBuffers64);
+        uint8_t** in = reinterpret_cast<uint8_t**>(data.inputs[0].channelBuffers64);
+        uint8_t** out = reinterpret_cast<uint8_t**>(data.outputs[0].channelBuffers64);
 
         //{
         Sample64 fVuLeft = 0.;
@@ -387,10 +385,10 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
             int32 sampleFrames = data.numSamples;
             int32 sampleOffset = 0;
 
-            uint8_t* ptrInLeft = reinterpret_cast<uint8_t*>(in[0]);
-            uint8_t* ptrOutLeft = reinterpret_cast<uint8_t*>(out[0]);
-            uint8_t* ptrInRight = reinterpret_cast<uint8_t*>(in[1]);
-            uint8_t* ptrOutRight = reinterpret_cast<uint8_t*>(out[1]);
+            uint8_t* ptrInLeft = in[0];
+            uint8_t* ptrOutLeft = out[0];
+            uint8_t* ptrInRight = in[1];
+            uint8_t* ptrOutRight = out[1];
 
             while (--sampleFrames >= 0) {
 
@@ -447,7 +445,6 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data) {
 
                     OldSignalL = SignalL[SCursor];
                     OldSignalR = SignalR[SCursor];
-
 
                     if (++FCursor >= EFilterFrame) {
                         FCursor = 0;

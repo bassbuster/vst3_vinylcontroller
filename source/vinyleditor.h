@@ -39,7 +39,7 @@ public:
 
 	//---from EditorView---------------
     tresult PLUGIN_API onSize(ViewRect* newSize) override;
-    tresult PLUGIN_API canResize() override { return kResultTrue; }
+    tresult PLUGIN_API canResize() override;
     tresult PLUGIN_API checkSizeConstraint(ViewRect* rect) override;
 
 	//---from IParameterFinder---------------
@@ -125,13 +125,14 @@ private:
 
     int64_t currentEntry_;
     int padTag_[ENumberOfPads];
+    int padForSetting_;
 
     std::vector<SharedPointer<VSTGUI::CBitmap>> sampleBitmaps_;
 
     static bool callBeforePopup(VSTGUI::IControlListener*, VSTGUI::CControl*);
     void setPadMessage(int pad,int type,int tag);
     void setPadMessage(int pad,int type);
-    int padForSetting_;
+    void touchPadMessage(int pad, double value);
 
 };
 
