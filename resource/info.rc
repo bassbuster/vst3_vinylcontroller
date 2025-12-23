@@ -45,7 +45,7 @@ vu_off.png              PNG DISCARDABLE vu_off.png
 vu_on.png               PNG DISCARDABLE vu_on.png
 yellow_combo.png        PNG DISCARDABLE yellow_combo.png
 
-vintage                 RCDATA DISCARDABLE vintage.wav
+//vintage                 RCDATA DISCARDABLE vintage.wav
 
 //punchin.png             PNG DISCARDABLE punchin.png
 //punchout.png            PNG DISCARDABLE punchout.png

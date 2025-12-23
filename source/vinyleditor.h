@@ -5,6 +5,7 @@
 #include "helpers/sampleentry.h"
 #include "controls/cvinylbuttons.h"
 #include "controls/cwaveview.h"
+#include "controls/cdebugfftview.h"
 #include "vinylconfigconst.h"
 
 
@@ -19,10 +20,9 @@ class AVinylEditorView:	public VSTGUIEditor,
 						public IParameterFinder
 {
     template<typename T>
-    // using SharedPointer = std::unique_ptr<T, void(*)(T*)>;
     using SharedPointer = VSTGUI::SharedPointer<T>;
 public:
-//------------------------------------------------------------------------
+
     AVinylEditorView(void* controller);
 
 	//---from VSTGUIEditor---------------
@@ -39,7 +39,7 @@ public:
 
 	//---from EditorView---------------
     tresult PLUGIN_API onSize(ViewRect* newSize) override;
-    tresult PLUGIN_API canResize() override { return kResultTrue; }
+    tresult PLUGIN_API canResize() override;
     tresult PLUGIN_API checkSizeConstraint(ViewRect* rect) override;
 
 	//---from IParameterFinder---------------
@@ -48,83 +48,90 @@ public:
     DELEGATE_REFCOUNT (EditorView)
     tresult PLUGIN_API queryInterface(const char* iid, void** obj)  override;
 
-    //---Custom Function------------------
+    //---Custom Functions------------------
     void update (ParamID tag, ParamValue value);
-    void initEntry(SampleEntry * newEntry);
+    void initEntry(SampleEntry<Sample64> &newEntry);
     void delEntry(size_t delEntryIndex);
-    void setPadState(int _pad, bool _state);
-    void setPadType(int _pad, int _type);
-    void setPadTag(int _pad, int _tag);
-    SharedPointer<VSTGUI::CBitmap> generateWaveform(SampleEntry * newEntry);
+    void setPadState(int pad, bool state);
+    void setPadType(int pad, int type);
+    void setPadTag(int pad, int tag);
+    SharedPointer<VSTGUI::CBitmap> generateWaveform(SampleEntry<Sample64> &sample, bool normolize = false);
 
-    void setSpeedMonitor(double _speed);
-    void setPositionMonitor(double _position);
-//------------------------------------------------------------------------
+    void setSpeedMonitor(double speed);
+    void setPositionMonitor(double position);
+
+
+    void debugFft(SampleEntry<Sample64> &sample);
+    void debugInput(SampleEntry<Sample64> &sample);
+
 private:
-
-    SharedPointer<VSTGUI::CKnob> gainKnob;
-    SharedPointer<VSTGUI::CKnob> scenKnob;
-    SharedPointer<VSTGUI::CHorizontalSlider> ampSlide;
-    SharedPointer<VSTGUI::CHorizontalSlider> tuneSlide;
-    SharedPointer<VSTGUI::CTextEdit> nameEdit;
-    SharedPointer<VSTGUI::CHorizontalSlider> pitchSlider;
-    SharedPointer<VSTGUI::CVerticalSlider> volumeSlider;
-    SharedPointer<VSTGUI::CVuMeter> vuLeftMeter;
-    SharedPointer<VSTGUI::CVuMeter> vuRightMeter;
-
-    SharedPointer<VSTGUI::CVuMeter> dispDistorsion;
-    SharedPointer<VSTGUI::CVuMeter> dispPreRoll;
-    SharedPointer<VSTGUI::CVuMeter> dispPostRoll;
-    SharedPointer<VSTGUI::CVuMeter> dispHold;
-    SharedPointer<VSTGUI::CVuMeter> dispFreeze;
-    SharedPointer<VSTGUI::CVuMeter> dispVintage;
-    SharedPointer<VSTGUI::CVuMeter> dispLockTone;
-
-    std::array<SharedPointer<VSTGUI::CVinylKickButton>, ENumberOfPads> padKick;//[ENumberOfPads];
-    std::array<SharedPointer<VSTGUI::C5PositionView>, ENumberOfPads> padType;//[ENumberOfPads];
-
-    SharedPointer<VSTGUI::CVinylCheckBox> loopBox;
-    SharedPointer<VSTGUI::CVinylCheckBox> syncBox;
-    SharedPointer<VSTGUI::CVinylCheckBox> rvrsBox;
-    SharedPointer<VSTGUI::CVinylCheckBox> tcLearnBox;
-    SharedPointer<VSTGUI::C3PositionSwitchBox> curvSwitch;
-    SharedPointer<VSTGUI::C3PositionSwitchBox> pitchSwitch;
-
-    SharedPointer<VSTGUI::CWaveView> wavView;
-
-    SharedPointer<VSTGUI::CTextLabel> pitchValue;
-    SharedPointer<VSTGUI::CTextLabel> sceneValue;
-    SharedPointer<VSTGUI::CTextLabel> speedValue;
-    SharedPointer<VSTGUI::CTextLabel> sampleNumber;
-    SharedPointer<VSTGUI::CVinylPopupMenu> popupPad;
-    SharedPointer<VSTGUI::COptionMenu> samplePopup;
-    SharedPointer<VSTGUI::COptionMenu> sampleBase;
-    SharedPointer<VSTGUI::COptionMenu> padBase;
-    SharedPointer<VSTGUI::COptionMenu> effectBase1;
-    SharedPointer<VSTGUI::COptionMenu> effectBase2;
-
-	float lastVuLeftMeterValue;
-	float lastVuRightMeterValue;
-	double lastSpeedValue;
-	double lastPositionValue;
-
-	bool lastDistort;
-	bool lastPreRoll;
-	bool lastPostRoll;
-	bool lastHold;
-	bool lastFreeze;
-	bool lastVintage;
-	bool lastLockTone;
-
-	int64_t currentEntry;
-	int PadTag[ENumberOfPads];
-
-    std::vector<SharedPointer<VSTGUI::CBitmap>> sampleBitmaps;
 
     static bool callBeforePopup(VSTGUI::IControlListener*, VSTGUI::CControl*);
     void setPadMessage(int pad,int type,int tag);
     void setPadMessage(int pad,int type);
-	int padForSetting;
+    void touchPadMessage(int pad, double value);
+
+    SharedPointer<VSTGUI::CKnob> gainKnob_;
+    SharedPointer<VSTGUI::CKnob> scenKnob_;
+    SharedPointer<VSTGUI::CHorizontalSlider> ampSlide_;
+    SharedPointer<VSTGUI::CHorizontalSlider> tuneSlide_;
+    SharedPointer<VSTGUI::CTextEdit> nameEdit_;
+    SharedPointer<VSTGUI::CHorizontalSlider> pitchSlider_;
+    SharedPointer<VSTGUI::CVerticalSlider> volumeSlider_;
+    SharedPointer<VSTGUI::CVuMeter> vuLeftMeter_;
+    SharedPointer<VSTGUI::CVuMeter> vuRightMeter_;
+
+    SharedPointer<VSTGUI::CVuMeter> dispDistorsion_;
+    SharedPointer<VSTGUI::CVuMeter> dispPreRoll_;
+    SharedPointer<VSTGUI::CVuMeter> dispPostRoll_;
+    SharedPointer<VSTGUI::CVuMeter> dispHold_;
+    SharedPointer<VSTGUI::CVuMeter> dispFreeze_;
+    SharedPointer<VSTGUI::CVuMeter> dispVintage_;
+    SharedPointer<VSTGUI::CVuMeter> dispLockTone_;
+
+    std::array<SharedPointer<VSTGUI::CVinylKickButton>, ENumberOfPads> padKick_;
+    std::array<SharedPointer<VSTGUI::C5PositionView>, ENumberOfPads> padType_;
+
+    SharedPointer<VSTGUI::CVinylCheckBox> loopBox_;
+    SharedPointer<VSTGUI::CVinylCheckBox> syncBox_;
+    SharedPointer<VSTGUI::CVinylCheckBox> rvrsBox_;
+    SharedPointer<VSTGUI::CVinylCheckBox> tcLearnBox_;
+    SharedPointer<VSTGUI::C3PositionSwitchBox> curvSwitch_;
+    SharedPointer<VSTGUI::C3PositionSwitchBox> pitchSwitch_;
+
+    SharedPointer<VSTGUI::CWaveView> wavView_;
+    SharedPointer<VSTGUI::CDebugFftView> debugFftView_;
+    SharedPointer<VSTGUI::CDebugFftView> debugInputView_;
+
+    SharedPointer<VSTGUI::CTextLabel> pitchValue_;
+    SharedPointer<VSTGUI::CTextLabel> sceneValue_;
+    SharedPointer<VSTGUI::CTextLabel> speedValue_;
+    SharedPointer<VSTGUI::CTextLabel> sampleNumber_;
+    SharedPointer<VSTGUI::CVinylPopupMenu> popupPad_;
+    SharedPointer<VSTGUI::COptionMenu> samplePopup_;
+    SharedPointer<VSTGUI::COptionMenu> sampleBase_;
+    SharedPointer<VSTGUI::COptionMenu> padBase_;
+    SharedPointer<VSTGUI::COptionMenu> effectBase1_;
+    SharedPointer<VSTGUI::COptionMenu> effectBase2_;
+
+    float lastVuLeftMeterValue_;
+    float lastVuRightMeterValue_;
+    double lastSpeedValue_;
+    double lastPositionValue_;
+
+    bool lastDistort_;
+    bool lastPreRoll_;
+    bool lastPostRoll_;
+    bool lastHold_;
+    bool lastFreeze_;
+    bool lastVintage_;
+    bool lastLockTone_;
+
+    int64_t currentEntry_;
+    int padTag_[ENumberOfPads];
+    int padForSetting_;
+
+    std::vector<SharedPointer<VSTGUI::CBitmap>> sampleBitmaps_;
 
 };
 

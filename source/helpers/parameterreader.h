@@ -47,13 +47,13 @@ public:
     ParameterReader(Initializer && init,
                     Setter &&set,
                     Approximator &&approx):
-        initializer(std::forward<Initializer>(init)),
-        setter(std::forward<Setter>(set)),
-        approximator(std::forward<Approximator>(approx)),
-        value(0),
-        queue(nullptr),
-        index(0),
-        offset(0)
+        initializer_(std::forward<Initializer>(init)),
+        setter_(std::forward<Setter>(set)),
+        approximator_(std::forward<Approximator>(approx)),
+        value_(0),
+        queue_(nullptr),
+        index_(0),
+        offset_(0)
     {}
 
     ~ParameterReader() override {
@@ -61,22 +61,22 @@ public:
     }
 
     void setQueue(IParamValueQueue* paramQueue) override final {
-        queue = paramQueue;
-        if (queue->getPoint(index++, offset, value) != kResultTrue) {
-            queue = nullptr;
+        queue_ = paramQueue;
+        if (queue_->getPoint(index_++, offset_, value_) != kResultTrue) {
+            queue_ = nullptr;
         }
     }
 
     void checkOffset(int32 sampleOffset) override final {
-        if (queue && offset == sampleOffset){
-            setter(value);
-            if (queue->getPoint(index++, offset, value) != kResultTrue) {
-                queue = nullptr;
+        if (queue_ && offset_ == sampleOffset){
+            setter_(value_);
+            if (queue_->getPoint(index_++, offset_, value_) != kResultTrue) {
+                queue_ = nullptr;
             }
-        } else if (queue && offset > sampleOffset){
-            approximator(sampleOffset, offset, value);
+        } else if (queue_ && offset_ > sampleOffset){
+            approximator_(sampleOffset, offset_, value_);
         }
-        lastCheckdOffset = sampleOffset;
+        lastCheckdOffset_ = sampleOffset;
     }
 
     // void set(Sample64 initial) override final {
@@ -87,34 +87,34 @@ public:
     // }
 
     void reset() override final {
-        value = initializer();
-        queue = nullptr;
-        index = 0;
-        offset = 0;
-        lastCheckdOffset = -1;
+        value_ = initializer_();
+        queue_ = nullptr;
+        index_ = 0;
+        offset_ = 0;
+        lastCheckdOffset_ = -1;
     }
 
     void flush() override final {
-        while (queue){
-            if (lastCheckdOffset < offset) {
-                setter(value);
+        while (queue_){
+            if (lastCheckdOffset_ < offset_) {
+                setter_(value_);
             }
-            if (queue->getPoint(index++, offset, value) != kResultTrue) {
-                queue = nullptr;
+            if (queue_->getPoint(index_++, offset_, value_) != kResultTrue) {
+                queue_ = nullptr;
             }
         }
     }
 
 private:
 
-    Initializer initializer;
-    Setter setter;
-    Approximator approximator;
-    ParamValue value = {};
-    IParamValueQueue* queue = 0;
-    int32 index = 0;
-    int32 offset = 0;
-    int32 lastCheckdOffset = 0;
+    Initializer initializer_;
+    Setter setter_;
+    Approximator approximator_;
+    ParamValue value_ = {};
+    IParamValueQueue* queue_ = 0;
+    int32 index_ = 0;
+    int32 offset_ = 0;
+    int32 lastCheckdOffset_ = 0;
 
 };
 

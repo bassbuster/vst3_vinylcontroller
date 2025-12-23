@@ -3,7 +3,7 @@
 #define ESpeedFrame 128
 #define EFilterFrame 80
 #define ETimeCodeCoeff 22.9
-//#define ETimeCodeCoeff 45.48
+
 #define ETimeCodeMinAmplytude 0.009
 #define EMaximumSamples 128
 #define EMaximumScenes 10
@@ -15,7 +15,6 @@
 #define ERollNote 1.0/32.0
 #define ERollCount 8
 #define ESoftEffectSamples 24
-//#define EHoldSamples 2205
 
 //////initial MIDIControls config
 #define gGain 0x07

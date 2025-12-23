@@ -30,12 +30,19 @@ smtg_add_vst3plugin(${target}
     source/controls/cvinylpopupmenu.h
     source/controls/cwaveview.cpp
     source/controls/cwaveview.h
-    source/helpers/sampleentry.cpp
+    source/controls/cdebugfftview.cpp
+    source/controls/cdebugfftview.h
     source/helpers/sampleentry.h
-    source/helpers/sampleplayer.cpp
-    source/helpers/sampleplayer.h
     source/helpers/parameterreader.h
     source/helpers/parameterwriter.h
+    source/helpers/cuepoint.h
+    source/helpers/padentry.h
+    source/helpers/fft.h
+    source/helpers/fft.cpp
+    source/helpers/resourcepath.h
+    source/helpers/resourcepath.cpp
+    source/helpers/ringbuffer.h
+    source/helpers/filtred.h
 )
 
 set_target_properties(${target} 
@@ -51,6 +58,7 @@ target_compile_features(${target}
 target_link_libraries(${target}
     PRIVATE
         vstgui_support
+        vstgui_standalone
 )
 
 smtg_target_add_plugin_resources(${target}
