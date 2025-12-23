@@ -7,6 +7,7 @@
 #include "helpers/parameterreader.h"
 #include "helpers/padentry.h"
 #include "helpers/ringbuffer.h"
+#include "helpers/filtred.h"
 
 #include "vinylconfigconst.h"
 
@@ -65,129 +66,15 @@ public:
     uint32 PLUGIN_API getLatencySamples() override;
     uint32 PLUGIN_API getTailSamples() override;
 
-//------------------------------------------------------------------------
 private:
-
-    template<typename SampleType, int round = 4>
-    class Filtred {
-    public:
-
-        Filtred(SampleType val = 0):
-            value_(val)
-        {}
-
-        SampleType set(SampleType val) {
-            value_ = (SampleType(round - 1) * value_ + val) / SampleType(round);
-            return value_;
-        }
-
-        Filtred& append(SampleType val) {
-            value_ = (SampleType(round - 1) * value_ + val) / SampleType(round);
-            return *this;
-        }
-
-        operator SampleType() const {
-            return value_;
-        }
-
-    private:
-        SampleType value_;
-    };
-
-    RingBuffer<Sample64, EFilterFrame> filterBufferLeft_;
-    RingBuffer<Sample64, EFilterFrame> filterBufferRight_;
-
-    // Sample64 SignalL[EFilterFrame];
-    // Sample64 SignalR[EFilterFrame];
-    Filtred<Sample64, EFilterFrame> filtredLoLeft_;
-    Filtred<Sample64, EFilterFrame> filtredLoRight_;
-    Sample64 originalBuffer_[EFFTFrame];
-    Sample64 fftBuffer_[EFFTFrame];
-
-    //Sample64 filtred_[EFFTFrame];
-    //Complex<double> fft_[EFFTFrame];
-
-    // size_t tailCursor_;
-    // size_t headCursor_;
-    size_t speedFrameIndex_;
-
-    Filtred<Sample64, 10> absAvgSpeed_;
-//	short Direction;
-    Filtred<Sample64> deltaLeft_;
-    Filtred<Sample64> deltaRight_;
-    Sample64 oldSignalLeft_;
-    Sample64 oldSignalRight_;
-    Filtred<Sample64> filtredHiLeft_;
-    Filtred<Sample64> filtredHiRight_;
-    Sample64 timeCodeAmplytude_;
-    size_t speedCounter_;
-	bool StatusR;
-	bool StatusL;
-	bool OldStatusR;
-	bool OldStatusL;
-	bool PStatusR;
-	bool PStatusL;
-	bool POldStatusR;
-	bool POldStatusL;
-
-    uint32_t directionBits_;
-    Sample64 direction_;
-    // bool Direction0;
-    // bool Direction1;
-    // bool Direction2;
-    // bool Direction3;
-
-    int32 effectorSet_;
-
-    // SoftCurves
-    Filtred<Sample32, ESoftEffectSamples> softVolume;
-    Filtred<Sample32, ESoftEffectSamples> softPreRoll;
-    Filtred<Sample32, ESoftEffectSamples> softPostRoll;
-    Filtred<Sample32, ESoftEffectSamples> softDistorsion;
-    Filtred<Sample32, ESoftEffectSamples> softHold;
-    Filtred<Sample32, ESoftEffectSamples> softFreeze;
-    Filtred<Sample32, ESoftEffectSamples> softVintage;
-
-	Sample64 lockSpeed;
-	Sample64 lockVolume;
-	Sample64 lockTune;
-
-	bool keyHold;
-	bool keyFreeze;
-	bool keyLockTone;
-
-	// our model values
-	Sample32 fVuOldL;
-	Sample32 fVuOldR;
-	Sample32 fPosition;
-	Sample32 fGain;          //0..+1
-	Sample32 fVolume;        //0..+1
-	Sample32 fPitch;         //0..+1
-    uint32_t currentEntry_;  //0..MaximumSamples - 1
-    uint32_t currentScene_;  //0..MaximumScenes - 1
-	Sample32 fSwitch;        //0..+1
-	Sample32 fCurve;         //0..+1
-    bool bBypass;
-	bool bTCLearn;
-
-    std::vector<std::unique_ptr<SampleEntry<Sample64>>> samplesArray_;
-    std::unique_ptr<SampleEntry<Sample64>> vintageSample_;
-
-    PadEntry padStates[EMaximumScenes][ENumberOfPads];
-
-	int32 currentProcessMode;
-	bool currentProcessStatus;
 
     void calcDirectionTimeCodeAmplitude();
     void calcAbsSpeed();
     void currentEntry(int64_t newentry);
 
-    //void padState(PadEntry &pad); 
-
     bool padWork(int padId, double paramValue);
     bool padSet(int currentSample);
     void padRemove(int currentSample);
-    //double normalizeTag(int _tag);
 
     // SampleBase manipulation
     void addSampleMessage(SampleEntry<Sample64>* newSample);
@@ -200,29 +87,101 @@ private:
     void debugFftMessage(Sample64 *fft, size_t len);
     void debugInputMessage(Sample64 *input, size_t len);
 
-    bool dirtyParams_;
-
-    Sample64 dSampleRate;
-    Sample64 dTempo;
-    Sample64 dNoteLength;
-
-    Sample64 fRealPitch;
-    Sample64 fRealSpeed;
-    Sample64 fRealVolume;
-    Filtred<Sample64, 16> fVolCoeff;
-    Filtred<Sample64, 256> avgTimeCodeCoeff_;
-    int timecodeLearnCounter_;
-	int HoldCounter;
-	int FreezeCounter;
-    SampleEntry<Sample64>::CuePoint HoldCue;
-    SampleEntry<Sample64>::CuePoint AfterHoldCue;
-    SampleEntry<Sample64>::CuePoint FreezeCue;
-    SampleEntry<Sample64>::CuePoint AfterFreezeCue;
-    SampleEntry<Sample64>::CuePoint FreezeCueCur;
-    SampleEntry<Sample64>::CuePoint Cue;
-
     void processEvent(const Event &event);
     void reset(bool state);
+
+    RingBuffer<Sample64, EFilterFrame> filterBufferLeft_;
+    RingBuffer<Sample64, EFilterFrame> filterBufferRight_;
+
+    Filtred<Sample64, EFilterFrame> filtredLoLeft_;
+    Filtred<Sample64, EFilterFrame> filtredLoRight_;
+
+    Sample64 originalBuffer_[EFFTFrame];
+    Sample64 fftBuffer_[EFFTFrame];
+
+    size_t speedFrameIndex_;
+
+    Filtred<Sample64, 10> absAvgSpeed_;
+    Filtred<Sample64> deltaLeft_;
+    Filtred<Sample64> deltaRight_;
+    Sample64 oldSignalLeft_;
+    Sample64 oldSignalRight_;
+    Filtred<Sample64> filtredHiLeft_;
+    Filtred<Sample64> filtredHiRight_;
+    Filtred<Sample64, 64> timeCodeAmplytude_;
+    size_t speedCounter_;
+    bool statusR_;
+    bool statusL_;
+    bool oldStatusR_;
+    bool oldStatusL_;
+    bool pStatusR_;
+    bool pStatusL_;
+    bool pOldStatusR_;
+    bool pOldStatusL_;
+
+    uint32_t directionBits_;
+    Sample64 direction_;
+
+    int32 effectorSet_;
+
+    // SoftCurves
+    Filtred<Sample32, ESoftEffectSamples> softVolume_;
+    Filtred<Sample32, ESoftEffectSamples> softPreRoll_;
+    Filtred<Sample32, ESoftEffectSamples> softPostRoll_;
+    Filtred<Sample32, ESoftEffectSamples> softDistorsion_;
+    Filtred<Sample32, ESoftEffectSamples> softHold_;
+    Filtred<Sample32, ESoftEffectSamples> softFreeze_;
+    Filtred<Sample32, ESoftEffectSamples> softVintage_;
+
+    Sample64 lockSpeed_;
+    Sample64 lockVolume_;
+    Sample64 lockTune_;
+
+    bool keyHold_;
+    bool keyFreeze_;
+    bool keyLockTone_;
+
+	// our model values
+    Sample32 vuLeft_;
+    Sample32 vuRight_;
+    Sample32 position_;
+    Sample32 gain_;          //0..+1
+    Sample32 volume_;        //0..+1
+    Sample32 pitch_;         //0..+1
+    uint32_t currentEntry_;  //0..MaximumSamples - 1
+    uint32_t currentScene_;  //0..MaximumScenes - 1
+    Sample32 switch_;        //0..+1
+    Sample32 curve_;         //0..+1
+    bool bypass_;
+    bool timeCodeLearn_;
+
+    std::vector<std::unique_ptr<SampleEntry<Sample64>>> samplesArray_;
+    std::unique_ptr<SampleEntry<Sample64>> vintageSample_;
+
+    PadEntry padStates_[EMaximumScenes][ENumberOfPads];
+
+    int32 currentProcessMode_;
+    bool currentProcessStatus_;
+
+    bool dirtyParams_;
+
+    double sampleRate_;
+    double tempo_;
+    size_t noteLength_;
+
+    Sample64 realPitch_;
+    Sample64 realSpeed_;
+    Sample64 realVolume_;
+    Filtred<Sample64, 16> volCoeff_;
+    Filtred<Sample64, 256> avgTimeCodeCoeff_;
+    size_t timecodeLearnCounter_;
+    size_t holdCounter_;
+    size_t freezeCounter_;
+    SampleEntry<Sample64>::CuePoint holdCue_;
+    SampleEntry<Sample64>::CuePoint endHoldCue_;
+    SampleEntry<Sample64>::CuePoint beginFreezeCue_;
+    SampleEntry<Sample64>::CuePoint endFreezeCue_;
+    SampleEntry<Sample64>::CuePoint freezeCue_;
 
     ReaderManager params_;
 };

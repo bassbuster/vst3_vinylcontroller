@@ -22,7 +22,7 @@ class AVinylEditorView:	public VSTGUIEditor,
     template<typename T>
     using SharedPointer = VSTGUI::SharedPointer<T>;
 public:
-//------------------------------------------------------------------------
+
     AVinylEditorView(void* controller);
 
 	//---from VSTGUIEditor---------------
@@ -64,8 +64,12 @@ public:
     void debugFft(SampleEntry<Sample64> &sample);
     void debugInput(SampleEntry<Sample64> &sample);
 
-//------------------------------------------------------------------------
 private:
+
+    static bool callBeforePopup(VSTGUI::IControlListener*, VSTGUI::CControl*);
+    void setPadMessage(int pad,int type,int tag);
+    void setPadMessage(int pad,int type);
+    void touchPadMessage(int pad, double value);
 
     SharedPointer<VSTGUI::CKnob> gainKnob_;
     SharedPointer<VSTGUI::CKnob> scenKnob_;
@@ -128,11 +132,6 @@ private:
     int padForSetting_;
 
     std::vector<SharedPointer<VSTGUI::CBitmap>> sampleBitmaps_;
-
-    static bool callBeforePopup(VSTGUI::IControlListener*, VSTGUI::CControl*);
-    void setPadMessage(int pad,int type,int tag);
-    void setPadMessage(int pad,int type);
-    void touchPadMessage(int pad, double value);
 
 };
 

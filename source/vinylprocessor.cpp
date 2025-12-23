@@ -1,5 +1,3 @@
-#pragma hdrstop
-
 #include "vinylprocessor.h"
 #include "vinylparamids.h"
 #include "vinylcids.h"	// for class ids
@@ -61,123 +59,116 @@ inline T calcRealVolume(T normalGain, T normalVolume, T normalKoeff)
     return normalVolume * normalGain;
 }
 
+template<typename T>
+inline size_t noteLengthInSamples(T note, T tempo, T sampleRate)
+{
+    if ((tempo > 0) && (note > 0)) {
+        return sampleRate / tempo * 60. * note;
+    }
+    return 0;
+}
+
 }
 
 namespace Steinberg {
 namespace Vst {
 
-// ------------------------------------------------------------------------
-// AGain Implementation
-// ------------------------------------------------------------------------
 AVinyl::AVinyl() :
-    fGain(0.8),
-    fRealVolume(0.8),
-    fVuOldL(0.),
-    fVuOldR(0.),
-    fVolume(1.0),
-    fPitch(.5),
-    fRealPitch(1.0),
+    speedFrameIndex_(0),
+    oldSignalLeft_(0),
+    oldSignalRight_(0),
+    gain_(0.8),
+    realVolume_(0.8),
+    vuLeft_(0.),
+    vuRight_(0.),
+    volume_(1.0),
+    pitch_(.5),
+    realPitch_(1.0),
     currentEntry_(0),
     currentScene_(0),
-    fSwitch(0),
-    fCurve(0),
-    currentProcessMode(-1), // -1 means not initialized
-    bBypass(false),
+    switch_(0),
+    curve_(0),
+    currentProcessMode_(-1), // -1 means not initialized
+    bypass_(false),
     avgTimeCodeCoeff_(ETimeCodeCoeff),
-    bTCLearn(false),
-    dSampleRate(EDefaultSampleRate),
-    dTempo(EDefaultTempo),
+    timeCodeLearn_(false),
+    sampleRate_(EDefaultSampleRate),
+    tempo_(EDefaultTempo),
     timecodeLearnCounter_(0),
-    HoldCounter(0),
-    FreezeCounter(0),
-    dNoteLength(0),
+    holdCounter_(0),
+    freezeCounter_(0),
+    noteLength_(0),
+    speedCounter_(0),
+    statusR_(false),
+    statusL_(false),
+    oldStatusR_(false),
+    oldStatusL_(false),
+    pStatusR_(false),
+    pStatusL_(false),
+    pOldStatusR_(false),
+    pOldStatusL_(false),
     directionBits_(0),
     direction_(1.),
     effectorSet_(eNoEffects),
-    softVolume(0),
-    softPreRoll(0),
-    softPostRoll(0),
-    softDistorsion(0),
-    softHold(0),
-    softFreeze(0),
-    softVintage(0),
-    currentProcessStatus(false)
+    lockSpeed_(0),
+    lockVolume_(0),
+    lockTune_(0),
+    keyHold_(false),
+    keyFreeze_(false),
+    keyLockTone_(false),
+    currentProcessStatus_(false)
 {
     // register its editor class (the same than used in againentry.cpp)
     setControllerClass(AVinylControllerUID);
 
     vintageSample_ = std::make_unique<SampleEntry<Sample64>>("vintage", (getResourcePath() + "\\vintage.wav").c_str());
-    //vintageSample_ = std::make_unique<SampleEntry<Sample64>>("vintage", "c:\\Work\\vst3sdk\\build\\VST3\\Debug\\vinylcontroller.vst3\\Contents\\Resources\\vintage.wav");
-    //vintageSample_ = std::make_unique<SampleEntry<Sample64>>("vintage", vintageLeft, vintageRight, sizeof(vintageLeft) / sizeof(Sample64));
     if (vintageSample_) {
         vintageSample_->Loop = true;
         vintageSample_->Sync = false;
         vintageSample_->Reverse = false;
     }
 
-
-    //{
-    //    auto VintageSample = std::make_unique<SampleEntry<Sample64>>("vintage", "c:\\Work\\vst3sdk\\build\\VST3\\Debug\\vinylcontroller.vst3\\Contents\\Resources\\vintage.wav");
-
-    //    std::ofstream vintage("c:\\Work\\vst3sdk\\build\\VST3\\Debug\\vinylcontroller.vst3\\Contents\\Resources\\vintage.h");
-    //    vintage << "#pragma once" << std::endl;
-    //    vintage << "" << std::endl;
-
-    //    vintage << "double vintageLeft[] = {";
-    //    for(size_t i = 0; i < VintageSample->bufferLength(); i++) {
-    //        vintage << VintageSample->getLeft(i) << (i == 0 ? "" : ",");
-    //    }
-    //    vintage << "};" << std::endl;
-
-    //    vintage << "double vintageRight[] = {";
-    //    for(size_t i = 0; i < VintageSample->bufferLength(); i++) {
-    //        vintage << VintageSample->getRight(i) << (i == 0 ? "" : ",");
-    //    }
-    //    vintage << "};" << std::endl;
-    //}
-
-
-    params_.addReader(kBypassId, [this] () { return bBypass ? 1. : 0.; },
+    params_.addReader(kBypassId, [this] () { return bypass_ ? 1. : 0.; },
                      [this](Sample64 value) {
-                         bBypass = value > 0.5;
+                         bypass_ = value > 0.5;
                      });
-    params_.addReader(kGainId,   [this] () { return fGain; },
+    params_.addReader(kGainId,   [this] () { return gain_; },
                      [this](Sample64 value) {
-                         fGain = value;
-                         fRealVolume = calcRealVolume(fGain, fVolume, fCurve); },
+                         gain_ = value;
+                         realVolume_ = calcRealVolume(gain_, volume_, curve_); },
                      [this] (int32 sampleOffset, int32 currentOffset, Sample64 currentValue) {
-                         fGain = aproxParamValue<Sample32>(sampleOffset, fGain, currentOffset, currentValue);
-                         fRealVolume = calcRealVolume(fGain, fVolume, fCurve);
+                         gain_ = aproxParamValue<Sample32>(sampleOffset, gain_, currentOffset, currentValue);
+                         realVolume_ = calcRealVolume(gain_, volume_, curve_);
                      });
-    params_.addReader(kVolumeId, [this] () { return fVolume; },
+    params_.addReader(kVolumeId, [this] () { return volume_; },
                      [this](Sample64 value) {
-                         fVolume = value;
-                         fRealVolume = calcRealVolume(fGain, fVolume, fCurve); },
+                         volume_ = value;
+                         realVolume_ = calcRealVolume(gain_, volume_, curve_); },
                      [this] (int32 sampleOffset, int32 currentOffset, Sample64 currentValue) {
-                         fVolume = aproxParamValue<Sample32>(sampleOffset, fVolume, currentOffset, currentValue);
-                         fRealVolume = calcRealVolume(fGain, fVolume, fCurve);
+                         volume_ = aproxParamValue<Sample32>(sampleOffset, volume_, currentOffset, currentValue);
+                         realVolume_ = calcRealVolume(gain_, volume_, curve_);
                      });
-    params_.addReader(kVolCurveId, [this] () { return fCurve; },
+    params_.addReader(kVolCurveId, [this] () { return curve_; },
                      [this](Sample64 value) {
-                         fCurve = value;
-                         fRealVolume = calcRealVolume(fGain, fVolume, fCurve); },
+                         curve_ = value;
+                         realVolume_ = calcRealVolume(gain_, volume_, curve_); },
                      [this] (int32 sampleOffset, int32 currentOffset, Sample64 currentValue) {
-                         fCurve = aproxParamValue<Sample32>(sampleOffset, fCurve, currentOffset, currentValue);
-                         fRealVolume = calcRealVolume(fGain, fVolume, fCurve);
+                         curve_ = aproxParamValue<Sample32>(sampleOffset, curve_, currentOffset, currentValue);
+                         realVolume_ = calcRealVolume(gain_, volume_, curve_);
                      });
-    params_.addReader(kPitchId, [this] () { return fPitch; },
-                     [this](Sample64 value) { fPitch = value; fRealPitch = calcRealPitch (fPitch, fSwitch); },
+    params_.addReader(kPitchId, [this] () { return pitch_; },
+                     [this](Sample64 value) { pitch_ = value; realPitch_ = calcRealPitch (pitch_, switch_); },
                      [this] (int32 sampleOffset, int32 currentOffset, Sample64 currentValue) {
-                         fPitch = aproxParamValue<Sample32>(sampleOffset, fPitch, currentOffset, currentValue);
-                         fRealPitch = calcRealPitch (fPitch, fSwitch);
+                         pitch_ = aproxParamValue<Sample32>(sampleOffset, pitch_, currentOffset, currentValue);
+                         realPitch_ = calcRealPitch (pitch_, switch_);
                      });
-    params_.addReader(kPitchSwitchId, [this] () { return fSwitch; },
+    params_.addReader(kPitchSwitchId, [this] () { return switch_; },
                      [this](Sample64 value) {
-                         fSwitch = value;
-                         fRealPitch = calcRealPitch (fPitch, fSwitch); },
+                         switch_ = value;
+                         realPitch_ = calcRealPitch (pitch_, switch_); },
                      [this] (int32 sampleOffset, int32 currentOffset, Sample64 currentValue) {
-                         fSwitch = aproxParamValue<Sample32>(sampleOffset, fSwitch, currentOffset, currentValue);
-                         fRealPitch = calcRealPitch (fPitch, fSwitch);
+                         switch_ = aproxParamValue<Sample32>(sampleOffset, switch_, currentOffset, currentValue);
+                         realPitch_ = calcRealPitch (pitch_, switch_);
                      });
 
     params_.addReader(kCurrentEntryId, [this] () { return double(currentEntry_) / (EMaximumSamples - 1.); },
@@ -226,21 +217,19 @@ AVinyl::AVinyl() :
                          }
                      });
 
-    params_.addReader(kTimecodeLearnId, [this] () { return bTCLearn ? 1. : 0.; },
+    params_.addReader(kTimecodeLearnId, [this] () { return timeCodeLearn_ ? 1. : 0.; },
                      [this](Sample64 value) {
                          if (value>0.5) {
                              timecodeLearnCounter_ = ETimecodeLearnCount;
-                             bTCLearn = true;
+                             timeCodeLearn_ = true;
                          }
                      });
 }
 
-// ------------------------------------------------------------------------
 AVinyl::~AVinyl() {
     // nothing to do here yet..
 }
 
-// ------------------------------------------------------------------------
 tresult PLUGIN_API AVinyl::initialize(FUnknown* context) {
 
     tresult result = AudioEffect::initialize(context);
@@ -261,10 +250,10 @@ tresult PLUGIN_API AVinyl::initialize(FUnknown* context) {
     // ---InitPads------
     for (int j = 0; j < EMaximumScenes; j++) {
         for (int i = 0; i < ENumberOfPads; i++) {
-            padStates[j][i].padType = PadEntry::SamplePad;
-            padStates[j][i].padTag = j * ENumberOfPads + i;
-            padStates[j][i].padState = false;
-            padStates[j][i].padMidi = gPad[i];
+            padStates_[j][i].padType = PadEntry::SamplePad;
+            padStates_[j][i].padTag = j * ENumberOfPads + i;
+            padStates_[j][i].padState = false;
+            padStates_[j][i].padMidi = gPad[i];
         }
     }
 
@@ -273,38 +262,29 @@ tresult PLUGIN_API AVinyl::initialize(FUnknown* context) {
     return kResultOk;
 }
 
-// ------------------------------------------------------------------------
-tresult PLUGIN_API AVinyl::terminate() {
+tresult PLUGIN_API AVinyl::terminate()
+{
     // nothing to do here yet...except calling our parent terminate
     samplesArray_.clear();
     return AudioEffect::terminate();
 }
 
-// ------------------------------------------------------------------------
-tresult PLUGIN_API AVinyl::setActive(TBool state) {
+tresult PLUGIN_API AVinyl::setActive(TBool state)
+{
     reset(state);
     // call our parent setActive
     return AudioEffect::setActive(state);
 }
 
-inline Sample64 noteLengthInSamples(Sample64 note, Sample64 tempo, Sample64 sampleRate) {
-    if ((tempo > 0) && (note > 0)) {
-        return sampleRate / tempo * 60.0 * note;
-    }
-    return 0;
-
-}
-
-// ------------------------------------------------------------------------
 tresult PLUGIN_API AVinyl::process(ProcessData& data)
 {
     try {
 
         bool samplesParamsUpdate = false;
         if (data.processContext) {
-            dSampleRate = data.processContext->sampleRate;
-            dTempo = data.processContext->tempo;
-            dNoteLength = noteLengthInSamples(ERollNote, dTempo, dSampleRate);
+            sampleRate_ = data.processContext->sampleRate;
+            tempo_ = data.processContext->tempo;
+            noteLength_ = noteLengthInSamples(ERollNote, tempo_, sampleRate_);
         }
 
         IParameterChanges* paramChanges = data.inputParameterChanges;
@@ -375,9 +355,9 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
         //{
         Sample64 fVuLeft = 0.;
         Sample64 fVuRight = 0.;
-        Sample64 fOldPosition = fPosition;
-        bool bOldTimecodeLearn = bTCLearn;
-        Sample64 fOldSpeed = fRealSpeed;
+        Sample64 fOldPosition = position_;
+        bool bOldTimecodeLearn = timeCodeLearn_;
+        Sample64 fOldSpeed = realSpeed_;
 
         if (numChannels >= 2) {
 
@@ -417,7 +397,7 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                 Sample64 outL{0.};
                 Sample64 outR{0.};
 
-                if (!bBypass) {
+                if (!bypass_) {
 
                     if (data.symbolicSampleSize == kSample64) {
                         inL = *reinterpret_cast<Sample64*>(ptrInLeft);
@@ -449,9 +429,6 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                     Sample64 smoothWindow = sin(Pi * Sample64(speedFrameIndex_ + EFFTFrame - ESpeedFrame) / Sample64(EFFTFrame));
                     originalBuffer_[speedFrameIndex_ + EFFTFrame - ESpeedFrame] = oldSignalLeft_ - oldSignalRight_;
                     fftBuffer_[speedFrameIndex_ + EFFTFrame - ESpeedFrame] = (smoothWindow * originalBuffer_[speedFrameIndex_ + EFFTFrame - ESpeedFrame]);
-                    //filtred_[FFTCursor + EFFTFrame - ESpeedFrame] = inL - inR;// (OldSignalL - OldSignalR);
-                    //fft_[FFTCursor + EFFTFrame - ESpeedFrame].real = (SmoothCoef * filtred_[FFTCursor + EFFTFrame - ESpeedFrame]);
-                    //fft_[FFTCursor + EFFTFrame - ESpeedFrame].imaginary = 0;
 
                     speedFrameIndex_++;
                     if (speedFrameIndex_ >= ESpeedFrame) {
@@ -459,219 +436,190 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
 
                         if (timeCodeAmplytude_ >= ETimeCodeMinAmplytude) {
 #ifdef DEVELOPMENT
-                            {
-                                debugInputMessage(fftBuffer_, EFFTFrame);
-                            }
+                            debugInputMessage(fftBuffer_, EFFTFrame);
 #endif // DEBUG
                             fastsine(fftBuffer_, EFFTFrame);
-                            //fft(fft_, EFFTFrame);
+
                             /// Filter out low noise
                             for (size_t i = 0; i < 10; i++) {
                                 Sample64 SmoothCoef =  i * .1 + .01;
                                 fftBuffer_[i] = SmoothCoef * fftBuffer_[i];
-                                //fft_[i].real = SmoothCoef * fft_[i].real;
-                                //fft_[i].imaginary = SmoothCoef * fft_[i].imaginary;
                             }
 #ifdef DEVELOPMENT
-                            {
-                                //Sample64 real_[EFFTFrame];
-                                //for (size_t i = 0; i < EFFTFrame; i++) {
-                                //    real_[i] = fft_[i].real;
-                                //}
-                                debugFftMessage(fftBuffer_, EFFTFrame);
-                            }
-                            //{
-                            //    Sample64 real_[EFFTFrame];
-                            //    for (size_t i = 0; i < EFFTFrame; i++) {
-                            //        real_[i] = fft_[i].imaginary;
-                            //    }
-                            //    debugInputMessage(real_, EFFTFrame);
-                            //}
+                            debugFftMessage(fftBuffer_, EFFTFrame);
 #endif // DEBUG
 
                             calcAbsSpeed();
                             if (timecodeLearnCounter_ > 0) {
                                 timecodeLearnCounter_--;
                                 avgTimeCodeCoeff_.append(direction_ * absAvgSpeed_);
-                                fRealSpeed = 1.;
+                                realSpeed_ = 1.;
+                            } else {
+                                realSpeed_ = absAvgSpeed_ / avgTimeCodeCoeff_;
+                                timeCodeLearn_ = false;
                             }
-                            else {
-                                fRealSpeed = absAvgSpeed_ / avgTimeCodeCoeff_;
-                                bTCLearn = false;
-                            }
-                            fVolCoeff.append(sqrt(fabs(fRealSpeed)));
-                            fRealSpeed = direction_ * fRealSpeed;
+                            volCoeff_.append(sqrt(fabs(realSpeed_)));
+                            realSpeed_ = direction_ * realSpeed_;
                         }
 
                         for (size_t i = 0; i < EFFTFrame - ESpeedFrame; i++) {
-                            //Sample64 SmoothCoef = 0.5 - 0.5 * cos((2.0 * Pi * Sample64(i) / EFFTFrame));
-                            Sample64 SmoothCoef = sin(Pi * Sample64(i) / Sample64(EFFTFrame));
+                            Sample64 smoothWindow = sin(Pi * Sample64(i) / Sample64(EFFTFrame));
                             originalBuffer_[i] = originalBuffer_[ESpeedFrame + i];
-                            fftBuffer_[i] = (SmoothCoef * originalBuffer_[ESpeedFrame + i]);
-                            //filtred_[i] = filtred_[ESpeedFrame + i];
-                            //fft_[i].real = (SmoothCoef * filtred_[ESpeedFrame + i]);
-                            //fft_[i].imaginary = 0.;
+                            fftBuffer_[i] = (smoothWindow * originalBuffer_[ESpeedFrame + i]);
                         }
                     }
 
                     if (timeCodeAmplytude_ < ETimeCodeMinAmplytude) {
-                        if (fVolCoeff >= 0.00001) {
+                        if (volCoeff_ >= 0.00001) {
                             absAvgSpeed_ = absAvgSpeed_ / 1.07;
-                            fRealSpeed = absAvgSpeed_ / avgTimeCodeCoeff_;
-                            fVolCoeff.append(sqrt(fabs(fRealSpeed)));
-                            fRealSpeed = direction_ * fRealSpeed;
+                            realSpeed_ = absAvgSpeed_ / avgTimeCodeCoeff_;
+                            volCoeff_.append(sqrt(fabs(realSpeed_)));
+                            realSpeed_ = direction_ * realSpeed_;
                         } else {
                             absAvgSpeed_ = 0.;
-                            fRealSpeed = 0.;
-                            fVolCoeff = 0.;
+                            realSpeed_ = 0.;
+                            volCoeff_ = 0.;
                         }
                     }
 
-                    if ((fVolCoeff >= 0.00001) && (samplesArray_.size() > currentEntry_)) {
+                    if ((volCoeff_ >= 0.00001) && (samplesArray_.size() > currentEntry_)) {
 
-                        ////////////////////EFFECTOR BEGIN//////////////////////////////
-
-                        softVolume.append((effectorSet_ & ePunchIn) ? (fGain * fVolCoeff) :
-                            ((effectorSet_ & ePunchOut) ? 0. : (fRealVolume * fVolCoeff)));
-                        softPreRoll.append(effectorSet_ & ePreRoll ? 1. : 0.);
-                        softPostRoll.append(effectorSet_ & ePostRoll ? 1. : 0.);
-                        softDistorsion.append(effectorSet_ & eDistorsion ? 1. : 0.);
-                        softVintage.append(effectorSet_ & eVintage ? 1. : 0.);
+                        softVolume_.append((effectorSet_ & ePunchIn)
+                                               ? (gain_ * volCoeff_) : ((effectorSet_ & ePunchOut)
+                                               ? 0. : (realVolume_ * volCoeff_)));
+                        softPreRoll_.append(effectorSet_ & ePreRoll ? 1. : 0.);
+                        softPostRoll_.append(effectorSet_ & ePostRoll ? 1. : 0.);
+                        softDistorsion_.append(effectorSet_ & eDistorsion ? 1. : 0.);
+                        softVintage_.append(effectorSet_ & eVintage ? 1. : 0.);
 
                         if (effectorSet_ & eHold) {
-                            if (!keyHold) {
-                                HoldCue = samplesArray_.at(currentEntry_)->cue();
-                                keyHold = true;
+                            if (!std::exchange(keyHold_, true)) {
+                                holdCue_ = samplesArray_.at(currentEntry_)->cue();
                             }
-                            softHold.append(1.);
+                            softHold_.append(1.);
                         } else {
-                            keyHold = false;
-                            softHold.append(0.);
+                            keyHold_ = false;
+                            softHold_.append(0.);
                         }
 
                         if (effectorSet_ & eFreeze) {
-                            if (!keyFreeze) {
-                                FreezeCue = samplesArray_.at(currentEntry_)->cue();
-                                FreezeCueCur = FreezeCue;
-                                keyFreeze = true;
+                            if (!std::exchange(keyFreeze_, true)) {
+                                beginFreezeCue_ = samplesArray_.at(currentEntry_)->cue();
+                                freezeCue_ = beginFreezeCue_;
                             }
-                            softFreeze.append(1.);
+                            softFreeze_.append(1.);
                         } else {
-                            if (keyFreeze) {
-                                keyFreeze = false;
-                                AfterFreezeCue = FreezeCueCur;
+                            if (std::exchange(keyFreeze_, false)) {
+                                endFreezeCue_ = freezeCue_;
                             }
-                            softFreeze.append(0.);
+                            softFreeze_.append(0.);
                         }
 
                         if (effectorSet_ & eLockTone) {
-                            if (!keyLockTone) {
-                                keyLockTone = true;
-                                lockSpeed = fabs(fRealSpeed * fRealPitch);
-                                lockVolume = fVolCoeff;
-                                lockTune = samplesArray_.at(currentEntry_)->Tune;
+                            if (!std::exchange(keyLockTone_, true)) {
+                                lockSpeed_ = fabs(realSpeed_ * realPitch_);
+                                lockVolume_ = volCoeff_;
+                                lockTune_ = samplesArray_.at(currentEntry_)->Tune;
                                 samplesArray_.at(currentEntry_)->beginLockStrobe();
                             }
-                            fVolCoeff = lockVolume;
                         } else {
-                            keyLockTone = false;
+                            keyLockTone_ = false;
                         }
 
-                        //////////////////////////PLAYER////////////////////////////////////////////////
-                        Sample64 speed = 0.;//fRealSpeed * fRealPitch;
+                        Sample64 speed = 0.;
                         Sample64 tempo = 0.;
 
-                        if (keyLockTone) {
-                            speed = direction_ * lockSpeed;
+                        if (keyLockTone_) {
+                            volCoeff_ = lockVolume_;
+                            speed = direction_ * lockSpeed_;
                             tempo = samplesArray_.at(currentEntry_)->Sync
-                                ? fabs(dTempo * fRealSpeed * fRealPitch)
-                                : samplesArray_.at(currentEntry_)->tempo() * fabs(fRealSpeed * fRealPitch) * lockTune;
+                                ? fabs(tempo_ * realSpeed_ * realPitch_)
+                                : samplesArray_.at(currentEntry_)->tempo() * fabs(realSpeed_ * realPitch_) * lockTune_;
                             samplesArray_.at(currentEntry_)->playStereoSampleTempo(&outL,
                                 &outR,
                                 speed,
                                 tempo,
-                                dSampleRate,
+                                sampleRate_,
                                 true);
                         } else {
-                            speed = fRealSpeed * fRealPitch;
-                            tempo = dTempo;
+                            speed = realSpeed_ * realPitch_;
+                            tempo = tempo_;
                             samplesArray_.at(currentEntry_)->playStereoSample(&outL,
                                 &outR,
                                 speed,
                                 tempo,
-                                dSampleRate,
+                                sampleRate_,
                                 true);
                         }
 
-                        if (keyFreeze) {
-                            FreezeCounter++;
+                        if (keyFreeze_) {
+                            freezeCounter_++;
                             bool pushSync = samplesArray_.at(currentEntry_)->Sync;
                             samplesArray_.at(currentEntry_)->Sync = false;
                             auto PushCue = samplesArray_.at(currentEntry_)->cue();
-                            samplesArray_.at(currentEntry_)->cue(FreezeCueCur);
+                            samplesArray_.at(currentEntry_)->cue(freezeCue_);
                             samplesArray_.at(currentEntry_)->playStereoSample(&outL,
                                 &outR,
                                 speed,
                                 tempo,
-                                dSampleRate,
+                                sampleRate_,
                                 true);
-                            FreezeCueCur = samplesArray_.at(currentEntry_)->cue();
-                            if ((softFreeze > 0.00001) && (softFreeze < 0.99)) {
+                            freezeCue_ = samplesArray_.at(currentEntry_)->cue();
+                            if ((softFreeze_ > 0.00001) && (softFreeze_ < 0.99)) {
                                 Sample64 fLeft = 0;
                                 Sample64 fRight = 0;
-                                samplesArray_.at(currentEntry_)->cue(AfterFreezeCue);
+                                samplesArray_.at(currentEntry_)->cue(endFreezeCue_);
                                 samplesArray_.at(currentEntry_)->playStereoSample(&fLeft,
                                     &fRight,
                                     speed,
                                     tempo,
-                                    dSampleRate,
+                                    sampleRate_,
                                     true);
-                                outL = outL * softFreeze + fLeft * (1.0 - softFreeze);
-                                outR = outR * softFreeze + fRight * (1.0 - softFreeze);
-                                AfterFreezeCue = samplesArray_.at(currentEntry_)->cue();
+                                outL = outL * softFreeze_ + fLeft * (1. - softFreeze_);
+                                outR = outR * softFreeze_ + fRight * (1. - softFreeze_);
+                                endFreezeCue_ = samplesArray_.at(currentEntry_)->cue();
                             }
                             if (speed != 0.0) {
-                                if (FreezeCounter >= dNoteLength) {
-                                    FreezeCounter = 0;
-                                    AfterFreezeCue = FreezeCueCur;
-                                    FreezeCueCur = FreezeCue;
-                                    softFreeze = 0;
+                                if (freezeCounter_ >= noteLength_) {
+                                    freezeCounter_ = 0;
+                                    endFreezeCue_ = freezeCue_;
+                                    freezeCue_ = beginFreezeCue_;
+                                    softFreeze_ = 0;
                                 }
                             }
                             samplesArray_.at(currentEntry_)->Sync = pushSync;
                             samplesArray_.at(currentEntry_)->cue(PushCue);
                         }
 
-                        if (keyHold) {
-                            HoldCounter++;
-                            if ((softHold > 0.00001) && (softHold < 0.99)) {
+                        if (keyHold_) {
+                            holdCounter_++;
+                            if ((softHold_ > 0.00001) && (softHold_ < 0.99)) {
                                 Sample64 fLeft = 0;
                                 Sample64 fRight = 0;
                                 auto PushCue = samplesArray_.at(currentEntry_)->cue();
-                                samplesArray_.at(currentEntry_)->cue(AfterHoldCue);
+                                samplesArray_.at(currentEntry_)->cue(endHoldCue_);
                                 samplesArray_.at(currentEntry_)->playStereoSample(&fLeft,
                                     &fRight,
                                     speed,
                                     samplesArray_.at(currentEntry_)->tempo(),
-                                    dSampleRate,
+                                    sampleRate_,
                                     true);
-                                outL = outL * softHold + fLeft * (1. - softHold);
-                                outR = outR * softHold + fRight * (1. - softHold);
-                                AfterHoldCue = samplesArray_.at(currentEntry_)->cue();
+                                outL = outL * softHold_ + fLeft * (1. - softHold_);
+                                outR = outR * softHold_ + fRight * (1. - softHold_);
+                                endHoldCue_ = samplesArray_.at(currentEntry_)->cue();
                                 samplesArray_.at(currentEntry_)->cue(PushCue);
                             }
-                            if (HoldCounter >= dNoteLength) {
-                                AfterHoldCue = samplesArray_.at(currentEntry_)->cue();
-                                samplesArray_.at(currentEntry_)->cue(HoldCue);
-                                HoldCounter = 0;
-                                softHold = 0;
+                            if (holdCounter_ >= noteLength_) {
+                                endHoldCue_ = samplesArray_.at(currentEntry_)->cue();
+                                samplesArray_.at(currentEntry_)->cue(holdCue_);
+                                holdCounter_ = 0;
+                                softHold_ = 0;
                             }
                         }
-                        ////////////////////////////////////////////////////////////////////////////
 
-                        if ((softPreRoll > 0.0001) || (softPostRoll > 0.0001)) {
+                        if ((softPreRoll_ > 0.0001) || (softPostRoll_ > 0.0001)) {
 
-                            Sample64 offset = samplesArray_.at(currentEntry_)->noteLength(ERollNote, dTempo);
+                            Sample64 offset = samplesArray_.at(currentEntry_)->noteLength(ERollNote, tempo_);
                             Sample64 pre_offset = offset;
                             Sample64 pos_offset = -offset;
 
@@ -679,61 +627,56 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                             Sample64 fRight = 0;
                             for (int i = 0; i < ERollCount; i++) {
                                 Sample32 rollVolume = (1. - Sample32(i) / Sample32(ERollCount)) * .6;
-                                if (softPreRoll > 0.0001) {
+                                if (softPreRoll_ > 0.0001) {
                                     samplesArray_.at(currentEntry_)->playStereoSample(&fLeft, &fRight, pos_offset, false);
-                                    outL = outL * (1. - softPreRoll * 0.1) + fLeft * rollVolume * softPreRoll;
-                                    outR = outR * (1. - softPreRoll * 0.1) + fRight * rollVolume * softPreRoll;
+                                    outL = outL * (1. - softPreRoll_ * 0.1) + fLeft * rollVolume * softPreRoll_;
+                                    outR = outR * (1. - softPreRoll_ * 0.1) + fRight * rollVolume * softPreRoll_;
                                     pos_offset = pos_offset + offset;
                                 }
-                                if (softPostRoll > 0.0001) {
+                                if (softPostRoll_ > 0.0001) {
                                     samplesArray_.at(currentEntry_)->playStereoSample(&fLeft, &fRight, pre_offset, false);
-                                    outL = outL * (1. - softPostRoll * 0.1) + fLeft * rollVolume * softPostRoll;
-                                    outR = outR * (1. - softPostRoll * 0.1) + fRight * rollVolume * softPostRoll;
+                                    outL = outL * (1. - softPostRoll_ * 0.1) + fLeft * rollVolume * softPostRoll_;
+                                    outR = outR * (1. - softPostRoll_ * 0.1) + fRight * rollVolume * softPostRoll_;
                                     pre_offset = pre_offset - offset;
                                 }
                             }
                         }
 
-                        if (softDistorsion > 0.0001) {
+                        if (softDistorsion_ > 0.0001) {
                             if (outL > 0) {
-                                outL = outL * (1. - softDistorsion * 0.6) + 0.4 * sqrt(outL) * softDistorsion;
+                                outL = outL * (1. - softDistorsion_ * 0.6) + 0.4 * sqrt(outL) * softDistorsion_;
                             } else {
-                                outL = outL * (1. - softDistorsion * 0.6) - 0.3 * sqrt(-outL) * softDistorsion;
+                                outL = outL * (1. - softDistorsion_ * 0.6) - 0.3 * sqrt(-outL) * softDistorsion_;
                             }
                             if (outR > 0) {
-                                outR = outR * (1. - softDistorsion * 0.6) + 0.4 * sqrt(outR) * softDistorsion;
+                                outR = outR * (1. - softDistorsion_ * 0.6) + 0.4 * sqrt(outR) * softDistorsion_;
                             } else {
-                                outR = outR * (1. - softDistorsion * 0.6) - 0.3 * sqrt(-outR) * softDistorsion;
+                                outR = outR * (1. - softDistorsion_ * 0.6) - 0.3 * sqrt(-outR) * softDistorsion_;
                             }
                         }
 
-                        if (softVintage > 0.0001) {
+                        if (softVintage_ > 0.0001) {
                             Sample64 VintageLeft = 0;
                             Sample64 VintageRight = 0;
                             if (vintageSample_) {
-                                vintageSample_->playStereoSample(&VintageLeft, &VintageRight, speed, dTempo, dSampleRate, true);
+                                vintageSample_->playStereoSample(&VintageLeft, &VintageRight, speed, tempo_, sampleRate_, true);
                             }
-                            outL = outL * (1. - softVintage * .3) + (-sqr(outR * .5) + VintageLeft) * softVintage;
-                            outR = outR * (1. - softVintage * .3) + (-sqr(outL * .5) + VintageRight) * softVintage;
+                            outL = outL * (1. - softVintage_ * .3) + (-sqr(outR * .5) + VintageLeft) * softVintage_;
+                            outR = outR * (1. - softVintage_ * .3) + (-sqr(outL * .5) + VintageRight) * softVintage_;
 
                         }
 
-                        /////////////////////////END OF EFFECTOR//////////////////
+                        outL = outL * softVolume_;
+                        outR = outR * softVolume_;
 
-
-                        outL = outL * softVolume;
-                        outR = outR * softVolume;
-
-                        fPosition = samplesArray_.at(currentEntry_)->cue().integerPart() / double(samplesArray_.at(currentEntry_)->bufferLength());
+                        position_ = samplesArray_.at(currentEntry_)->cue().integerPart() / double(samplesArray_.at(currentEntry_)->bufferLength());
                         if (outL > fVuLeft) {
                             fVuLeft = outL;
                         }
                         if (outR > fVuRight) {
                             fVuRight = outR;
                         }
-
                     }
-
                 }
 
                 if (data.symbolicSampleSize == kSample64) {
@@ -753,14 +696,14 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
 
         if (outParamChanges) {
 
-            if (fVuOldL != fVuLeft) {
+            if (vuLeft_ != fVuLeft) {
                 vuLeftWriter.store(data.numSamples - 1, fVuLeft);
             }
-            if (fVuOldR != fVuRight) {
+            if (vuRight_ != fVuRight) {
                 vuRightWriter.store(data.numSamples - 1, fVuRight);
             }
-            if (fOldPosition != fPosition) {
-                positionWriter.store(data.numSamples - 1, fPosition);
+            if (fOldPosition != position_) {
+                positionWriter.store(data.numSamples - 1, position_);
             }
 
             if ((samplesParamsUpdate || dirtyParams_) && (samplesArray_.size() > currentEntry_)) {
@@ -792,18 +735,18 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
                 dirtyParams_ = false;
             }
 
-            if (bTCLearn != bOldTimecodeLearn) {
-                tcLearnWriter.store(data.numSamples - 1, bTCLearn ? 1. : 0.);
+            if (timeCodeLearn_ != bOldTimecodeLearn) {
+                tcLearnWriter.store(data.numSamples - 1, timeCodeLearn_ ? 1. : 0.);
             }
-            if (fabs(fOldPosition - fPosition) > 0.001) {
-                updatePositionMessage(fPosition);
+            if (fabs(fOldPosition - position_) > 0.001) {
+                updatePositionMessage(position_);
             }
-            if (fabs(fOldSpeed - fRealSpeed) > 0.001) {
-                updateSpeedMessage(fRealSpeed);
+            if (fabs(fOldSpeed - realSpeed_) > 0.001) {
+                updateSpeedMessage(realSpeed_);
             }
         }
-        fVuOldL = fVuLeft;
-        fVuOldR = fVuRight;
+        vuLeft_ = fVuLeft;
+        vuRight_ = fVuRight;
 
     }
     catch (std::exception& e) {
@@ -816,15 +759,12 @@ tresult PLUGIN_API AVinyl::process(ProcessData& data)
 
 tresult PLUGIN_API AVinyl::setProcessing(TBool state)
 {
-    currentProcessStatus = state;
+    currentProcessStatus_ = state;
     return kResultTrue;
 }
 
 tresult PLUGIN_API AVinyl::canProcessSampleSize(int32 symbolicSampleSize)
 {
-    //if (kSample64 == symbolicSampleSize) {
-    //    return kResultFalse;
-    //}
     return kResultTrue;
 }
 
@@ -840,45 +780,45 @@ uint32 PLUGIN_API AVinyl::getTailSamples()
 
 void AVinyl::calcDirectionTimeCodeAmplitude()
 {
-    if ((StatusR) && (deltaRight_ < 0.0)) {
-        OldStatusR = StatusR;
-        StatusR = false;
-        timeCodeAmplytude_ = (63.0 * timeCodeAmplytude_ + fabs(oldSignalRight_)) / 64.0;
-    } else if ((!StatusR) && (deltaRight_ > 0.0)) {
-        OldStatusR = StatusR;
-        StatusR = true;
-        timeCodeAmplytude_ = (63.0 * timeCodeAmplytude_ + fabs(oldSignalRight_)) / 64.0;
+    if ((statusR_) && (deltaRight_ < 0.0)) {
+        oldStatusR_ = statusR_;
+        statusR_ = false;
+        timeCodeAmplytude_.append(fabs(oldSignalRight_));
+    } else if ((!statusR_) && (deltaRight_ > 0.0)) {
+        oldStatusR_ = statusR_;
+        statusR_ = true;
+        timeCodeAmplytude_.append(fabs(oldSignalRight_));
     }
 
-    if ((StatusL) && (deltaLeft_ < 0.0)) {
-        OldStatusL = StatusL;
-        StatusL = false;
-        timeCodeAmplytude_ = (63.0 * timeCodeAmplytude_ + fabs(oldSignalLeft_)) / 64.0;
-    } else if ((!StatusL) && (deltaLeft_ > 0.0)) {
-        OldStatusL = StatusL;
-        StatusL = true;
-        timeCodeAmplytude_ = (63.0 * timeCodeAmplytude_ + fabs(oldSignalLeft_)) / 64.0;
+    if ((statusL_) && (deltaLeft_ < 0.0)) {
+        oldStatusL_ = statusL_;
+        statusL_ = false;
+        timeCodeAmplytude_.append(fabs(oldSignalLeft_));
+    } else if ((!statusL_) && (deltaLeft_ > 0.0)) {
+        oldStatusL_ = statusL_;
+        statusL_ = true;
+        timeCodeAmplytude_.append(fabs(oldSignalLeft_));
     }
 
     if (timeCodeAmplytude_ >= ETimeCodeMinAmplytude) {
-        if ((StatusL != PStatusL) || (StatusR != PStatusR) ||
-            (OldStatusL != POldStatusL) || (OldStatusR != POldStatusR)) {
+        if ((statusL_ != pStatusL_) || (statusR_ != pStatusR_) ||
+            (oldStatusL_ != pOldStatusL_) || (oldStatusR_ != pOldStatusR_)) {
 
-            if ((StatusL == PStatusR) && (StatusR == POldStatusL) && (OldStatusL == POldStatusR) && (OldStatusR == PStatusL) 
+            if ((statusL_ == pStatusR_) && (statusR_ == pOldStatusL_) && (oldStatusL_ == pOldStatusR_) && (oldStatusR_ == pStatusL_)
                 && (speedCounter_ >= 3)) {
                 directionBits_ <<= 8;
                 directionBits_ |= 0xff;
                 speedCounter_ = 0;
-            } else if ((StatusL == POldStatusR) && (StatusR == PStatusL) && (OldStatusL == PStatusR) && (OldStatusR == POldStatusL)
+            } else if ((statusL_ == pOldStatusR_) && (statusR_ == pStatusL_) && (oldStatusL_ == pStatusR_) && (oldStatusR_ == pOldStatusL_)
                 && (speedCounter_ >= 3)) {
                 directionBits_ <<= 8;
                 directionBits_ &= 0xffffff00;
                 speedCounter_ = 0;
             }
-            PStatusL = StatusL;
-            PStatusR = StatusR;
-            POldStatusL = OldStatusL;
-            POldStatusR = OldStatusR;
+            pStatusL_ = statusL_;
+            pStatusR_ = statusR_;
+            pOldStatusL_ = oldStatusL_;
+            pOldStatusR_ = oldStatusR_;
         }
 
         if (directionBits_ == 0) {
@@ -902,8 +842,6 @@ void AVinyl::calcAbsSpeed()
     for (int i = 0; i < EFFTFrame; i++) {
         if (maxY < fabs(fftBuffer_[i])) {
             maxY = fabs(fftBuffer_[i]);
-        //if (maxY < fabs(fft_[i].real)) {
-        //    maxY = fabs(fft_[i].real);
             maxX = i;
         }
     }
@@ -914,8 +852,6 @@ void AVinyl::calcAbsSpeed()
             Sample64 koef = 100.;
             if (fftBuffer_[i] != 0) {
                 koef = (maxY / fftBuffer_[i]) * (maxY / fftBuffer_[i]);
-            //if (fft_[i].real != 0) {
-            //    koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
             }
             tmp = (koef * tmp + Sample64(i)) / (koef + 1.);
             continue;
@@ -928,8 +864,6 @@ void AVinyl::calcAbsSpeed()
             Sample64 koef = 100.;
             if (fftBuffer_[i] != 0) {
                 koef = (maxY / fftBuffer_[i]) * (maxY / fftBuffer_[i]);
-            //if (fft_[i].real != 0) {
-            //   koef = (maxY / fft_[i].real) * (maxY / fft_[i].real);
             }
             tmp = (koef * tmp + Sample64(i)) / (koef + 1.);
             continue;
@@ -963,15 +897,15 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
 
         IBStreamer reader(state, byteOrder);
 
-        reader.readFloat(fGain);
-        reader.readFloat(fVolume);
-        reader.readFloat(fPitch);
+        reader.readFloat(gain_);
+        reader.readFloat(volume_);
+        reader.readFloat(pitch_);
 
         reader.readInt32u(currentEntry_);
         reader.readInt32u(currentScene_);
 
-        reader.readFloat(fSwitch);
-        reader.readFloat(fCurve);
+        reader.readFloat(switch_);
+        reader.readFloat(curve_);
 
         uint32_t savedBypass;
         reader.readInt32u(savedBypass);
@@ -989,12 +923,12 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
 
         avgTimeCodeCoeff_ = savedTimeCodeCoeff;
 
-        bBypass = savedBypass > 0;
+        bypass_ = savedBypass > 0;
 
-        keyLockTone = (effectorSet_ & eLockTone) > 0;
+        keyLockTone_ = (effectorSet_ & eLockTone) > 0;
 
-        fRealPitch = calcRealPitch (fPitch,fSwitch);
-        fRealVolume = calcRealVolume(fGain, fVolume, fCurve);
+        realPitch_ = calcRealPitch (pitch_,switch_);
+        realVolume_ = calcRealVolume(gain_, volume_, curve_);
 
         for (unsigned j = 0; j < savedSceneCount; j++) {
             for (unsigned i = 0; i < savedPadCount; i++) {
@@ -1006,9 +940,9 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
                 reader.readInt32u(savedMidi);
 
                 if ((j < EMaximumScenes) && (i < ENumberOfPads)) {
-                    padStates[j][i].padType = PadEntry::TypePad(savedType);
-                    padStates[j][i].padTag = savedTag;
-                    padStates[j][i].padMidi = savedMidi;
+                    padStates_[j][i].padType = PadEntry::TypePad(savedType);
+                    padStates_[j][i].padTag = savedTag;
+                    padStates_[j][i].padMidi = savedMidi;
                 }
             }
         }
@@ -1052,7 +986,7 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
         for (unsigned j = 0; j < savedSceneCount; j++) {
             for (unsigned i = 0; i < savedPadCount; i++) {
                 if ((j < EMaximumScenes) && (i < ENumberOfPads)) {
-                    padStates[j][i].updateState(currentEntry_, effectorSet_);
+                    padStates_[j][i].updateState(currentEntry_, effectorSet_);
                 }
             }
         }
@@ -1062,8 +996,8 @@ tresult PLUGIN_API AVinyl::setState(IBStream* state)
         reader.readFloat(savedLockedSpeed);
         reader.readFloat(savedLockedVolume);
 
-        lockSpeed = savedLockedSpeed;
-        lockVolume = savedLockedVolume;
+        lockSpeed_ = savedLockedSpeed;
+        lockVolume_ = savedLockedVolume;
 
         dirtyParams_ = true;
         return kResultOk;
@@ -1077,21 +1011,21 @@ tresult PLUGIN_API AVinyl::getState(IBStream* state)
     int8 byteOrder = BYTEORDER;
     if (state->write (&byteOrder, sizeof (int8)) == kResultTrue) {
 
-        float toSaveGain = fGain;
-        float toSaveVolume = fVolume;
-        float toSavePitch = fPitch;
+        float toSaveGain = gain_;
+        float toSaveVolume = volume_;
+        float toSavePitch = pitch_;
         uint32_t toSaveEntry = currentEntry_;
         uint32_t toSaveScene = currentScene_;
-        float toSaveSwitch = fSwitch;
-        float toSaveCurve = fCurve;
+        float toSaveSwitch = switch_;
+        float toSaveCurve = curve_;
         float toSaveTimecodeCoeff = avgTimeCodeCoeff_;
-        uint32_t toSaveBypass = bBypass ? 1 : 0;
+        uint32_t toSaveBypass = bypass_ ? 1 : 0;
         uint32_t toSaveEffector = effectorSet_;
         uint32_t toSavePadCount = ENumberOfPads;
         uint32_t toSaveSceneCount = EMaximumScenes;
         uint32_t toSaveEntryCount = uint32_t(samplesArray_.size());
-        float toSavelockSpeed = lockSpeed;
-        float toSavelockVolume = lockVolume;
+        float toSavelockSpeed = lockSpeed_;
+        float toSavelockVolume = lockVolume_;
 
         state->write(&toSaveGain, sizeof(float));
         state->write(&toSaveVolume, sizeof(float));
@@ -1109,9 +1043,9 @@ tresult PLUGIN_API AVinyl::getState(IBStream* state)
 
         for (int j = 0; j < EMaximumScenes; j++) {
             for (int i = 0; i < ENumberOfPads; i++) {
-                uint32_t toSaveType = padStates[j][i].padType;
-                uint32_t toSaveTag = padStates[j][i].padTag;
-                uint32_t toSaveMidi = padStates[j][i].padMidi;
+                uint32_t toSaveType = padStates_[j][i].padType;
+                uint32_t toSaveTag = padStates_[j][i].padTag;
+                uint32_t toSaveMidi = padStates_[j][i].padMidi;
                 state->write(&toSaveType, sizeof(uint32_t));
                 state->write(&toSaveTag, sizeof(uint32_t));
                 state->write(&toSaveMidi, sizeof(uint32_t));
@@ -1152,7 +1086,7 @@ tresult PLUGIN_API AVinyl::setupProcessing(ProcessSetup& newSetup) {
     // called before the process call, always in a disable state (not active)
 
     // here we keep a trace of the processing mode (offline,...) for example.
-    currentProcessMode = newSetup.processMode;
+    currentProcessMode_ = newSetup.processMode;
 
     return AudioEffect::setupProcessing(newSetup);
 }
@@ -1189,14 +1123,14 @@ tresult PLUGIN_API AVinyl::notify(IMessage* message)
     if (strcmp(message->getMessageID(), "setPad") == 0) {
         int64 PadNumber;
         if (message->getAttributes()->getInt("PadNumber", PadNumber) == kResultOk) {
-            padStates[currentScene_][PadNumber - 1].padState = false;
+            padStates_[currentScene_][PadNumber - 1].padState = false;
             int64 PadType;
             if (message->getAttributes()->getInt("PadType", PadType) == kResultOk) {
-                padStates[currentScene_][PadNumber - 1].padType = PadEntry::TypePad(PadType);
+                padStates_[currentScene_][PadNumber - 1].padType = PadEntry::TypePad(PadType);
                 int64 PadTag;
                 if (message->getAttributes()->getInt("PadTag", PadTag) == kResultOk) {
-                    padStates[currentScene_][PadNumber - 1].padTag = PadTag;
-                    padStates[currentScene_][PadNumber - 1].updateState(currentEntry_, effectorSet_);
+                    padStates_[currentScene_][PadNumber - 1].padTag = PadTag;
+                    padStates_[currentScene_][PadNumber - 1].updateState(currentEntry_, effectorSet_);
                 }
             }
             dirtyParams_ = true;
@@ -1403,11 +1337,11 @@ void AVinyl::updatePadsMessage(void)
         String ttmp3[ENumberOfPads];
         for (int i = 0; i < ENumberOfPads; i++) {
             ttmp1[i] = tmp.printf("PadState%02d", i);
-            msg->getAttributes()->setInt(ttmp1[i].text8(), padStates[currentScene_][i].padState ? 1 : 0);
+            msg->getAttributes()->setInt(ttmp1[i].text8(), padStates_[currentScene_][i].padState ? 1 : 0);
             ttmp2[i] = tmp.printf("PadType%02d", i);
-            msg->getAttributes()->setInt(ttmp2[i].text8(), padStates[currentScene_][i].padType);
+            msg->getAttributes()->setInt(ttmp2[i].text8(), padStates_[currentScene_][i].padType);
             ttmp3[i] = tmp.printf("PadTag%02d", i);
-            msg->getAttributes()->setInt(ttmp3[i].text8(), padStates[currentScene_][i].padTag);
+            msg->getAttributes()->setInt(ttmp3[i].text8(), padStates_[currentScene_][i].padTag);
         }
         sendMessage(msg);
         msg->release();
@@ -1419,19 +1353,19 @@ void AVinyl::processEvent(const Event &event)
     switch (event.type) {
     case Event::kNoteOnEvent:
         for (int i = 0; i < ENumberOfPads; i++) {
-            if (padStates[currentScene_][i].padMidi == event.noteOn.pitch) {
+            if (padStates_[currentScene_][i].padMidi == event.noteOn.pitch) {
                 dirtyParams_ |= padWork(i, 1.);
             }
-            if (padStates[currentScene_][i].padType == PadEntry::AssigMIDI) {
-                padStates[currentScene_][i].padType = PadEntry::SamplePad;
-                padStates[currentScene_][i].padMidi = event.noteOn.pitch;
+            if (padStates_[currentScene_][i].padType == PadEntry::AssigMIDI) {
+                padStates_[currentScene_][i].padType = PadEntry::SamplePad;
+                padStates_[currentScene_][i].padMidi = event.noteOn.pitch;
                 dirtyParams_ = true;
             }
         }
         break;
     case Event::kNoteOffEvent:
         for (int i = 0; i < ENumberOfPads; i++) {
-            if (padStates[currentScene_][i].padMidi == event.noteOn.pitch)
+            if (padStates_[currentScene_][i].padMidi == event.noteOn.pitch)
                 dirtyParams_ |= padWork(i, 0);
         }
         break;
@@ -1458,22 +1392,22 @@ void AVinyl::reset(bool state)
         filtredHiLeft_ = 0.;
         filtredHiRight_ = 0.;
         timeCodeAmplytude_ = 0;
-        HoldCounter = 0;
-        FreezeCounter = 0;
+        holdCounter_ = 0;
+        freezeCounter_ = 0;
 
     }
     else {
         // reset the VuMeter value
-        fVuOldL = 0.f;
-        fVuOldR = 0.f;
+        vuLeft_ = 0.;
+        vuRight_ = 0.;
     }
-    softVolume = 0;
-    softPreRoll = 0;
-    softPostRoll = 0;
-    softDistorsion = 0;
-    softHold = 0;
-    softFreeze = 0;
-    softVintage = 0;
+    softVolume_ = 0;
+    softPreRoll_ = 0;
+    softPostRoll_ = 0;
+    softDistorsion_ = 0;
+    softHold_ = 0;
+    softFreeze_ = 0;
+    softVintage_ = 0;
 }
 
 void AVinyl::currentEntry(int64_t newentry)
@@ -1489,26 +1423,26 @@ void AVinyl::currentEntry(int64_t newentry)
     if (newentry < int64_t(samplesArray_.size())) {
         samplesArray_.at(newentry)->resetCursor();
     }
-    fPosition = 0;
+    position_ = 0;
 }
 
 bool AVinyl::padWork(int padId, double paramValue)
 {
     bool result = false;
-    switch(padStates[currentScene_][padId].padType) {
+    switch(padStates_[currentScene_][padId].padType) {
     case PadEntry::SamplePad:
-        if ((padStates[currentScene_][padId].padTag >= 0)
-            && (samplesArray_.size() > padStates[currentScene_][padId].padTag)) {
+        if ((padStates_[currentScene_][padId].padTag >= 0)
+            && (samplesArray_.size() > padStates_[currentScene_][padId].padTag)) {
             if (paramValue > 0.5) {
                 for (int j = 0; j < EMaximumScenes; j++) {
                     for (int i = 0; i < ENumberOfPads; i++) {
-                        if (padStates[j][i].padType == PadEntry::SamplePad) {
-                            padStates[j][i].padState = false;
+                        if (padStates_[j][i].padType == PadEntry::SamplePad) {
+                            padStates_[j][i].padState = false;
                         }
                     }
                 }
-                padStates[currentScene_][padId].padState = true;
-                currentEntry(padStates[currentScene_][padId].padTag);
+                padStates_[currentScene_][padId].padState = true;
+                currentEntry(padStates_[currentScene_][padId].padTag);
                 result = true;
             }
         }
@@ -1516,8 +1450,8 @@ bool AVinyl::padWork(int padId, double paramValue)
     case PadEntry::SwitchPad:
     {
         if (paramValue > 0.5) {
-            padStates[currentScene_][padId].padState = !padStates[currentScene_][padId].padState;
-            effectorSet_ ^= padStates[currentScene_][padId].padTag;
+            padStates_[currentScene_][padId].padState = !padStates_[currentScene_][padId].padState;
+            effectorSet_ ^= padStates_[currentScene_][padId].padTag;
             result = true;
         }
     }
@@ -1525,11 +1459,11 @@ bool AVinyl::padWork(int padId, double paramValue)
     case PadEntry::KickPad:
     {
         if (paramValue > 0.5) {
-            padStates[currentScene_][padId].padState = true;
-            effectorSet_ |= padStates[currentScene_][padId].padTag;
+            padStates_[currentScene_][padId].padState = true;
+            effectorSet_ |= padStates_[currentScene_][padId].padTag;
         } else {
-            padStates[currentScene_][padId].padState = false;
-            effectorSet_ &= ~padStates[currentScene_][padId].padTag;
+            padStates_[currentScene_][padId].padState = false;
+            effectorSet_ &= ~padStates_[currentScene_][padId].padTag;
         }
         result = true;
     }
@@ -1545,11 +1479,11 @@ bool AVinyl::padSet(int currentSample)
     bool result = false;
     for (int j = 0; j < EMaximumScenes; j++) {
         for (int i = 0; i < ENumberOfPads; i++) {
-            if (padStates[j][i].padType == PadEntry::SamplePad) {
-                if (padStates[j][i].padTag == currentSample) {
-                    padStates[j][i].padState = true;
+            if (padStates_[j][i].padType == PadEntry::SamplePad) {
+                if (padStates_[j][i].padTag == currentSample) {
+                    padStates_[j][i].padState = true;
                 } else {
-                    padStates[j][i].padState = false;
+                    padStates_[j][i].padState = false;
                 }
                 result = true;
             }
@@ -1558,63 +1492,21 @@ bool AVinyl::padSet(int currentSample)
     return result;
 }
 
-//void AVinyl::padState(PadEntry &pad)
-//{
-//    switch(pad.padType){
-//    case PadEntry::SamplePad:
-//        pad.padState = (pad.padTag == int(iCurrentEntry));
-//        break;
-//    case PadEntry::SwitchPad:
-//        pad.padState = (pad.padTag & effectorSet);
-//        break;
-//    default:
-//        pad.padState = false;
-//    }
-//}
-
 void AVinyl::padRemove(int currentSample)
 {
     for (int j = 0; j < EMaximumScenes; j++) {
         for (int i = 0; i < ENumberOfPads; i++) {
-            if (padStates[j][i].padType == PadEntry::SamplePad) {
-                if (padStates[j][i].padTag == currentSample) {
-                    padStates[j][i].padTag = -1;
-                    padStates[j][i].padType = PadEntry::EmptyPad;
-                    padStates[j][i].padState = false;
-                } else if (padStates[j][i].padTag > currentSample) {
-                    padStates[j][i].padTag = padStates[j][i].padTag - 1;
+            if (padStates_[j][i].padType == PadEntry::SamplePad) {
+                if (padStates_[j][i].padTag == currentSample) {
+                    padStates_[j][i].padTag = -1;
+                    padStates_[j][i].padType = PadEntry::EmptyPad;
+                    padStates_[j][i].padState = false;
+                } else if (padStates_[j][i].padTag > currentSample) {
+                    padStates_[j][i].padTag = padStates_[j][i].padTag - 1;
                 }
             }
         }
     }
 }
-
-//double AVinyl::normalizeTag(int tag)
-//{
-//    if (padStates[iCurrentScene][tag].padTag < 0) {
-//        return 0.;
-//    }
-//
-//    switch (padStates[iCurrentScene][tag].padType) {
-//    case PadEntry::SamplePad:
-//        if (padStates[iCurrentScene][tag].padTag >= SamplesArray.size()) {
-//            return 0.;
-//        }
-//        return (padStates[iCurrentScene][tag].padTag + 1.) / SamplesArray.size();
-//    case PadEntry::SwitchPad:
-//        if (padStates[iCurrentScene][tag].padTag >= 5) {
-//            return 0.;
-//        }
-//        return (padStates[iCurrentScene][tag].padTag + 1.) / 5.;
-//    case PadEntry::KickPad:
-//        if (padStates[iCurrentScene][tag].padTag >= 5) {
-//            return 0.;
-//        }
-//        return (padStates[iCurrentScene][tag].padTag + 1.) / 5.;
-//    default:
-//        break;
-//    }
-//    return 0.;
-//}
 
 }} // namespaces
