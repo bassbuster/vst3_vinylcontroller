@@ -1258,18 +1258,17 @@ void AVinylEditorView::update(ParamID tag, ParamValue value)
     }
 }
 
-//------------------------------------------------------------------------
-VSTGUI::CMessageResult AVinylEditorView::notify (CBaseObject* sender, const char* message)
+VSTGUI::CMessageResult AVinylEditorView::notify(CBaseObject* sender, const char* message)
 {
 
     if (message == VSTGUI::CVSTGUITimer::kMsgTimer) {
         if (vuLeftMeter_) {
-            vuLeftMeter_->setValue((vuLeftMeter_->getValue() * 4. + (1. - lastVuLeftMeterValue_)) / 5.);
-            lastVuLeftMeterValue_ = 1.f;
+            vuLeftMeter_->setValue((vuLeftMeter_->getValue() * 1. + sqrt(lastVuLeftMeterValue_)) / 2.);
+            lastVuLeftMeterValue_ /= 2.;
         }
         if (vuRightMeter_) {
-            vuRightMeter_->setValue((vuRightMeter_->getValue() * 4. + (1. - lastVuRightMeterValue_)) / 5.);
-            lastVuRightMeterValue_ = 1.f;
+            vuRightMeter_->setValue((vuRightMeter_->getValue() * 1. + sqrt(lastVuRightMeterValue_)) / 2.);
+            lastVuRightMeterValue_ /= 2.;
         }
         if (dispDistorsion_) {
             dispDistorsion_->setValue(lastDistort_ ? 1 : 0);
