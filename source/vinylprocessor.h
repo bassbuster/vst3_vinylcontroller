@@ -6,9 +6,8 @@
 #include "helpers/sampleentry.h"
 #include "helpers/parameterreader.h"
 #include "helpers/padentry.h"
-#include "helpers/ringbuffer.h"
-#include "helpers/filtred.h"
 #include "helpers/speedprocessor.h"
+#include "effects/effector.h"
 
 #include "vinylconfigconst.h"
 
@@ -90,24 +89,7 @@ private:
     void reset(bool state);
 
     SpeedProcessor<Sample64, ESpeedFrame, EFFTFrame, EFilterFrame> speedProcessor_;
-    int32 effectorSet_;
-
-    // SoftCurves
-    Filtred<Sample32, ESoftEffectSamples> softVolume_;
-    Filtred<Sample32, ESoftEffectSamples> softPreRoll_;
-    Filtred<Sample32, ESoftEffectSamples> softPostRoll_;
-    Filtred<Sample32, ESoftEffectSamples> softDistorsion_;
-    Filtred<Sample32, ESoftEffectSamples> softHold_;
-    Filtred<Sample32, ESoftEffectSamples> softFreeze_;
-    Filtred<Sample32, ESoftEffectSamples> softVintage_;
-
-    Sample64 lockSpeed_;
-    Sample64 lockVolume_;
-    Sample64 lockTune_;
-
-    bool keyHold_;
-    bool keyFreeze_;
-    bool keyLockTone_;
+    int32_t effectorSet_;
 
 	// our model values
     Sample32 vuLeft_;
@@ -123,7 +105,6 @@ private:
     bool bypass_;
 
     std::vector<std::unique_ptr<SampleEntry<Sample64>>> samplesArray_;
-    std::unique_ptr<SampleEntry<Sample64>> vintageSample_;
 
     PadEntry padStates_[EMaximumScenes][ENumberOfPads];
 
@@ -139,15 +120,8 @@ private:
     Sample64 realPitch_;
     Sample64 realVolume_;
 
-    size_t holdCounter_;
-    size_t freezeCounter_;
-    SampleEntry<Sample64>::CuePoint holdCue_;
-    SampleEntry<Sample64>::CuePoint endHoldCue_;
-    SampleEntry<Sample64>::CuePoint beginFreezeCue_;
-    SampleEntry<Sample64>::CuePoint endFreezeCue_;
-    SampleEntry<Sample64>::CuePoint freezeCue_;
-
     ReaderManager params_;
+    Effector effector_;
 };
 
 
