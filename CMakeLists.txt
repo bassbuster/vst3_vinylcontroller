@@ -44,6 +44,17 @@ smtg_add_vst3plugin(${target}
     source/helpers/ringbuffer.h
     source/helpers/filtred.h
     source/helpers/speedprocessor.h
+
+    source/effects/effect.h
+    source/effects/effector.h
+    source/effects/effector.cpp
+    source/effects/distortion.h
+    source/effects/vintage.h
+    source/effects/punch.h
+    source/effects/hold.h
+    source/effects/freeze.h
+    source/effects/roll.h
+    source/effects/lock.h
 )
 
 set_target_properties(${target} 

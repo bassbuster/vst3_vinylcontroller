@@ -3,6 +3,7 @@
 #include "vinylcontroller.h"
 #include "vinylparamids.h"
 #include "helpers/padentry.h"
+#include "effects/effect.h"
 
 #include "base/source/fstring.h"
 #include "vstgui/standalone/source/genericalertbox.h"
@@ -26,9 +27,30 @@ auto make_shared(Args&&... arg) {
 namespace Steinberg {
 namespace Vst {
 
-const char * effectNames[9] = {"Distorsion", "PreRoll", "PostRoll", "PunchIn", "PunchOut", "Hold", "Freeze", "Vintage", "LockTone"};
-int switchedFx[6] = {eDistorsion, ePreRoll, ePostRoll, eHold, eVintage, eLockTone};
-int punchFx[9] = {eDistorsion, ePreRoll, ePostRoll, ePunchIn, ePunchOut, eHold, eFreeze, eVintage, eLockTone};
+const char * effectNames[9] = {"Distorsion",
+                               "PreRoll",
+                               "PostRoll",
+                               "PunchIn",
+                               "PunchOut",
+                               "Hold",
+                               "Freeze",
+                               "Vintage",
+                               "LockTone"};
+int switchedFx[6] = {Effect::Distorsion,
+                     Effect::PreRoll,
+                     Effect::PostRoll,
+                     Effect::Hold,
+                     Effect::Vintage,
+                     Effect::LockTone};
+int punchFx[9] = {Effect::Distorsion,
+                  Effect::PreRoll,
+                  Effect::PostRoll,
+                  Effect::PunchIn,
+                  Effect::PunchOut,
+                  Effect::Hold,
+                  Effect::Freeze,
+                  Effect::Vintage,
+                  Effect::LockTone};
 
 //------------------------------------------------------------------------
 enum

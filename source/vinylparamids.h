@@ -31,17 +31,3 @@ enum
 	kAmpId,
 	kTuneId
 };
-
-enum effectFlags {
-	eNoEffects		= 0,
-	eDistorsion		= 1 << 0,
-	ePreRoll		= 1 << 1,
-	ePostRoll  		= 1 << 2,
-	ePunchIn 		= 1 << 3,
-	ePunchOut		= 1 << 4,
-	eHold			= 1 << 5,
-	eFreeze			= 1 << 6,
-	eVintage		= 1 << 7,
-	eLockTone		= 1 << 8
-};
-

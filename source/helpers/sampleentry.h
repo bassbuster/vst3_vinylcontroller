@@ -149,7 +149,6 @@ public:
         return realCursor_;
     }
 
-    //unsigned NormalizeBeat(long _Beat);
     void beginLockStrobe() {
         overlapCursorFirst_ = realCursor_;
         smoothOverlap_ = -1;
@@ -163,8 +162,11 @@ public:
         }
     }
 
-    void playStereoSampleTempo(SampleType *left, SampleType *right,
-                               ParameterType speed, ParameterType tempo, ParameterType sampleRate,
+    void playStereoSampleTempo(SampleType* left,
+                               SampleType* right,
+                               ParameterType speed,
+                               ParameterType tempo,
+                               ParameterType sampleRate,
                                bool changeCursors) {
         auto newSpeed = calcRealSpeed(speed, sampleRate);
         auto newTempoSpeed = calcTempoSpeed(speed, tempo, sampleRate);
@@ -215,7 +217,7 @@ public:
         realCursor_ = changeCursors ? PushCue : PushCue2;
     }
 
-    void playStereoSample(SampleType *Left, SampleType *Right, ParameterType offset, bool changeCursors) {
+    void playStereoSample(SampleType* Left, SampleType* Right, ParameterType offset, bool changeCursors) {
 
         if (soundBufferLeft_.size() >= 4) {
 
@@ -249,8 +251,7 @@ public:
             if (NewCursor.integerPart() < int64_t(soundBufferRight_.size()) - 3) {
                 Point3 = soundBufferRight_[NewCursor.integerPart() + 2];
             }
-            *Right = Level * hermite(NewCursor.floatPart(), Point0, Point1,
-                                     Point2, Point3);
+            *Right = Level * hermite(NewCursor.floatPart(), Point0, Point1, Point2, Point3);
 
             if (changeCursors) {
                 realCursor_ = NewCursor;
