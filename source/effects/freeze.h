@@ -30,7 +30,7 @@ public:
             auto sample = sampler_();
             bool pushSync = sample->Sync;
             sample->Sync = false;
-            auto PushCue = sample->cue();
+            const auto& PushCue = sample->cue();
             sample->cue(freezeCue_);
             sample->playStereoSample(&outL,
                 &outR,

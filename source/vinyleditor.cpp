@@ -127,47 +127,47 @@ tresult PLUGIN_API AVinylEditorView::findParameter (int32 xPos, int32 yPos, Para
 
 
     // test wether xPos/yPos is inside the gainSlider.
-    if (volumeSlider_->hitTest(where, 0)) {
+    if (volumeSlider_->hitTest(where)) {
         resultTag = kVolumeId;
         return kResultOk;
     }
-    if (pitchSlider_->hitTest(where, 0)) {
+    if (pitchSlider_->hitTest(where)) {
         resultTag = kPitchId;
         return kResultOk;
     }
-    if (gainKnob_->hitTest(where, 0)) {
+    if (gainKnob_->hitTest(where)) {
         resultTag = kGainId;
         return kResultOk;
     }
-    if (scenKnob_->hitTest(where, 0)) {
+    if (scenKnob_->hitTest(where)) {
         resultTag = kCurrentSceneId;
         return kResultOk;
     }
-    if (loopBox_->hitTest(where, 0)) {
+    if (loopBox_->hitTest(where)) {
         resultTag = kLoopId;
         return kResultOk;
     }
-    if (syncBox_->hitTest(where, 0)) {
+    if (syncBox_->hitTest(where)) {
         resultTag = kSyncId;
         return kResultOk;
     }
-    if (rvrsBox_->hitTest (where, 0)) {
+    if (rvrsBox_->hitTest(where)) {
         resultTag = kReverseId;
         return kResultOk;
     }
-    if (curvSwitch_->hitTest(where, 0)) {
+    if (curvSwitch_->hitTest(where)) {
         resultTag = kVolCurveId;
         return kResultOk;
     }
-    if (pitchSwitch_->hitTest(where, 0)) {
+    if (pitchSwitch_->hitTest(where)) {
         resultTag = kPitchSwitchId;
         return kResultOk;
     }
-    if (ampSlide_->hitTest(where, 0)) {
+    if (ampSlide_->hitTest(where)) {
         resultTag = kAmpId;
         return kResultOk;
     }
-    if (tuneSlide_->hitTest(where, 0)) {
+    if (tuneSlide_->hitTest(where)) {
         resultTag = kTuneId;
         return kResultOk;
     }
@@ -1413,8 +1413,8 @@ AVinylEditorView::SharedPointer<VSTGUI::CBitmap> AVinylEditorView::generateWavef
         return nullptr;
     }
 
-    auto pixelMap = VSTGUI::SharedPointer(VSTGUI::CBitmapPixelAccess::create(waveForm), false);
-    auto pixelDigits = VSTGUI::SharedPointer(VSTGUI::CBitmapPixelAccess::create(digits), false);
+    auto pixelMap = VSTGUI::SharedPointer(VSTGUI::CBitmapPixelAccess::create(waveForm, false), false);
+    auto pixelDigits = VSTGUI::SharedPointer(VSTGUI::CBitmapPixelAccess::create(digits, false), false);
     pixelMap->setPosition(0, 61);
     pixelMap->setColor(VSTGUI::CColor(0, 255, 0, 220));
     double stretch = double(sample.bufferLength()) / halfWidth;

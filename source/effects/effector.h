@@ -13,6 +13,7 @@ public:
 
     Effector(std::vector<std::unique_ptr<Effect>> &&effects = {})
         : effects_(std::move(effects))
+        , activeSet_(Effect::NoEffects)
     {}
 
     void process(double &left, double &right, double &speed, double &tempo, double &volume);

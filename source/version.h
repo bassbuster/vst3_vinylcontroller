@@ -1,10 +1,12 @@
 #pragma once
 
 #include "projectversion.h"
-
+#ifdef DEVELOPMENT
+#define stringPluginName 		"Vinyl Sampler 2 dev"
+#else
 #define stringPluginName 		"Vinyl Sampler 2"
-
-#if PLATFORM_64
+#endif
+#if  defined(_WIN64) || defined(__x86_64__)
 #define stringFileDescription	"VinylSampler VST3-SDK (64Bit)"
 #else
 #define stringFileDescription	"VinylSampler VST3-SDK"

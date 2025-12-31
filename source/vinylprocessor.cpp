@@ -77,6 +77,7 @@ AVinyl::AVinyl() :
     realVolume_(0.8),
     vuLeft_(0.),
     vuRight_(0.),
+    position_(0.),
     volume_(1.0),
     pitch_(.5),
     realPitch_(1.0),
@@ -90,7 +91,8 @@ AVinyl::AVinyl() :
     tempo_(EDefaultTempo),
     noteLength_(0),
     effectorSet_(0),
-    currentProcessStatus_(false)
+    currentProcessStatus_(false),
+    dirtyParams_(false)
 {
     // register its editor class (the same than used in againentry.cpp)
     setControllerClass(AVinylControllerUID);
@@ -677,8 +679,8 @@ tresult PLUGIN_API AVinyl::getState(IBStream* state)
         state->write(&toSaveSceneCount, sizeof(uint32_t));
         state->write(&toSaveEntryCount, sizeof(uint32_t));
 
-        for (int j = 0; j < EMaximumScenes; j++) {
-            for (int i = 0; i < ENumberOfPads; i++) {
+        for (size_t j = 0; j < EMaximumScenes; j++) {
+            for (size_t i = 0; i < ENumberOfPads; i++) {
                 uint32_t toSaveType = padStates_[j][i].padType;
                 uint32_t toSaveTag = padStates_[j][i].padTag;
                 uint32_t toSaveMidi = padStates_[j][i].padMidi;
@@ -688,7 +690,7 @@ tresult PLUGIN_API AVinyl::getState(IBStream* state)
             }
         }
 
-        for (int i = 0; i < samplesArray_.size(); i++) {
+        for (size_t i = 0; i < samplesArray_.size(); i++) {
             uint32_t toSavedLoop = samplesArray_.at(i)->Loop ? 1 : 0;
             uint32_t toSavedReverse = samplesArray_.at(i)->Reverse ? 1 : 0;
             uint32_t toSavedSync = samplesArray_.at(i)->Sync ? 1 : 0;
@@ -918,7 +920,7 @@ void AVinyl::debugInputMessage(Sample64* input, size_t len)
 
 void AVinyl::initSamplesMessage(void)
 {
-    for (int32 i = 0; i < samplesArray_.size (); i++) {
+    for (size_t i = 0; i < samplesArray_.size(); i++) {
         IMessage* msg = allocateMessage();
         if (msg) {
             msg->setMessageID("addEntry");
@@ -1035,10 +1037,10 @@ bool AVinyl::padWork(int padId, double paramValue)
     switch(padStates_[currentScene_][padId].padType) {
     case PadEntry::SamplePad:
         if ((padStates_[currentScene_][padId].padTag >= 0)
-            && (samplesArray_.size() > padStates_[currentScene_][padId].padTag)) {
+            && (int(samplesArray_.size()) > padStates_[currentScene_][padId].padTag)) {
             if (paramValue > 0.5) {
-                for (int j = 0; j < EMaximumScenes; j++) {
-                    for (int i = 0; i < ENumberOfPads; i++) {
+                for (size_t j = 0; j < EMaximumScenes; j++) {
+                    for (size_t i = 0; i < ENumberOfPads; i++) {
                         if (padStates_[j][i].padType == PadEntry::SamplePad) {
                             padStates_[j][i].padState = false;
                         }

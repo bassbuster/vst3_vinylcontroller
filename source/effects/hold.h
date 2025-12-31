@@ -31,7 +31,7 @@ public:
             if ((volume_ > 0.00001) && (volume_ < 0.99)) {
                 double left = 0;
                 double right = 0;
-                auto PushCue = samplePtr->cue();
+                const auto& PushCue = samplePtr->cue();
                 samplePtr->cue(endHoldCue_);
                 samplePtr->playStereoSample(&left,
                     &right,

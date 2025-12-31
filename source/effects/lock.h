@@ -16,6 +16,9 @@ public:
         , init_(false)
         , sampleRate_(sampleRate)
         , sampler_(std::forward<SampleGetter>(sampler))
+        , lockSpeed_(0)
+        , lockVolume_(0)
+        , lockTune_(0)
     {
     }
 
