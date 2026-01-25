@@ -102,8 +102,8 @@ public:
 #endif // DEBUG
                 fastsine(fftBuffer_.data(), SpectrumFame);
 
-                for (size_t i = 0; i < 10; i++) {
-                    SampleType SmoothCoef =  i * .1 + .01;
+                for (size_t i = 0; i < 8; i++) {
+                    SampleType SmoothCoef =  i * .125 + .01;
                     fftBuffer_[i] = SmoothCoef * fftBuffer_[i];
                 }
 

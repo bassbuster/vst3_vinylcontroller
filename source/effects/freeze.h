@@ -28,9 +28,9 @@ public:
         if (active_) {
             freezeCounter_++;
             auto sample = sampler_();
-            bool pushSync = sample->Sync;
+            bool currentSync = sample->Sync;
+            SampleEntry<double>::CuePoint currentCue = sample->cue();
             sample->Sync = false;
-            const auto& PushCue = sample->cue();
             sample->cue(freezeCue_);
             sample->playStereoSample(&outL,
                 &outR,
@@ -62,8 +62,8 @@ public:
                     volume_ = 0;
                 }
             }
-            sample->Sync = pushSync;
-            sample->cue(PushCue);
+            sample->Sync = currentSync;
+            sample->cue(currentCue);
         }
     }
 

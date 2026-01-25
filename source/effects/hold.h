@@ -31,7 +31,7 @@ public:
             if ((volume_ > 0.00001) && (volume_ < 0.99)) {
                 double left = 0;
                 double right = 0;
-                const auto& PushCue = samplePtr->cue();
+                SampleEntry<double>::CuePoint currentCue = samplePtr->cue();
                 samplePtr->cue(endHoldCue_);
                 samplePtr->playStereoSample(&left,
                     &right,
@@ -42,7 +42,7 @@ public:
                 outL = outL * volume_ + left * (1. - volume_);
                 outR = outR * volume_ + right * (1. - volume_);
                 endHoldCue_ = samplePtr->cue();
-                samplePtr->cue(PushCue);
+                samplePtr->cue(currentCue);
             }
 
             if (holdCounter_ >= noteLength_) {
